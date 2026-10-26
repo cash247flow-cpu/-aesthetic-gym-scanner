@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import type { PlannedExercise, PlanResult } from "@/lib/plan";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
+import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -26,9 +27,15 @@ export function ResultView({
   const isLegs = plan.counts.abs > 0 || plan.sessionLabel === "Legs & Abs";
   // Divider goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = plan.exercises.findIndex((e) => e.abs === true);
+  const [rest, setRest] = useState<RestRequest | null>(null);
+
+  function startRest(ex: PlannedExercise) {
+    unlockAudio(); // must happen inside the tap so the end-of-rest beep is allowed
+    setRest({ id: Date.now(), label: ex.name, seconds: defaultRestSeconds(ex.restSeconds) });
+  }
 
   return (
-    <section className="mt-2">
+    <section className={`mt-2 ${rest ? "pb-44" : ""}`}>
       <header>
         <h1 className="text-3xl font-bold tracking-tight">{plan.sessionLabel}</h1>
         <p className="mt-1 text-sm text-zinc-400">
@@ -56,7 +63,7 @@ export function ResultView({
                 <span className="h-px flex-1 bg-zinc-800" />
               </li>
             )}
-            <ExerciseCard ex={ex} index={i + 1} />
+            <ExerciseCard ex={ex} index={i + 1} onStartRest={() => startRest(ex)} />
           </Fragment>
         ))}
       </ol>
@@ -72,6 +79,8 @@ export function ResultView({
       >
         Scan another gym
       </button>
+
+      {rest && <RestTimer key={rest.id} request={rest} onClose={() => setRest(null)} />}
     </section>
   );
 }
@@ -166,7 +175,7 @@ function EquipmentEditor({
   );
 }
 
-function ExerciseCard({ ex, index }: { ex: PlannedExercise; index: number }) {
+function ExerciseCard({ ex, index, onStartRest }: { ex: PlannedExercise; index: number; onStartRest: () => void }) {
   return (
     <li className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -184,7 +193,15 @@ function ExerciseCard({ ex, index }: { ex: PlannedExercise; index: number }) {
         <span className="text-2xl font-bold tabular-nums">
           {ex.sets} × {ex.reps}
         </span>
-        <span className="text-sm text-zinc-400">{formatRest(ex.restSeconds)}</span>
+        <button
+          type="button"
+          onClick={onStartRest}
+          aria-label={`Start rest timer for ${ex.name}`}
+          className="flex items-center gap-1.5 rounded-full border border-zinc-700 px-2.5 py-1 text-sm text-zinc-300 transition hover:border-lime-400 hover:text-lime-300 active:scale-95"
+        >
+          <TimerIcon />
+          {formatRest(ex.restSeconds)}
+        </button>
       </div>
 
       <p className="mt-3 text-sm text-zinc-200">
@@ -193,5 +210,14 @@ function ExerciseCard({ ex, index }: { ex: PlannedExercise; index: number }) {
       </p>
       {ex.reason && <p className="mt-1.5 text-sm italic text-zinc-400">{ex.reason}</p>}
     </li>
+  );
+}
+
+function TimerIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2.5 2.5M9 2h6" />
+    </svg>
   );
 }
