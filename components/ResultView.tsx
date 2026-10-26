@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import type { PlannedExercise, PlanResult } from "@/lib/plan";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
+import { SetLogger, loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -28,6 +29,12 @@ export function ResultView({
   // Divider goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = plan.exercises.findIndex((e) => e.abs === true);
   const [rest, setRest] = useState<RestRequest | null>(null);
+  const [unit, setUnit] = useState<Unit>(loadUnit);
+
+  function changeUnit(u: Unit) {
+    setUnit(u);
+    saveUnit(u);
+  }
 
   function startRest(ex: PlannedExercise) {
     unlockAudio(); // must happen inside the tap so the end-of-rest beep is allowed
@@ -37,7 +44,22 @@ export function ResultView({
   return (
     <section className={`mt-2 ${rest ? "pb-44" : ""}`}>
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">{plan.sessionLabel}</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">{plan.sessionLabel}</h1>
+          <div role="group" aria-label="Weight unit" className="flex shrink-0 rounded-full border border-zinc-700 p-0.5 text-xs font-semibold">
+            {(["lb", "kg"] as const).map((u) => (
+              <button
+                key={u}
+                type="button"
+                onClick={() => changeUnit(u)}
+                aria-pressed={unit === u}
+                className={`rounded-full px-3 py-1 transition ${unit === u ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:text-zinc-200"}`}
+              >
+                {u}
+              </button>
+            ))}
+          </div>
+        </div>
         <p className="mt-1 text-sm text-zinc-400">
           {isLegs
             ? `${plan.counts.leg} leg ${plural(plan.counts.leg)} + ${plan.counts.abs} ab ${plural(plan.counts.abs)} · ${plan.note}`
@@ -63,7 +85,7 @@ export function ResultView({
                 <span className="h-px flex-1 bg-zinc-800" />
               </li>
             )}
-            <ExerciseCard ex={ex} index={i + 1} onStartRest={() => startRest(ex)} />
+            <ExerciseCard ex={ex} index={i + 1} unit={unit} onStartRest={() => startRest(ex)} />
           </Fragment>
         ))}
       </ol>
@@ -175,7 +197,17 @@ function EquipmentEditor({
   );
 }
 
-function ExerciseCard({ ex, index, onStartRest }: { ex: PlannedExercise; index: number; onStartRest: () => void }) {
+function ExerciseCard({
+  ex,
+  index,
+  unit,
+  onStartRest,
+}: {
+  ex: PlannedExercise;
+  index: number;
+  unit: Unit;
+  onStartRest: () => void;
+}) {
   return (
     <li className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -209,6 +241,8 @@ function ExerciseCard({ ex, index, onStartRest }: { ex: PlannedExercise; index: 
         {ex.cue}
       </p>
       {ex.reason && <p className="mt-1.5 text-sm italic text-zinc-400">{ex.reason}</p>}
+
+      <SetLogger exercise={ex.name} sets={ex.sets} reps={ex.reps} unit={unit} onSetDone={onStartRest} />
     </li>
   );
 }

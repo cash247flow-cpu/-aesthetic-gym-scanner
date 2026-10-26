@@ -1,0 +1,191 @@
+"use client";
+
+import { useState } from "react";
+
+export type Unit = "lb" | "kg";
+type Row = { weight: string; reps: string; done: boolean };
+// One record per exercise: today's sets plus the last earlier session's sets ("Previous").
+type LogRecord = { date: string; sets: Row[]; prevSets: Row[] };
+
+const MAX_SETS = 10;
+const emptyRow = (): Row => ({ weight: "", reps: "", done: false });
+const hasData = (r: Row) => r.weight.trim() !== "" || r.reps.trim() !== "";
+const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
+const storageKey = (exercise: string) => `ags:log:${exercise}`;
+
+// localStorage can throw (private mode, storage full) — logging should never break the page.
+function loadRecord(exercise: string): LogRecord | null {
+  try {
+    const raw = localStorage.getItem(storageKey(exercise));
+    return raw ? (JSON.parse(raw) as LogRecord) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveRecord(exercise: string, record: LogRecord) {
+  try {
+    localStorage.setItem(storageKey(exercise), JSON.stringify(record));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadUnit(): Unit {
+  try {
+    return localStorage.getItem("ags:unit") === "kg" ? "kg" : "lb";
+  } catch {
+    return "lb";
+  }
+}
+
+export function saveUnit(unit: Unit) {
+  try {
+    localStorage.setItem("ags:unit", unit);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** "2–3" → 3, "3" → 3: start with the top of the programmed range. */
+function targetSetCount(sets: string): number {
+  const nums = sets.split(/[–-]/).map((n) => Number(n.trim())).filter((n) => Number.isFinite(n) && n > 0);
+  return Math.min(MAX_SETS, nums.length ? nums[nums.length - 1] : 3);
+}
+
+export function SetLogger({
+  exercise,
+  sets,
+  reps,
+  unit,
+  onSetDone,
+}: {
+  exercise: string;
+  sets: string;
+  reps: string;
+  unit: Unit;
+  onSetDone: () => void;
+}) {
+  const [initial] = useState(() => {
+    const rec = loadRecord(exercise);
+    const isToday = rec?.date === today();
+    const prev = (isToday ? rec?.prevSets : rec?.sets)?.filter(hasData) ?? [];
+    const rows = isToday && rec?.sets.length ? rec.sets : Array.from({ length: targetSetCount(sets) }, emptyRow);
+    return { prev, rows };
+  });
+  const prev = initial.prev;
+  const [rows, setRows] = useState<Row[]>(initial.rows);
+
+  const repsHint = /fail/i.test(reps) ? "max" : reps.split(/[–-]/)[0]?.trim() || "";
+
+  function commit(next: Row[]) {
+    setRows(next);
+    saveRecord(exercise, { date: today(), sets: next, prevSets: prev });
+  }
+
+  function update(i: number, patch: Partial<Row>) {
+    commit(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  }
+
+  function fillFromPrevious(i: number) {
+    const p = prev[i];
+    if (p) update(i, { weight: p.weight, reps: p.reps });
+  }
+
+  function toggleDone(i: number) {
+    const row = rows[i];
+    if (row.done) return update(i, { done: false });
+    // Like Strong/Hevy: an empty field takes last session's value when you tick the set.
+    const p = prev[i];
+    update(i, {
+      done: true,
+      weight: row.weight || p?.weight || "",
+      reps: row.reps || p?.reps || "",
+    });
+    onSetDone();
+  }
+
+  return (
+    <div className="mt-4 border-t border-zinc-800 pt-3">
+      <div className="grid grid-cols-[1.75rem_1fr_4.25rem_3.5rem_2.5rem] items-center gap-x-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+        <span>Set</span>
+        <span>Previous</span>
+        <span className="text-center">{unit}</span>
+        <span className="text-center">Reps</span>
+        <span className="text-center">✓</span>
+      </div>
+
+      <ol className="mt-1.5 grid gap-1.5">
+        {rows.map((row, i) => {
+          const p = prev[i];
+          return (
+            <li
+              key={i}
+              className={`grid grid-cols-[1.75rem_1fr_4.25rem_3.5rem_2.5rem] items-center gap-x-2 rounded-lg px-1 py-1 transition ${
+                row.done ? "bg-lime-400/10" : ""
+              }`}
+            >
+              <span className="text-center text-sm font-semibold text-zinc-300">{i + 1}</span>
+              <button
+                type="button"
+                onClick={() => fillFromPrevious(i)}
+                disabled={!p}
+                aria-label={p ? `Use previous: ${p.weight} ${unit} for ${p.reps} reps` : "No previous set"}
+                className="truncate text-left text-sm tabular-nums text-zinc-500 enabled:hover:text-zinc-300"
+              >
+                {p ? `${p.weight || "—"} × ${p.reps || "—"}` : "—"}
+              </button>
+              <input
+                inputMode="decimal"
+                aria-label={`Set ${i + 1} weight in ${unit}`}
+                value={row.weight}
+                placeholder={p?.weight || "0"}
+                onChange={(e) => update(i, { weight: e.target.value.replace(/[^\d.,]/g, "") })}
+                className="h-9 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400"
+              />
+              <input
+                inputMode="numeric"
+                aria-label={`Set ${i + 1} reps`}
+                value={row.reps}
+                placeholder={p?.reps || repsHint}
+                onChange={(e) => update(i, { reps: e.target.value.replace(/\D/g, "") })}
+                className="h-9 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400"
+              />
+              <button
+                type="button"
+                onClick={() => toggleDone(i)}
+                aria-label={row.done ? `Set ${i + 1} done — tap to undo` : `Mark set ${i + 1} done`}
+                aria-pressed={row.done}
+                className={`grid h-9 w-full place-items-center rounded-lg text-base font-bold transition active:scale-90 ${
+                  row.done ? "bg-lime-400 text-zinc-950" : "bg-zinc-800 text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                ✓
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          onClick={() => commit([...rows, emptyRow()])}
+          disabled={rows.length >= MAX_SETS}
+          className="h-9 flex-1 rounded-lg bg-zinc-800/70 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-800 active:scale-[0.98] disabled:opacity-40"
+        >
+          + Add Set
+        </button>
+        {rows.length > 1 && (
+          <button
+            type="button"
+            onClick={() => commit(rows.slice(0, -1))}
+            className="h-9 rounded-lg px-3 text-sm text-zinc-500 transition hover:text-zinc-300"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
