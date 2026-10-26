@@ -63,8 +63,8 @@ export function buildPlan(session: SessionKey, rawEquipment: unknown): PlanResul
   const usable = (c: { name: string; equipmentNeeded: string[] }) => hasAll(c.equipmentNeeded) && !used.has(c.name);
 
   for (const original of program.exercises) {
-    // Sets/reps/rest/cue always come from the programmed slot; the movement may be swapped.
-    let pick: { name: string; aestheticKey: string; aestheticMap: AestheticMap; abs?: boolean } | null = null;
+    // Sets/reps/rest come from the programmed slot; a swap brings its own cue when it has one.
+    let pick: { name: string; cue?: string; aestheticKey: string; aestheticMap: AestheticMap; abs?: boolean } | null = null;
     let swappedFrom: string | undefined;
 
     if (usable(original)) {
@@ -94,7 +94,7 @@ export function buildPlan(session: SessionKey, rawEquipment: unknown): PlanResul
       sets: original.sets,
       reps: original.reps,
       restSeconds: original.restSeconds,
-      cue: original.cue,
+      cue: pick.cue ?? original.cue,
       badge,
       reason,
       ...(swappedFrom ? { swappedFrom } : {}),

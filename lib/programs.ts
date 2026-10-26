@@ -3,6 +3,7 @@ export type AestheticMap = "upper" | "legs";
 
 export type Sub = {
   name: string;
+  cue?: string; // overrides the slot's cue when this swap is used
   equipmentNeeded: string[];
   aestheticKey: string;
   aestheticMap: AestheticMap;
@@ -60,8 +61,8 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Every set to true failure; the rep range is where failure lands.",
         equipmentNeeded: ["dumbbells","incline bench"], aestheticKey: "Incline Dumbbell Press", aestheticMap: "upper",
         substitutes: [
-          { name: "Incline Smith Machine Press", equipmentNeeded: ["smith machine","bench"], aestheticKey: "Incline Dumbbell Press", aestheticMap: "upper" },
-          { name: "Flat Dumbbell Press", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Incline Dumbbell Press", aestheticMap: "upper" },
+          { name: "Incline Smith Machine Press", cue: "Bench at 30°, lower the bar to your upper chest.", equipmentNeeded: ["smith machine","bench"], aestheticKey: "Incline Dumbbell Press", aestheticMap: "upper" },
+          { name: "Flat Dumbbell Press", cue: "Elbows ~45°, sink into a deep stretch at the bottom.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Incline Dumbbell Press", aestheticMap: "upper" },
         ] },
       { name: "Cable Rope Pushdown", sets: "2–3", reps: "8–12", restSeconds: "90–120",
         cue: "No upper-arm swing; let the long head work.",
@@ -70,8 +71,8 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Lead with the elbow, not the hand.",
         equipmentNeeded: ["dumbbells","incline bench"], aestheticKey: "Lateral Raise", aestheticMap: "upper",
         substitutes: [
-          { name: "Machine Lateral Raise", equipmentNeeded: ["lateral raise machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
-          { name: "Cable Lateral Raise", equipmentNeeded: ["cable machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
+          { name: "Machine Lateral Raise", cue: "Pads on the elbows; lead with the elbow, no shrug.", equipmentNeeded: ["lateral raise machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
+          { name: "Cable Lateral Raise", cue: "Cable behind your body; lead with the elbow, no shrug.", equipmentNeeded: ["cable machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
         ] },
       { name: "High-to-Low Cable Fly", sets: "2–3", reps: "12–15", restSeconds: "90–120",
         cue: "The fly is a fly. If you can cheat it, the weight is too heavy.",
@@ -80,7 +81,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Keep elbows pinned, lower to forehead.",
         equipmentNeeded: ["ez bar","bench"], aestheticKey: "Cable Rope Pushdown", aestheticMap: "upper",
         substitutes: [
-          { name: "Overhead Cable Extension", equipmentNeeded: ["cable machine","rope attachment"], aestheticKey: "Cable Rope Pushdown", aestheticMap: "upper" },
+          { name: "Overhead Cable Extension", cue: "Face away, elbows by your ears, full stretch behind the head.", equipmentNeeded: ["cable machine","rope attachment"], aestheticKey: "Cable Rope Pushdown", aestheticMap: "upper" },
         ] },
       { name: "Dumbbell Overhead Press", sets: "2–3", reps: "10–12", restSeconds: "120–180",
         cue: "Brace hard, press straight up.",
@@ -89,7 +90,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Full stretch at the bottom.",
         equipmentNeeded: ["chest press machine"], aestheticKey: "High-to-Low Cable Fly", aestheticMap: "upper",
         substitutes: [
-          { name: "Flat Dumbbell Press", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "High-to-Low Cable Fly", aestheticMap: "upper" },
+          { name: "Flat Dumbbell Press", cue: "Full stretch at the bottom; elbows ~45°.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "High-to-Low Cable Fly", aestheticMap: "upper" },
         ] },
     ],
   },
@@ -101,14 +102,14 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Shoulder adduction: drive elbows down, not back.",
         equipmentNeeded: ["lat pulldown"], aestheticKey: "Lat Pulldown", aestheticMap: "upper",
         substitutes: [
-          { name: "Unilateral Pulldown", equipmentNeeded: ["lat pulldown"], aestheticKey: "Lat Pulldown", aestheticMap: "upper" },
-          { name: "Neutral-Grip Pulldown", equipmentNeeded: ["lat pulldown","neutral grip attachment"], aestheticKey: "Lat Pulldown", aestheticMap: "upper" },
+          { name: "Unilateral Pulldown", cue: "One arm at a time; drive the elbow down to your hip.", equipmentNeeded: ["lat pulldown"], aestheticKey: "Lat Pulldown", aestheticMap: "upper" },
+          { name: "Neutral-Grip Pulldown", cue: "Palms facing; drive elbows down, not back.", equipmentNeeded: ["lat pulldown","neutral grip attachment"], aestheticKey: "Lat Pulldown", aestheticMap: "upper" },
         ] },
       { name: "Spider Curl", sets: "2–3", reps: "8–12", restSeconds: "90–120",
         cue: "Arms in front for the short head.",
         equipmentNeeded: ["ez bar","incline bench"], aestheticKey: "Incline Dumbbell Curl", aestheticMap: "upper",
         substitutes: [
-          { name: "Machine Preacher Curl", equipmentNeeded: ["preacher curl machine"], aestheticKey: "Preacher Curl", aestheticMap: "upper" },
+          { name: "Machine Preacher Curl", cue: "Armpits tight to the pad; full stretch at the bottom.", equipmentNeeded: ["preacher curl machine"], aestheticKey: "Preacher Curl", aestheticMap: "upper" },
         ] },
       { name: "Single-Arm Dumbbell Row", sets: "2–3", reps: "8–12", restSeconds: "120–180",
         cue: "Straps are fine if your grip goes first.",
@@ -120,8 +121,8 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Straight up, no rolling.",
         equipmentNeeded: ["dumbbells"], aestheticKey: "Shrugs", aestheticMap: "upper",
         substitutes: [
-          { name: "Barbell Shrugs", equipmentNeeded: ["barbell"], aestheticKey: "Shrugs", aestheticMap: "upper" },
-          { name: "Smith Machine Shrug", equipmentNeeded: ["smith machine"], aestheticKey: "Shrugs", aestheticMap: "upper" },
+          { name: "Barbell Shrugs", cue: "Straight up, pause at the top, no rolling.", equipmentNeeded: ["barbell"], aestheticKey: "Shrugs", aestheticMap: "upper" },
+          { name: "Smith Machine Shrug", cue: "Straight up, pause at the top, no rolling.", equipmentNeeded: ["smith machine"], aestheticKey: "Shrugs", aestheticMap: "upper" },
         ] },
       { name: "Cable Hammer Curl", sets: "2–3", reps: "12–15", restSeconds: "90–120",
         cue: "Neutral grip for the brachialis.",
@@ -130,7 +131,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "45° angle, lead with the elbow.",
         equipmentNeeded: ["reverse pec deck"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper",
         substitutes: [
-          { name: "Cable Rear Delt Fly", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
+          { name: "Cable Rear Delt Fly", cue: "Cross the cables; sweep out at 45°, lead with the elbow.", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
         ] },
     ],
   },
@@ -142,14 +143,14 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Feet low on the platform; control the eccentric.",
         equipmentNeeded: ["hack squat machine"], aestheticKey: "Hack Squat", aestheticMap: "legs",
         substitutes: [
-          { name: "Leg Press", equipmentNeeded: ["leg press"], aestheticKey: "Hack Squat", aestheticMap: "legs" },
-          { name: "Barbell Squat", equipmentNeeded: ["barbell","squat rack"], aestheticKey: "Hack Squat", aestheticMap: "legs" },
+          { name: "Leg Press", cue: "Feet low on the platform; control the eccentric, don't lock out.", equipmentNeeded: ["leg press"], aestheticKey: "Hack Squat", aestheticMap: "legs" },
+          { name: "Barbell Squat", cue: "Sit straight down, knees forward; control the eccentric.", equipmentNeeded: ["barbell","squat rack"], aestheticKey: "Hack Squat", aestheticMap: "legs" },
         ] },
       { name: "Romanian Deadlift", sets: "3", reps: "10", restSeconds: "120–180",
         cue: "Hinge at the hips, bar close, feel the hamstring stretch.",
         equipmentNeeded: ["barbell"], aestheticKey: "Romanian Deadlift", aestheticMap: "legs",
         substitutes: [
-          { name: "Dumbbell RDL", equipmentNeeded: ["dumbbells"], aestheticKey: "Romanian Deadlift", aestheticMap: "legs" },
+          { name: "Dumbbell RDL", cue: "Hinge at the hips, dumbbells close to the legs, feel the hamstring stretch.", equipmentNeeded: ["dumbbells"], aestheticKey: "Romanian Deadlift", aestheticMap: "legs" },
         ] },
       { name: "Leg Extension", sets: "3", reps: "10–12", restSeconds: "90–120",
         cue: "Seat back, push through the quad, squeeze at the top.",
@@ -158,7 +159,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Lean forward for a better hamstring stretch.",
         equipmentNeeded: ["seated leg curl machine"], aestheticKey: "Seated Leg Curl", aestheticMap: "legs",
         substitutes: [
-          { name: "Lying Leg Curl", equipmentNeeded: ["lying leg curl machine"], aestheticKey: "Seated Leg Curl", aestheticMap: "legs" },
+          { name: "Lying Leg Curl", cue: "Hips pinned to the pad; control the eccentric.", equipmentNeeded: ["lying leg curl machine"], aestheticKey: "Seated Leg Curl", aestheticMap: "legs" },
         ] },
       { name: "Standing Calf Raise", sets: "3", reps: "10–12", restSeconds: "90–120",
         cue: "2s up, 2s at the top, 2s down, 2s in the stretch.",
@@ -167,20 +168,20 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "Hold 1–2s at the top and bottom; drop set on the last set.",
         equipmentNeeded: ["abductor machine"], aestheticKey: "Hip Abduction", aestheticMap: "legs",
         substitutes: [
-          { name: "Cable Hip Abduction", equipmentNeeded: ["cable machine","ankle strap"], aestheticKey: "Hip Abduction", aestheticMap: "legs" },
+          { name: "Cable Hip Abduction", cue: "Lean slightly away; sweep out and hold 1–2s at the top.", equipmentNeeded: ["cable machine","ankle strap"], aestheticKey: "Hip Abduction", aestheticMap: "legs" },
         ] },
       { name: "Leg Raise", sets: "3", reps: "failure", restSeconds: "90–120",
         cue: "Curl the pelvis, don't swing. Stop when you can't do a clean rep.",
         equipmentNeeded: ["captains chair"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true,
         substitutes: [
-          { name: "Hanging Leg Raise", equipmentNeeded: ["pull-up bar"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true },
-          { name: "Lying Leg Raise", equipmentNeeded: ["bench"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true },
+          { name: "Hanging Leg Raise", cue: "Dead hang, curl the pelvis up; don't swing.", equipmentNeeded: ["pull-up bar"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true },
+          { name: "Lying Leg Raise", cue: "Lower back pressed down; curl the pelvis up at the top.", equipmentNeeded: ["bench"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true },
         ] },
       { name: "Decline Crunches", sets: "3", reps: "failure", restSeconds: "90–120",
         cue: "Pure spinal flexion — round the back, slow eccentric.",
         equipmentNeeded: ["decline bench"], aestheticKey: "Decline Crunch", aestheticMap: "legs", abs: true,
         substitutes: [
-          { name: "Cable Rope Crunch", equipmentNeeded: ["cable machine","rope attachment"], aestheticKey: "Decline Crunch", aestheticMap: "legs", abs: true },
+          { name: "Cable Rope Crunch", cue: "Kneel, round the spine to bring elbows to knees; slow eccentric.", equipmentNeeded: ["cable machine","rope attachment"], aestheticKey: "Decline Crunch", aestheticMap: "legs", abs: true },
         ] },
     ],
   },
