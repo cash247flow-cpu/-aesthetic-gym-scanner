@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type Unit = "lb" | "kg";
 type Row = { weight: string; reps: string; done: boolean };
@@ -59,12 +59,15 @@ export function SetLogger({
   reps,
   unit,
   onSetDone,
+  onProgress,
 }: {
   exercise: string;
   sets: string;
   reps: string;
   unit: Unit;
-  onSetDone: () => void;
+  /** Called when a set is ticked; allDone is true when that was the last open set. */
+  onSetDone: (allDone: boolean) => void;
+  onProgress?: (done: number, total: number) => void;
 }) {
   const [initial] = useState(() => {
     const rec = loadRecord(exercise);
@@ -75,6 +78,11 @@ export function SetLogger({
   });
   const prev = initial.prev;
   const [rows, setRows] = useState<Row[]>(initial.rows);
+
+  const doneCount = rows.filter((r) => r.done).length;
+  useEffect(() => {
+    onProgress?.(doneCount, rows.length);
+  }, [doneCount, rows.length, onProgress]);
 
   const repsHint = /fail/i.test(reps) ? "max" : reps.split(/[–-]/)[0]?.trim() || "";
 
@@ -97,12 +105,11 @@ export function SetLogger({
     if (row.done) return update(i, { done: false });
     // Like Strong/Hevy: an empty field takes last session's value when you tick the set.
     const p = prev[i];
-    update(i, {
-      done: true,
-      weight: row.weight || p?.weight || "",
-      reps: row.reps || p?.reps || "",
-    });
-    onSetDone();
+    const next = rows.map((r, j) =>
+      j === i ? { done: true, weight: r.weight || p?.weight || "", reps: r.reps || p?.reps || "" } : r,
+    );
+    commit(next);
+    onSetDone(next.every((r) => r.done));
   }
 
   return (

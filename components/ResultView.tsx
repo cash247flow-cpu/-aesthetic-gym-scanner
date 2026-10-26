@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { PlannedExercise, PlanResult } from "@/lib/plan";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
@@ -26,10 +26,59 @@ export function ResultView({
   onEquipmentChange: (equipment: string[]) => Promise<void>;
 }) {
   const isLegs = plan.counts.abs > 0 || plan.sessionLabel === "Legs & Abs";
-  // Divider goes before the first abs card, but only if a non-abs card precedes it.
+  // Abs marker goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = plan.exercises.findIndex((e) => e.abs === true);
   const [rest, setRest] = useState<RestRequest | null>(null);
   const [unit, setUnit] = useState<Unit>(loadUnit);
+  const [active, setActive] = useState(0);
+  const [progress, setProgress] = useState<Record<string, { done: number; total: number }>>({});
+  const trackRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const count = plan.exercises.length;
+  const isComplete = (name: string) => {
+    const p = progress[name];
+    return !!p && p.total > 0 && p.done >= p.total;
+  };
+  const allComplete = count > 0 && plan.exercises.every((e) => isComplete(e.name));
+
+  // One exercise per page: the track scrolls horizontally and snaps to each card.
+  const goTo = useCallback((i: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
+  }, []);
+
+  function onTrackScroll() {
+    const track = trackRef.current;
+    if (track && track.clientWidth > 0) setActive(Math.round(track.scrollLeft / track.clientWidth));
+  }
+
+  // Editing equipment can shorten the list; don't leave the view past the last card.
+  useEffect(() => {
+    if (active > count - 1) goTo(Math.max(0, count - 1));
+  }, [active, count, goTo]);
+
+  const reportProgress = useCallback((name: string, done: number, total: number) => {
+    setProgress((prev) =>
+      prev[name]?.done === done && prev[name]?.total === total ? prev : { ...prev, [name]: { done, total } },
+    );
+  }, []);
+
+  function onSetDone(i: number, allDone: boolean) {
+    startRest(plan.exercises[i]);
+    if (!allDone) return;
+    // Finished every set here: move on to the next exercise that still has open sets.
+    const next = Array.from({ length: count - 1 }, (_, k) => (i + 1 + k) % count).find(
+      (j) => !isComplete(plan.exercises[j].name),
+    );
+    if (next === undefined) return;
+    setTimeout(() => {
+      goTo(next);
+      // If you were down at the set rows, bring the new card's title back into view.
+      const nav = navRef.current;
+      if (nav && nav.getBoundingClientRect().top < 0) nav.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 450);
+  }
 
   function changeUnit(u: Unit) {
     setUnit(u);
@@ -75,20 +124,76 @@ export function ResultView({
         </div>
       )}
 
-      <ol className="mt-5 grid gap-3">
+      {count > 0 && (
+        <nav ref={navRef} aria-label="Exercises" className="mt-5 scroll-mt-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              {allComplete ? "Workout complete 💪" : `Exercise ${Math.min(active, count - 1) + 1} of ${count}`}
+            </p>
+            <div className="flex gap-1.5">
+              <ArrowButton dir="prev" disabled={active <= 0} onClick={() => goTo(active - 1)} />
+              <ArrowButton dir="next" disabled={active >= count - 1} onClick={() => goTo(active + 1)} />
+            </div>
+          </div>
+          <ol className="mt-2 flex flex-wrap items-center gap-1.5">
+            {plan.exercises.map((ex, i) => {
+              const done = isComplete(ex.name);
+              const current = i === active;
+              return (
+                <Fragment key={`${ex.name}-${i}`}>
+                  {isLegs && i === firstAbsIndex && i > 0 && (
+                    <li aria-hidden className="px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                      Abs
+                    </li>
+                  )}
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => goTo(i)}
+                      aria-label={`${ex.name}${done ? " (done)" : ""}`}
+                      aria-current={current ? "step" : undefined}
+                      className={`grid h-8 w-8 place-items-center rounded-full text-xs font-bold tabular-nums transition active:scale-90 ${
+                        done
+                          ? "bg-lime-400 text-zinc-950"
+                          : current
+                            ? "bg-zinc-100 text-zinc-900"
+                            : "bg-zinc-800 text-zinc-400 hover:text-zinc-100"
+                      } ${current && done ? "ring-2 ring-zinc-100 ring-offset-2 ring-offset-zinc-950" : ""}`}
+                    >
+                      {done ? "✓" : i + 1}
+                    </button>
+                  </li>
+                </Fragment>
+              );
+            })}
+          </ol>
+        </nav>
+      )}
+
+      <div
+        ref={trackRef}
+        onScroll={onTrackScroll}
+        aria-roledescription="carousel"
+        className="-mx-1 mt-3 flex snap-x snap-mandatory items-start overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {plan.exercises.map((ex, i) => (
-          <Fragment key={`${ex.name}-${i}`}>
-            {isLegs && i === firstAbsIndex && i > 0 && (
-              <li aria-hidden className="flex items-center gap-3 pt-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                <span className="h-px flex-1 bg-zinc-800" />
-                Abs
-                <span className="h-px flex-1 bg-zinc-800" />
-              </li>
-            )}
-            <ExerciseCard ex={ex} index={i + 1} unit={unit} onStartRest={() => startRest(ex)} />
-          </Fragment>
+          <div
+            key={`${ex.name}-${i}`}
+            aria-roledescription="slide"
+            aria-label={`${i + 1} of ${count}`}
+            className="w-full shrink-0 snap-center snap-always px-1"
+          >
+            <ExerciseCard
+              ex={ex}
+              index={i + 1}
+              unit={unit}
+              onStartRest={() => startRest(ex)}
+              onSetDone={(allDone) => onSetDone(i, allDone)}
+              onProgress={reportProgress}
+            />
+          </div>
         ))}
-      </ol>
+      </div>
 
       <p className="mt-6 text-center text-sm text-zinc-400">
         Working sets to true failure. Keep these exercises ~8 weeks.
@@ -197,19 +302,42 @@ function EquipmentEditor({
   );
 }
 
+function ArrowButton({ dir, disabled, onClick }: { dir: "prev" | "next"; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={dir === "prev" ? "Previous exercise" : "Next exercise"}
+      className="grid h-8 w-8 place-items-center rounded-full bg-zinc-800 text-zinc-200 transition hover:bg-zinc-700 active:scale-90 disabled:opacity-30"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+        <path d={dir === "prev" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"} />
+      </svg>
+    </button>
+  );
+}
+
 function ExerciseCard({
   ex,
   index,
   unit,
   onStartRest,
+  onSetDone,
+  onProgress,
 }: {
   ex: PlannedExercise;
   index: number;
   unit: Unit;
   onStartRest: () => void;
+  onSetDone: (allDone: boolean) => void;
+  onProgress: (name: string, done: number, total: number) => void;
 }) {
+  const name = ex.name;
+  const reportProgress = useCallback((done: number, total: number) => onProgress(name, done, total), [onProgress, name]);
+
   return (
-    <li className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-medium text-zinc-500">{String(index).padStart(2, "0")}</p>
@@ -242,8 +370,15 @@ function ExerciseCard({
       </p>
       {ex.reason && <p className="mt-1.5 text-sm italic text-zinc-400">{ex.reason}</p>}
 
-      <SetLogger exercise={ex.name} sets={ex.sets} reps={ex.reps} unit={unit} onSetDone={onStartRest} />
-    </li>
+      <SetLogger
+        exercise={ex.name}
+        sets={ex.sets}
+        reps={ex.reps}
+        unit={unit}
+        onSetDone={onSetDone}
+        onProgress={reportProgress}
+      />
+    </div>
   );
 }
 
