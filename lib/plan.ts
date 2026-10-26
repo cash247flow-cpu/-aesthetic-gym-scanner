@@ -57,16 +57,20 @@ export function buildPlan(session: SessionKey, rawEquipment: unknown): PlanResul
 
   const exercises: PlannedExercise[] = [];
   const dropped: string[] = [];
+  const duplicates: string[] = [];
+  // Never repeat a movement: a substitute already used by an earlier slot is skipped.
+  const used = new Set<string>();
+  const usable = (c: { name: string; equipmentNeeded: string[] }) => hasAll(c.equipmentNeeded) && !used.has(c.name);
 
   for (const original of program.exercises) {
     // Sets/reps/rest/cue always come from the programmed slot; the movement may be swapped.
     let pick: { name: string; aestheticKey: string; aestheticMap: AestheticMap; abs?: boolean } | null = null;
     let swappedFrom: string | undefined;
 
-    if (hasAll(original.equipmentNeeded)) {
+    if (usable(original)) {
       pick = original;
     } else {
-      const sub = original.substitutes?.find((s) => hasAll(s.equipmentNeeded));
+      const sub = original.substitutes?.find(usable);
       if (sub) {
         pick = sub;
         swappedFrom = original.name;
@@ -75,9 +79,12 @@ export function buildPlan(session: SessionKey, rawEquipment: unknown): PlanResul
 
     // No match → the slot stays empty. Never invent or borrow from another muscle group.
     if (!pick) {
-      dropped.push(original.name);
+      const candidates = [original, ...(original.substitutes ?? [])];
+      if (candidates.some((c) => hasAll(c.equipmentNeeded))) duplicates.push(original.name);
+      else dropped.push(original.name);
       continue;
     }
+    used.add(pick.name);
 
     const abs = pick.abs ?? original.abs;
     const { badge, reason } = resolveAesthetic(pick.aestheticKey, pick.aestheticMap, abs);
@@ -98,16 +105,20 @@ export function buildPlan(session: SessionKey, rawEquipment: unknown): PlanResul
   const absCount = exercises.filter((e) => e.abs).length;
 
   let missingNote: string | undefined;
+  const parts: string[] = [];
   if (dropped.length > 0) {
-    const parts = [
+    parts.push(
       `This gym is missing equipment for ${dropped.length} exercise(s); remaining slots are shown below.`,
       `Couldn't fill: ${dropped.join(", ")}.`,
-    ];
+    );
     if (session === "legs" && dropped.includes("Hack Squat")) {
       parts.push("No hack squat, leg press or barbell squat setup found — the main quad slot is left empty.");
     }
-    missingNote = parts.join(" ");
   }
+  if (duplicates.length > 0) {
+    parts.push(`Skipped ${duplicates.join(", ")}: the only swap available is already in this session.`);
+  }
+  if (parts.length > 0) missingNote = parts.join(" ");
 
   return {
     sessionLabel: program.label,

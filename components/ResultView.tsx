@@ -1,5 +1,8 @@
-import { Fragment } from "react";
+"use client";
+
+import { Fragment, useState } from "react";
 import type { PlannedExercise, PlanResult } from "@/lib/plan";
+import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -11,7 +14,15 @@ export function formatRest(restSeconds: string): string {
 
 const plural = (n: number) => (n === 1 ? "exercise" : "exercises");
 
-export function ResultView({ plan, onReset }: { plan: PlanResult; onReset: () => void }) {
+export function ResultView({
+  plan,
+  onReset,
+  onEquipmentChange,
+}: {
+  plan: PlanResult;
+  onReset: () => void;
+  onEquipmentChange: (equipment: string[]) => Promise<void>;
+}) {
   const isLegs = plan.counts.abs > 0 || plan.sessionLabel === "Legs & Abs";
   // Divider goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = plan.exercises.findIndex((e) => e.abs === true);
@@ -27,20 +38,7 @@ export function ResultView({ plan, onReset }: { plan: PlanResult; onReset: () =>
         </p>
       </header>
 
-      <div className="mt-4">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Equipment found</h2>
-        {plan.equipment.length > 0 ? (
-          <ul className="mt-2 flex flex-wrap gap-1.5">
-            {plan.equipment.map((e) => (
-              <li key={e} className="rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs capitalize text-zinc-300">
-                {e}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-sm text-zinc-400">Nothing recognizable — try a wider shot.</p>
-        )}
-      </div>
+      <EquipmentEditor equipment={plan.equipment} onChange={onEquipmentChange} />
 
       {plan.missingNote && (
         <div role="status" className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-3 text-sm text-amber-200">
@@ -75,6 +73,96 @@ export function ResultView({ plan, onReset }: { plan: PlanResult; onReset: () =>
         Scan another gym
       </button>
     </section>
+  );
+}
+
+function EquipmentEditor({
+  equipment,
+  onChange,
+}: {
+  equipment: string[];
+  onChange: (equipment: string[]) => Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const missing = CANONICAL_EQUIPMENT.filter((e) => !equipment.includes(e));
+
+  async function update(next: string[]) {
+    setBusy(true);
+    setError(null);
+    try {
+      await onChange(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update the plan.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Equipment found</h2>
+        <span className="text-[11px] text-zinc-500" aria-live="polite">
+          {busy ? "Updating…" : "Tap to remove"}
+        </span>
+      </div>
+
+      <ul className={`mt-2 flex flex-wrap gap-1.5 ${busy ? "opacity-60" : ""}`}>
+        {equipment.map((e) => (
+          <li key={e}>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => update(equipment.filter((x) => x !== e))}
+              aria-label={`Remove ${e}`}
+              className="flex items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 py-1 pl-2.5 pr-2 text-xs capitalize text-zinc-200 transition hover:border-red-400/60 active:scale-95"
+            >
+              {e}
+              <span aria-hidden className="text-zinc-500">×</span>
+            </button>
+          </li>
+        ))}
+        <li>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setAdding((v) => !v)}
+            aria-expanded={adding}
+            className="rounded-full border border-dashed border-lime-400/60 px-2.5 py-1 text-xs font-medium text-lime-300 transition hover:bg-lime-400/10 active:scale-95"
+          >
+            {adding ? "Done" : "+ Add equipment"}
+          </button>
+        </li>
+      </ul>
+
+      {equipment.length === 0 && !adding && (
+        <p className="mt-2 text-sm text-zinc-400">Nothing recognizable — add equipment or try a wider shot.</p>
+      )}
+
+      {adding && (
+        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+          <p className="text-xs text-zinc-400">Gemini missed something? Tap to add it.</p>
+          <ul className={`mt-2 flex flex-wrap gap-1.5 ${busy ? "opacity-60" : ""}`}>
+            {missing.map((e) => (
+              <li key={e}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => update([...equipment, e])}
+                  className="rounded-full border border-zinc-700 px-2.5 py-1 text-xs capitalize text-zinc-400 transition hover:border-lime-400 hover:text-zinc-100 active:scale-95"
+                >
+                  + {e}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {error && <p role="alert" className="mt-2 text-sm text-red-300">{error}</p>}
+    </div>
   );
 }
 

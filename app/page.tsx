@@ -7,7 +7,7 @@ import { ResultView } from "@/components/ResultView";
 type View =
   | { state: "upload" }
   | { state: "loading" }
-  | { state: "result"; plan: PlanResult };
+  | { state: "result"; plan: PlanResult; session: SessionKey };
 
 const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
   { key: "push", label: "Push", hint: "Chest · Shoulders · Triceps" },
@@ -47,20 +47,19 @@ export default function Home() {
       const idData = await idRes.json();
       if (!idRes.ok) throw new Error(idData.error || "Couldn't read the photo.");
 
-      const planRes = await fetch("/api/plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session, equipment: idData.equipment }),
-      });
-      const plan = await planRes.json();
-      if (!planRes.ok) throw new Error(plan.error || "Couldn't build the plan.");
-
-      setView({ state: "result", plan });
+      const plan = await fetchPlan(session, idData.equipment);
+      setView({ state: "result", plan, session });
       window.scrollTo({ top: 0 });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setView({ state: "upload" });
     }
+  }
+
+  // Rebuild the plan after the user adds/removes equipment chips. No new photo or Gemini call.
+  async function changeEquipment(session: SessionKey, equipment: string[]) {
+    const plan = await fetchPlan(session, equipment);
+    setView({ state: "result", plan, session });
   }
 
   function reset() {
@@ -151,9 +150,26 @@ export default function Home() {
         </section>
       )}
 
-      {view.state === "result" && <ResultView plan={view.plan} onReset={reset} />}
+      {view.state === "result" && (
+        <ResultView
+          plan={view.plan}
+          onReset={reset}
+          onEquipmentChange={(eq) => changeEquipment(view.session, eq)}
+        />
+      )}
     </main>
   );
+}
+
+async function fetchPlan(session: SessionKey, equipment: string[]): Promise<PlanResult> {
+  const res = await fetch("/api/plan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session, equipment }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Couldn't build the plan.");
+  return data;
 }
 
 /** Downscale phone photos (often 5–15 MB) to ~1600px JPEG before upload. */
