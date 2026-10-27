@@ -1,6 +1,18 @@
 "use client";
 
-import { CHOICES, DAY_NAMES, WEEK_ORDER, isDefaultWeek, withChoice, type WeekPlan } from "@/lib/schedule";
+import {
+  CHOICES,
+  DAY_NAMES,
+  MAX_AB_DAYS,
+  WEEK_ORDER,
+  abDayCount,
+  abWarnings,
+  canAddAbs,
+  isDefaultWeek,
+  withAbs,
+  withChoice,
+  type WeekPlan,
+} from "@/lib/schedule";
 
 /** Weekly split editor: pick Push / Pull / Legs / Pump / Rest for each day. */
 export function WeekEditor({
@@ -13,6 +25,8 @@ export function WeekEditor({
   onBack: () => void;
 }) {
   const today = new Date().getDay();
+  const abDays = abDayCount(week);
+  const warnings = abWarnings(week);
 
   return (
     <section className="mt-2">
@@ -21,9 +35,23 @@ export function WeekEditor({
         Pick what each day is for. Rest days open Cardio Day. Changes save automatically.
       </p>
 
+      <div className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-3.5 py-2.5 text-sm">
+        <p className="font-semibold text-rose-200">
+          Ab days: {abDays} of {MAX_AB_DAYS}
+          <span className="font-normal text-zinc-400"> · keep a day off between</span>
+        </p>
+        <p className="mt-0.5 text-xs text-zinc-400">Legs days include abs. Tap “+ Abs” to add them to another day.</p>
+        {warnings.map((w) => (
+          <p key={w} className="mt-1 text-xs font-semibold text-amber-300">
+            ⚠ {w}
+          </p>
+        ))}
+      </div>
+
       <ol className="mt-5 grid grid-cols-1 gap-2">
         {WEEK_ORDER.map((day) => {
           const plan = week[day];
+          const absAllowed = canAddAbs(week, day);
           return (
             <li
               key={day}
@@ -57,6 +85,33 @@ export function WeekEditor({
                     </button>
                   );
                 })}
+              </div>
+              <div className="mt-2 flex items-center gap-2 px-1">
+                {plan.choice === "legs" ? (
+                  <span className="rounded-full bg-rose-400/15 px-2.5 py-1 text-xs font-semibold text-rose-200">Abs included</span>
+                ) : plan.abs ? (
+                  <button
+                    type="button"
+                    onClick={() => onChange(withAbs(week, day, false))}
+                    aria-pressed="true"
+                    className="rounded-full bg-rose-400 px-2.5 py-1 text-xs font-semibold text-zinc-950 transition active:scale-95"
+                  >
+                    ✓ Abs
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onChange(withAbs(week, day, true))}
+                      disabled={!absAllowed.ok}
+                      aria-pressed="false"
+                      className="rounded-full border border-rose-400/50 px-2.5 py-1 text-xs font-semibold text-rose-200 transition active:scale-95 disabled:border-zinc-800 disabled:text-zinc-600"
+                    >
+                      + Abs
+                    </button>
+                    {!absAllowed.ok && <span className="truncate text-[11px] text-zinc-500">{absAllowed.reason}</span>}
+                  </>
+                )}
               </div>
             </li>
           );

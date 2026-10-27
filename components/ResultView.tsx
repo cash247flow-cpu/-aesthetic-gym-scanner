@@ -47,7 +47,7 @@ export function ResultView({
   onEquipmentChange: (equipment: string[]) => Promise<void>;
   onShowWins: () => void;
 }) {
-  const isLegs = plan.counts.abs > 0 || plan.sessionLabel === "Legs & Abs";
+  const isLegs = plan.sessionLabel === "Legs & Abs";
   // Abs marker goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = plan.exercises.findIndex((e) => e.abs === true);
   const [rest, setRest] = useState<RestRequest | null>(null);
@@ -195,7 +195,9 @@ export function ResultView({
         <p className="mt-1 text-sm text-zinc-400">
           {isLegs
             ? `${plan.counts.leg} leg ${plural(plan.counts.leg)} + ${plan.counts.abs} ab ${plural(plan.counts.abs)} · ${plan.note}`
-            : plan.note}
+            : plan.counts.abs > 0 && plan.counts.leg > 0
+              ? `${plan.note} · + ${plan.counts.abs} ab ${plural(plan.counts.abs)} at the end`
+              : plan.note}
         </p>
       </header>
 
@@ -262,7 +264,7 @@ export function ResultView({
               const isCardio = sl.kind === "cardio";
               return (
                 <Fragment key={sl.key}>
-                  {isLegs && sl.kind === "lift" && sl.liftIndex === firstAbsIndex && sl.liftIndex > 0 && (
+                  {sl.kind === "lift" && sl.liftIndex === firstAbsIndex && sl.liftIndex > 0 && (
                     <li aria-hidden className="px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                       Abs
                     </li>

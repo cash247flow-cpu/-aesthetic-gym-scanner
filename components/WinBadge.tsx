@@ -5,6 +5,7 @@ const GRADIENT: Record<BadgeGroup, string> = {
   workouts: "from-violet-300 via-violet-400 to-indigo-500 text-zinc-950",
   prs: "from-amber-200 via-amber-400 to-orange-500 text-zinc-950",
   cardio: "from-sky-200 via-sky-400 to-blue-500 text-zinc-950",
+  habits: "from-rose-200 via-rose-400 to-pink-500 text-zinc-950",
 };
 
 const HEX = "polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0% 50%)";

@@ -7,6 +7,8 @@ import { CardioSession } from "@/components/CardioSession";
 import { WinsView } from "@/components/WinsView";
 import { BodyTracker } from "@/components/BodyTracker";
 import { TodayCard } from "@/components/TodayCard";
+import { HabitsView } from "@/components/HabitsView";
+import { HABITS, doneCount, loadHabitLogs, streak, todayStr } from "@/lib/habits";
 import { WeekEditor } from "@/components/WeekEditor";
 import { DEFAULT_WEEK, loadWeek, saveWeek, type WeekPlan } from "@/lib/schedule";
 import { shrinkImage } from "@/lib/image";
@@ -17,14 +19,16 @@ type View =
   | { state: "cardio" }
   | { state: "body" }
   | { state: "week" }
+  | { state: "habits" }
   | { state: "wins"; back: View }
-  | { state: "result"; plan: PlanResult; session: SessionKey };
+  | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean };
 
 const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
   { key: "push", label: "Push", hint: "Chest · Shoulders · Triceps" },
   { key: "pull", label: "Pull", hint: "Back · Rear delts · Biceps" },
   { key: "legs", label: "Legs", hint: "Quads · Hams · Calves · Abs" },
   { key: "pump", label: "Pump", hint: "Chest · Rear delts · Biceps" },
+  { key: "abs", label: "Abs", hint: "Leg raises · Crunches" },
 ];
 
 export default function Home() {
@@ -41,13 +45,20 @@ export default function Home() {
     setTodayIdx(new Date().getDay());
   }, []);
   const todayChoice = todayIdx === null ? null : week[todayIdx].choice;
+  // Today's habit progress for the home row; re-read whenever the home screen shows.
+  const [habitSummary, setHabitSummary] = useState<{ done: number; streak: number } | null>(null);
+  useEffect(() => {
+    if (view.state !== "upload") return;
+    const logs = loadHabitLogs();
+    setHabitSummary({ done: doneCount(logs[todayStr()]), streak: streak(logs, "all") });
+  }, [view.state]);
 
   function changeWeek(next: WeekPlan | null) {
     setWeek(next ?? DEFAULT_WEEK);
     saveWeek(next);
   }
 
-  function go(state: "cardio" | "body" | "week") {
+  function go(state: "cardio" | "body" | "week" | "habits") {
     setView({ state });
     window.scrollTo({ top: 0 });
   }
@@ -66,7 +77,7 @@ export default function Home() {
     setPreview(URL.createObjectURL(file));
   }
 
-  async function run(session: SessionKey) {
+  async function run(session: SessionKey, withAbs = false) {
     if (!photo) return;
     setError(null);
     setView({ state: "loading" });
@@ -77,8 +88,8 @@ export default function Home() {
       const idData = await idRes.json();
       if (!idRes.ok) throw new Error(idData.error || "Couldn't read the photo.");
 
-      const plan = await fetchPlan(session, idData.equipment);
-      setView({ state: "result", plan, session });
+      const plan = await fetchPlan(session, idData.equipment, withAbs);
+      setView({ state: "result", plan, session, withAbs });
       window.scrollTo({ top: 0 });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -87,9 +98,9 @@ export default function Home() {
   }
 
   // Rebuild the plan after the user adds/removes equipment chips. No new photo or Gemini call.
-  async function changeEquipment(session: SessionKey, equipment: string[]) {
-    const plan = await fetchPlan(session, equipment);
-    setView({ state: "result", plan, session });
+  async function changeEquipment(session: SessionKey, withAbs: boolean, equipment: string[]) {
+    const plan = await fetchPlan(session, equipment, withAbs);
+    setView({ state: "result", plan, session, withAbs });
   }
 
   // Back from a cardio-only day: keep the photo so a lifting session can still be picked.
@@ -143,6 +154,25 @@ export default function Home() {
             onCardio={() => go("cardio")}
             onEditWeek={() => go("week")}
           />
+
+          <button
+            type="button"
+            onClick={() => go("habits")}
+            className="mt-3 flex h-14 w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-left transition hover:border-lime-400/60 active:scale-[0.98]"
+          >
+            <span className="font-semibold">✅ Daily habits</span>
+            <span className="flex items-center gap-3 text-sm tabular-nums text-zinc-400">
+              {habitSummary && (
+                <>
+                  <span>
+                    {habitSummary.done}/{HABITS.length} today
+                  </span>
+                  {habitSummary.streak > 0 && <span className="font-semibold text-amber-300">🔥 {habitSummary.streak}</span>}
+                </>
+              )}
+              <span aria-hidden>›</span>
+            </span>
+          </button>
 
           <input
             ref={inputRef}
@@ -241,6 +271,8 @@ export default function Home() {
 
       {view.state === "week" && <WeekEditor week={week} onChange={changeWeek} onBack={backToSessions} />}
 
+      {view.state === "habits" && <HabitsView onBack={backToSessions} />}
+
       {view.state === "wins" && (
         <WinsView
           onBack={() => {
@@ -261,7 +293,7 @@ export default function Home() {
         <ResultView
           plan={view.plan}
           onReset={reset}
-          onEquipmentChange={(eq) => changeEquipment(view.session, eq)}
+          onEquipmentChange={(eq) => changeEquipment(view.session, view.withAbs, eq)}
           onShowWins={showWins}
         />
       )}
@@ -269,11 +301,11 @@ export default function Home() {
   );
 }
 
-async function fetchPlan(session: SessionKey, equipment: string[]): Promise<PlanResult> {
+async function fetchPlan(session: SessionKey, equipment: string[], withAbs = false): Promise<PlanResult> {
   const res = await fetch("/api/plan", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session, equipment }),
+    body: JSON.stringify({ session, equipment, withAbs }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Couldn't build the plan.");

@@ -1,5 +1,6 @@
 import { loadRecord, type Row, type Unit } from "@/components/SetLogger";
 import { loadLog as loadCardioLog } from "@/components/CardioCard";
+import { bestPerfectStreak, loadHabitLogs } from "@/lib/habits";
 
 // Weights are typed in whatever unit the toggle shows; everything stored here is in lb.
 const LB_PER_KG = 2.20462;
@@ -24,7 +25,7 @@ export type HistoryEntry = {
   cardioMin: number;
 };
 export type Totals = { volumeLb: number; workouts: number; prs: number; cardioMin: number };
-export type BadgeGroup = "lift" | "workouts" | "prs" | "cardio";
+export type BadgeGroup = "lift" | "workouts" | "prs" | "cardio" | "habits";
 export type Badge = { id: string; group: BadgeGroup; label: string; sub: string; earned: boolean };
 export type Summary = {
   date: string;
@@ -120,20 +121,24 @@ const BADGE_TIERS: Record<BadgeGroup, number[]> = {
   workouts: [1, 5, 10, 25, 50, 100],
   prs: [1, 5, 10, 25, 50, 100],
   cardio: [30, 60, 300, 600, 1500, 3000],
+  habits: [3, 7, 14, 30, 60, 100],
 };
 
-export function badgesFor(totals: Totals, unit: Unit): Badge[] {
+/** `habitBest` is the longest run of perfect habit days (all five done). */
+export function badgesFor(totals: Totals, unit: Unit, habitBest = bestPerfectStreak(loadHabitLogs())): Badge[] {
   const value: Record<BadgeGroup, number> = {
     lift: fromLb(totals.volumeLb, unit),
     workouts: totals.workouts,
     prs: totals.prs,
     cardio: totals.cardioMin,
+    habits: habitBest,
   };
   const sub: Record<BadgeGroup, (n: number) => string> = {
     lift: () => `${unit} lifted`,
     workouts: (n) => (n === 1 ? "Workout" : "Workouts"),
     prs: (n) => (n === 1 ? "First PR" : "PRs"),
     cardio: (n) => (n < 60 ? "Cardio min" : n === 60 ? "Cardio hr" : "Cardio hrs"),
+    habits: () => "Day streak",
   };
   // Cardio tiers past an hour read better in hours ("25 hrs", not "1.5K min").
   const label = (group: BadgeGroup, n: number) => (group === "cardio" && n >= 60 ? String(n / 60) : compact(n));

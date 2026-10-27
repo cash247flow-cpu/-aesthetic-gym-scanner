@@ -19,7 +19,7 @@ export function TodayCard({
   week: WeekPlan;
   hasPhoto: boolean;
   photoInputId: string;
-  onStart: (session: SessionKey) => void;
+  onStart: (session: SessionKey, withAbs: boolean) => void;
   onCardio: () => void;
   onEditWeek: () => void;
 }) {
@@ -31,6 +31,10 @@ export function TodayCard({
   const tomorrow = week[(day + 1) % 7];
   const rest = plan.choice === "rest";
   const sessionShort = CHOICES.find((c) => c.key === plan.choice)?.short;
+  // Legs already includes abs; other days only when "+Abs" is set.
+  const extraAbs = plan.choice !== "legs" && !!plan.abs;
+  const startLabel = (name: string) => (hasPhoto ? `Start ${name}` : "📷 Snap the gym to start");
+  const primary = "flex h-12 w-full items-center justify-center rounded-xl text-base font-semibold transition active:scale-[0.98]";
 
   return (
     <div className={`mt-5 rounded-2xl border p-4 ${rest ? "border-sky-400/40 bg-sky-400/5" : "border-lime-400/40 bg-lime-400/5"}`}>
@@ -39,7 +43,12 @@ export function TodayCard({
           <p className={`text-[11px] font-semibold uppercase tracking-wider ${rest ? "text-sky-300" : "text-lime-300"}`}>
             Today · {DAY_NAMES[day]}
           </p>
-          <p className="mt-0.5 text-2xl font-bold leading-tight">{rest ? "Rest day" : plan.name}</p>
+          <p className="mt-0.5 text-2xl font-bold leading-tight">
+            {rest ? "Rest day" : plan.name}
+            {(extraAbs || plan.choice === "legs") && (
+              <span className="ml-2 align-middle rounded-full bg-rose-400/15 px-2 py-0.5 text-xs font-semibold text-rose-200">+ Abs</span>
+            )}
+          </p>
           {!rest && sessionShort !== plan.name && <p className="text-sm text-zinc-400">{sessionShort} session</p>}
         </div>
         <button type="button" onClick={onEditWeek} className="shrink-0 text-sm text-zinc-400 hover:text-zinc-100">
@@ -47,36 +56,62 @@ export function TodayCard({
         </button>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-3 grid gap-2">
         {rest ? (
-          <button
-            type="button"
-            onClick={onCardio}
-            className="h-12 w-full rounded-xl bg-sky-400 text-base font-semibold text-zinc-950 transition hover:bg-sky-300 active:scale-[0.98]"
-          >
+          <button type="button" onClick={onCardio} className={`${primary} bg-sky-400 text-zinc-950 hover:bg-sky-300`}>
             Open Cardio Day
           </button>
-        ) : hasPhoto ? (
-          <button
-            type="button"
-            onClick={() => onStart(plan.choice as SessionKey)}
-            className="h-12 w-full rounded-xl bg-lime-400 text-base font-semibold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.98]"
-          >
-            Start {plan.name}
-          </button>
         ) : (
-          <label
-            htmlFor={photoInputId}
-            className="flex h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-lime-400 text-base font-semibold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.98]"
+          <StartButton
+            hasPhoto={hasPhoto}
+            photoInputId={photoInputId}
+            className={`${primary} bg-lime-400 text-zinc-950 hover:bg-lime-300`}
+            onClick={() => onStart(plan.choice as SessionKey, extraAbs)}
           >
-            📷 Snap the gym to start
-          </label>
+            {startLabel(plan.name)}
+          </StartButton>
+        )}
+        {rest && plan.abs && (
+          <StartButton
+            hasPhoto={hasPhoto}
+            photoInputId={photoInputId}
+            className={`${primary} border border-rose-400/60 text-rose-200 hover:bg-rose-400/10`}
+            onClick={() => onStart("abs", false)}
+          >
+            {hasPhoto ? "Start Abs" : "📷 Snap the gym for abs"}
+          </StartButton>
         )}
       </div>
 
       <p className="mt-2 text-xs text-zinc-500">
         Tomorrow: {tomorrow.choice === "rest" ? "Rest" : tomorrow.name}
+        {tomorrow.choice !== "legs" && tomorrow.abs ? " + Abs" : ""}
       </p>
     </div>
+  );
+}
+
+/** A photo is needed to plan around the gym's equipment, so without one this opens the camera. */
+function StartButton({
+  hasPhoto,
+  photoInputId,
+  className,
+  onClick,
+  children,
+}: {
+  hasPhoto: boolean;
+  photoInputId: string;
+  className: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return hasPhoto ? (
+    <button type="button" onClick={onClick} className={className}>
+      {children}
+    </button>
+  ) : (
+    <label htmlFor={photoInputId} className={`${className} cursor-pointer`}>
+      {children}
+    </label>
   );
 }

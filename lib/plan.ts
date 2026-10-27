@@ -22,11 +22,29 @@ const COMBOS = {
       ["pull", "Cable Hammer Curl"],
     ] as const,
   },
+  // Stand-alone ab session for rest days: the two ab exercises from Legs.
+  abs: {
+    label: "Abs",
+    note: "Up to 3× a week, with a day off between.",
+    picks: [
+      ["legs", "Leg Raise"],
+      ["legs", "Decline Crunches"],
+    ] as const,
+  },
 };
+
+// The ab exercises appended when a day has "+Abs" (Legs already ends with them).
+const AB_EXERCISES = SESSIONS.legs.exercises.filter((e) => e.abs);
 
 export type SessionKey = keyof typeof SESSIONS | keyof typeof COMBOS;
 
-export function getProgram(key: SessionKey): { label: string; note: string; exercises: Exercise[] } {
+export function getProgram(key: SessionKey, withAbs = false): { label: string; note: string; exercises: Exercise[] } {
+  const base = baseProgram(key);
+  if (!withAbs || base.exercises.some((e) => e.abs)) return base;
+  return { ...base, label: `${base.label} + Abs`, exercises: [...base.exercises, ...AB_EXERCISES] };
+}
+
+function baseProgram(key: SessionKey): { label: string; note: string; exercises: Exercise[] } {
   if (key in SESSIONS) return SESSIONS[key as keyof typeof SESSIONS];
   const combo = COMBOS[key as keyof typeof COMBOS];
   const exercises = combo.picks.map(([from, name]) => {
@@ -78,8 +96,8 @@ function resolveAesthetic(
   return { badge: "—", reason: "" };
 }
 
-export function buildPlan(session: SessionKey, rawEquipment: unknown): PlanResult {
-  const program = getProgram(session);
+export function buildPlan(session: SessionKey, rawEquipment: unknown, opts: { withAbs?: boolean } = {}): PlanResult {
+  const program = getProgram(session, opts.withAbs);
   const equipment = normalizeEquipment(rawEquipment);
   const have = new Set(equipment);
   const hasAll = (needed: string[]) => needed.every((e) => have.has(e));

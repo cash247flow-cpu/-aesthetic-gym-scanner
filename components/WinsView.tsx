@@ -10,6 +10,7 @@ const GROUP_TITLE: Record<BadgeGroup, string> = {
   workouts: "Workouts",
   prs: "Personal records",
   cardio: "Cardio",
+  habits: "Habit streaks (perfect days)",
 };
 
 const latestPr = (dates: Partial<Record<string, string>>) =>
