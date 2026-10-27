@@ -5,11 +5,14 @@ import type { PlanResult, SessionKey } from "@/lib/plan";
 import { ResultView } from "@/components/ResultView";
 import { CardioSession } from "@/components/CardioSession";
 import { WinsView } from "@/components/WinsView";
+import { BodyTracker } from "@/components/BodyTracker";
+import { shrinkImage } from "@/lib/image";
 
 type View =
   | { state: "upload" }
   | { state: "loading" }
   | { state: "cardio" }
+  | { state: "body" }
   | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey };
 
@@ -179,10 +182,31 @@ export default function Home() {
               </span>
             </button>
           </div>
+
+          <h2 className="mt-7 text-xs font-semibold uppercase tracking-wider text-zinc-500">Track your body</h2>
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setView({ state: "body" });
+                window.scrollTo({ top: 0 });
+              }}
+              className="flex h-16 w-full items-center justify-between rounded-xl border border-violet-400/30 bg-zinc-900 px-5 text-left transition hover:border-violet-400 active:scale-[0.98]"
+            >
+              <span className="text-xl font-bold text-violet-300">📈 Body tracker</span>
+              <span className="text-right text-xs text-zinc-400">
+                Weight goal · graph
+                <br />
+                <span className="text-zinc-500">Scale photo · scan reports</span>
+              </span>
+            </button>
+          </div>
         </section>
       )}
 
       {view.state === "cardio" && <CardioSession onBack={backToSessions} onShowWins={showWins} />}
+
+      {view.state === "body" && <BodyTracker onBack={backToSessions} />}
 
       {view.state === "wins" && (
         <WinsView
@@ -221,23 +245,6 @@ async function fetchPlan(session: SessionKey, equipment: string[]): Promise<Plan
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Couldn't build the plan.");
   return data;
-}
-
-/** Downscale phone photos (often 5–15 MB) to ~1600px JPEG before upload. */
-async function shrinkImage(file: File, maxSide = 1600): Promise<Blob> {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
-    return blob ?? file;
-  } catch {
-    return file; // e.g. HEIC on a browser that can't decode it — let the server try.
-  }
 }
 
 function CameraIcon() {

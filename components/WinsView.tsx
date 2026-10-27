@@ -86,7 +86,7 @@ export function WinsView({ onBack }: { onBack: () => void }) {
         {history.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-500">No finished workouts yet.</p>
         ) : (
-          <ul className="mt-2 grid gap-2">
+          <ul className="mt-2 grid grid-cols-1 gap-2">
             {history.slice(0, 30).map((h) => (
               <li
                 key={`${h.date}-${h.session}`}
