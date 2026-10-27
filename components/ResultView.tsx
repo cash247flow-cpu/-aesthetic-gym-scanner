@@ -7,6 +7,7 @@ import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/
 import { SetLogger, loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
 import {
   CardioCard,
+  DEFAULT_CARDIO,
   MACHINE_LABEL,
   loadCardioPlan,
   saveCardioPlan,
@@ -14,6 +15,7 @@ import {
   type CardioPosition,
 } from "@/components/CardioCard";
 import { Celebrate } from "@/components/Celebrate";
+import { PreWorkoutReminder } from "@/components/PreWorkoutReminder";
 import { finishWorkout, type Summary } from "@/lib/wins";
 
 export function formatRest(restSeconds: string): string {
@@ -158,7 +160,7 @@ export function ResultView({
 
   function addCardio(position: CardioPosition) {
     setChoosingCardio(false);
-    updateCardio({ position, machine: cardio?.machine ?? "treadmill", minutes: cardio?.minutes ?? 20 });
+    updateCardio({ ...DEFAULT_CARDIO, position });
   }
 
   function changeUnit(u: Unit) {
@@ -196,6 +198,8 @@ export function ResultView({
             : plan.note}
         </p>
       </header>
+
+      <PreWorkoutReminder />
 
       <EquipmentEditor equipment={plan.equipment} onChange={onEquipmentChange} />
 

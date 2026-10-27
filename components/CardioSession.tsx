@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { CardioCard, type CardioPlan } from "@/components/CardioCard";
+import { CardioCard, DEFAULT_CARDIO, type CardioPlan } from "@/components/CardioCard";
 import { loadUnit } from "@/components/SetLogger";
 import { Celebrate } from "@/components/Celebrate";
 import { finishWorkout, type Summary } from "@/lib/wins";
 
 // Cardio-only days keep their own machine/duration, separate from cardio added to a lifting day.
-const SOLO_KEY = "ags:cardio:solo";
-const DEFAULT_PLAN: CardioPlan = { position: "after", machine: "treadmill", minutes: 20 };
+// v2: starts from the plan's StairMaster default rather than older saved settings.
+const SOLO_KEY = "ags:cardio:solo:v2";
+const DEFAULT_PLAN: CardioPlan = DEFAULT_CARDIO;
 
 function loadSoloPlan(): CardioPlan {
   try {

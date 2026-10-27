@@ -6,30 +6,38 @@ import type { Unit } from "@/components/SetLogger";
 
 export type CardioMachine = "treadmill" | "stairmaster";
 export type CardioPosition = "before" | "after";
-export type CardioPlan = { position: CardioPosition; machine: CardioMachine; minutes: number };
+export type CardioPlan = { position: CardioPosition; machine: CardioMachine; minutes: number; level?: string };
+
+// The training plan's cardio: 40 minutes on the StairMaster at level 7, after lifting.
+export const DEFAULT_CARDIO: CardioPlan = { position: "after", machine: "stairmaster", minutes: 40, level: "7" };
+// v2: earlier builds stored "no cardio" as a missing key; now it's on by default.
+const PLAN_KEY = "ags:cardio:v2";
+const OFF = "off";
 
 export type CardioLog = { date: string; minutes: number; speed: string; incline: string; level: string };
 
 export const MACHINE_LABEL: Record<CardioMachine, string> = { treadmill: "Treadmill", stairmaster: "StairMaster" };
-const PRESETS = [10, 15, 20, 30];
+const PRESETS = [10, 15, 20, 30, 40];
 const MIN_MINUTES = 1;
 const MAX_MINUTES = 90;
 const today = () => new Date().toLocaleDateString("en-CA");
 
 // Same storage rules as the set log: never let localStorage errors break the page.
+/** Cardio added to lifting days: the plan's default until changed, null once removed. */
 export function loadCardioPlan(): CardioPlan | null {
   try {
-    const raw = localStorage.getItem("ags:cardio");
-    return raw ? (JSON.parse(raw) as CardioPlan) : null;
+    const raw = localStorage.getItem(PLAN_KEY);
+    if (raw === null) return DEFAULT_CARDIO;
+    const parsed = JSON.parse(raw) as CardioPlan | typeof OFF;
+    return parsed === OFF ? null : { ...DEFAULT_CARDIO, ...parsed };
   } catch {
-    return null;
+    return DEFAULT_CARDIO;
   }
 }
 
 export function saveCardioPlan(plan: CardioPlan | null) {
   try {
-    if (plan) localStorage.setItem("ags:cardio", JSON.stringify(plan));
-    else localStorage.removeItem("ags:cardio");
+    localStorage.setItem(PLAN_KEY, JSON.stringify(plan ?? OFF));
   } catch {
     /* ignore */
   }
@@ -81,7 +89,10 @@ export function CardioCard({
   });
   const [speed, setSpeed] = useState(todayLog?.speed ?? "");
   const [incline, setIncline] = useState(todayLog?.incline ?? "");
-  const [level, setLevel] = useState(todayLog?.level ?? "");
+  // StairMaster level starts at the plan's target (level 7) until something is logged.
+  const targetLevelRef = useRef(plan.level ?? "");
+  targetLevelRef.current = plan.level ?? "";
+  const [level, setLevel] = useState(todayLog?.level ?? targetLevelRef.current);
 
   // Timer: timestamps rather than tick counting, like the rest timer.
   const [endAt, setEndAt] = useState<number | null>(null);
@@ -115,7 +126,7 @@ export function CardioCard({
     setTodayLog(t);
     setSpeed(t?.speed ?? "");
     setIncline(t?.incline ?? "");
-    setLevel(t?.level ?? "");
+    setLevel(t?.level ?? targetLevelRef.current);
     setFinished(t !== null);
     firedRef.current = false;
   }, [machine]);
@@ -206,7 +217,7 @@ export function CardioCard({
           <h3 className="text-lg font-semibold leading-tight">{MACHINE_LABEL[machine]}</h3>
         </div>
         <span className="shrink-0 rounded-full bg-sky-400/15 px-2.5 py-1 text-xs font-semibold text-sky-300">
-          {minutes} min
+          {minutes} min{machine === "stairmaster" && plan.level ? ` · L${plan.level}` : ""}
         </span>
       </div>
 
@@ -230,7 +241,7 @@ export function CardioCard({
               type="button"
               onClick={() => setMinutes(m)}
               aria-pressed={minutes === m}
-              className={`h-8 rounded-full px-3 text-sm font-semibold tabular-nums transition active:scale-95 ${
+              className={`h-8 rounded-full px-2.5 text-sm font-semibold tabular-nums transition active:scale-95 ${
                 minutes === m ? "bg-sky-400 text-zinc-950" : "bg-zinc-800 text-zinc-300 hover:text-zinc-100"
               }`}
             >
@@ -307,7 +318,7 @@ export function CardioCard({
             <Field label="Incline (%)" value={incline} onChange={(v) => editField("incline", v)} placeholder={last?.incline || "12"} />
           </>
         ) : (
-          <Field label="Level" value={level} onChange={(v) => editField("level", v)} placeholder={last?.level || "8"} className="col-span-2" />
+          <Field label="Level" value={level} onChange={(v) => editField("level", v)} placeholder={last?.level || plan.level || "8"} className="col-span-2" />
         )}
       </div>
       {lastText && (
