@@ -31,7 +31,9 @@ export function ExerciseGuide({
   onClose: () => void;
 }) {
   const g = GUIDE[exercise];
-  const video = VIDEOS[exercise];
+  const videos = VIDEOS[exercise] ?? [];
+  const [videoIdx, setVideoIdx] = useState(0);
+  const video = videos[videoIdx];
   const [frame, setFrame] = useState(0);
   const [playing, setPlaying] = useState(!video);
   const [showVideo, setShowVideo] = useState(false);
@@ -124,6 +126,25 @@ export function ExerciseGuide({
                 </span>
               </button>
             )}
+          </div>
+        )}
+        {videos.length > 1 && (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {videos.map((v, i) => (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => setVideoIdx(i)}
+                aria-pressed={videoIdx === i}
+                className={`h-9 rounded-lg text-sm font-semibold transition ${
+                  videoIdx === i
+                    ? "bg-zinc-100 text-zinc-900"
+                    : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                }`}
+              >
+                Video {i + 1}
+              </button>
+            ))}
           </div>
         )}
         {video && (
