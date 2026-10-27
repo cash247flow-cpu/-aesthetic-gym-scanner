@@ -30,3 +30,11 @@ Find your laptop's LAN IP (Windows: `ipconfig` → IPv4 Address; macOS: `ipconfi
 | `app/api/identify/route.ts` | Image → Gemini → `{ equipment: string[] }` (with model fallback + timeout) |
 | `app/api/plan/route.ts` | `{ session, equipment }` → plan JSON |
 | `app/page.tsx`, `components/ResultView.tsx` | Upload → loading → result UI |
+
+## Exercise guide data
+
+The "How to" photos and step-by-step instructions come from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain, Unlicense). Each app exercise is matched to a database entry by hand in `scripts/build-exercise-guide.mjs`; exercises without a faithful equivalent show no guide. To refresh the data and photos, run:
+
+```bash
+node scripts/build-exercise-guide.mjs
+```

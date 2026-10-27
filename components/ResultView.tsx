@@ -16,6 +16,7 @@ import {
 } from "@/components/CardioCard";
 import { Celebrate } from "@/components/Celebrate";
 import { PreWorkoutReminder } from "@/components/PreWorkoutReminder";
+import { ExerciseGuide, hasGuide } from "@/components/ExerciseGuide";
 import { finishWorkout, type Summary } from "@/lib/wins";
 
 export function formatRest(restSeconds: string): string {
@@ -485,6 +486,8 @@ function ExerciseCard({
 }) {
   const name = ex.name;
   const reportProgress = useCallback((done: number, total: number) => onProgress(name, done, total), [onProgress, name]);
+  const [showGuide, setShowGuide] = useState(false);
+  const closeGuide = useCallback(() => setShowGuide(false), []);
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
@@ -512,7 +515,18 @@ function ExerciseCard({
           <TimerIcon />
           {formatRest(ex.restSeconds)}
         </button>
+        {hasGuide(ex.name) && (
+          <button
+            type="button"
+            onClick={() => setShowGuide(true)}
+            aria-label={`How to do ${ex.name}`}
+            className="rounded-full border border-zinc-700 px-2.5 py-1 text-sm text-zinc-300 transition hover:border-lime-400 hover:text-lime-300 active:scale-95"
+          >
+            ▶ How to
+          </button>
+        )}
       </div>
+      {showGuide && <ExerciseGuide exercise={ex.name} onClose={closeGuide} />}
 
       <p className="mt-3 text-sm text-zinc-200">
         <span className="font-semibold text-zinc-400">Cue · </span>
