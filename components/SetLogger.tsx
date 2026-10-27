@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 
 export type Unit = "lb" | "kg";
-type Row = { weight: string; reps: string; done: boolean };
+export type Row = { weight: string; reps: string; done: boolean };
 // One record per exercise: today's sets plus the last earlier session's sets ("Previous").
-type LogRecord = { date: string; sets: Row[]; prevSets: Row[] };
+export type LogRecord = { date: string; sets: Row[]; prevSets: Row[] };
 
 const MAX_SETS = 10;
 const emptyRow = (): Row => ({ weight: "", reps: "", done: false });
@@ -14,7 +14,7 @@ const today = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in loc
 const storageKey = (exercise: string) => `ags:log:${exercise}`;
 
 // localStorage can throw (private mode, storage full) — logging should never break the page.
-function loadRecord(exercise: string): LogRecord | null {
+export function loadRecord(exercise: string): LogRecord | null {
   try {
     const raw = localStorage.getItem(storageKey(exercise));
     return raw ? (JSON.parse(raw) as LogRecord) : null;

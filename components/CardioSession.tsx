@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { CardioCard, type CardioPlan } from "@/components/CardioCard";
 import { loadUnit } from "@/components/SetLogger";
+import { Celebrate } from "@/components/Celebrate";
+import { finishWorkout, type Summary } from "@/lib/wins";
 
 // Cardio-only days keep their own machine/duration, separate from cardio added to a lifting day.
 const SOLO_KEY = "ags:cardio:solo";
@@ -25,10 +27,15 @@ function saveSoloPlan(plan: CardioPlan) {
   }
 }
 
-export function CardioSession({ onBack }: { onBack: () => void }) {
+export function CardioSession({ onBack, onShowWins }: { onBack: () => void; onShowWins: () => void }) {
   const [plan, setPlan] = useState<CardioPlan>(loadSoloPlan);
   const [unit] = useState(loadUnit);
   const [done, setDone] = useState(false);
+  const [summary, setSummary] = useState<Summary | null>(null);
+
+  function celebrate() {
+    setSummary(finishWorkout({ session: "Cardio Day", label: "Cardio Day", exercises: [], unit, includeCardio: true }));
+  }
 
   function change(next: CardioPlan) {
     setPlan(next);
@@ -51,18 +58,33 @@ export function CardioSession({ onBack }: { onBack: () => void }) {
           unit={unit}
           onChange={change}
           onRemove={onBack}
-          onDone={() => setDone(true)}
+          onDone={() => {
+            setDone(true);
+            setTimeout(celebrate, 900);
+          }}
           onFinishedChange={setDone}
         />
       </div>
 
+      {done && (
+        <button
+          type="button"
+          onClick={celebrate}
+          className="mt-6 h-12 w-full rounded-xl border border-sky-400/60 text-base font-semibold text-sky-300 transition hover:bg-sky-400/10 active:scale-[0.98]"
+        >
+          🏆 See today&apos;s wins
+        </button>
+      )}
+
       <button
         type="button"
         onClick={onBack}
-        className="mt-6 h-12 w-full rounded-xl bg-zinc-800 text-base font-semibold text-zinc-100 transition hover:bg-zinc-700 active:scale-[0.98]"
+        className="mt-3 h-12 w-full rounded-xl bg-zinc-800 text-base font-semibold text-zinc-100 transition hover:bg-zinc-700 active:scale-[0.98]"
       >
         Back to sessions
       </button>
+
+      {summary && <Celebrate summary={summary} unit={unit} onClose={() => setSummary(null)} onSeeAll={onShowWins} />}
     </section>
   );
 }

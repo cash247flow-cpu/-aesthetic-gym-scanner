@@ -8,7 +8,7 @@ export type CardioMachine = "treadmill" | "stairmaster";
 export type CardioPosition = "before" | "after";
 export type CardioPlan = { position: CardioPosition; machine: CardioMachine; minutes: number };
 
-type CardioLog = { date: string; minutes: number; speed: string; incline: string; level: string };
+export type CardioLog = { date: string; minutes: number; speed: string; incline: string; level: string };
 
 export const MACHINE_LABEL: Record<CardioMachine, string> = { treadmill: "Treadmill", stairmaster: "StairMaster" };
 const PRESETS = [10, 15, 20, 30];
@@ -35,7 +35,7 @@ export function saveCardioPlan(plan: CardioPlan | null) {
   }
 }
 
-function loadLog(machine: CardioMachine): CardioLog | null {
+export function loadLog(machine: CardioMachine): CardioLog | null {
   try {
     const raw = localStorage.getItem(`ags:cardio:log:${machine}`);
     return raw ? (JSON.parse(raw) as CardioLog) : null;

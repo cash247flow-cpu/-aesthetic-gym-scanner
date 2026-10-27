@@ -13,6 +13,8 @@ import {
   type CardioPlan,
   type CardioPosition,
 } from "@/components/CardioCard";
+import { Celebrate } from "@/components/Celebrate";
+import { finishWorkout, type Summary } from "@/lib/wins";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -36,10 +38,12 @@ export function ResultView({
   plan,
   onReset,
   onEquipmentChange,
+  onShowWins,
 }: {
   plan: PlanResult;
   onReset: () => void;
   onEquipmentChange: (equipment: string[]) => Promise<void>;
+  onShowWins: () => void;
 }) {
   const isLegs = plan.counts.abs > 0 || plan.sessionLabel === "Legs & Abs";
   // Abs marker goes before the first abs card, but only if a non-abs card precedes it.
@@ -69,6 +73,21 @@ export function ResultView({
   };
   const allComplete = count > 0 && slides.every((sl) => isComplete(sl.key));
   const current = slides[Math.min(active, count - 1)];
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const anySetDone = Object.values(progress).some((p) => p.done > 0);
+
+  function finish() {
+    setRest(null);
+    setSummary(
+      finishWorkout({
+        session: plan.sessionLabel,
+        label: plan.sessionLabel,
+        exercises: plan.exercises.map((e) => e.name),
+        unit,
+        includeCardio: cardio !== null,
+      }),
+    );
+  }
 
   // One exercise per page: the track scrolls horizontally and snaps to each card.
   const goTo = useCallback((i: number) => {
@@ -94,11 +113,15 @@ export function ResultView({
   }, []);
 
   // Finished a page: move on to the next one that still has work left (wrapping around).
+  // Nothing left means the whole workout is done, so celebrate.
   function advanceFrom(i: number) {
     const next = Array.from({ length: count - 1 }, (_, k) => (i + 1 + k) % count).find(
       (j) => !isComplete(slides[j].key),
     );
-    if (next === undefined) return;
+    if (next === undefined) {
+      setTimeout(finish, 900);
+      return;
+    }
     setTimeout(() => {
       goTo(next);
       // If you were down at the set rows, bring the new card's title back into view.
@@ -310,6 +333,15 @@ export function ResultView({
 
       <button
         type="button"
+        onClick={finish}
+        disabled={!anySetDone}
+        className="mt-4 h-12 w-full rounded-xl border border-lime-400/60 text-base font-semibold text-lime-300 transition hover:bg-lime-400/10 active:scale-[0.98] disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
+      >
+        🏁 Finish workout
+      </button>
+
+      <button
+        type="button"
         onClick={onReset}
         className="mt-4 h-12 w-full rounded-xl bg-lime-400 text-base font-semibold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.98]"
       >
@@ -317,6 +349,9 @@ export function ResultView({
       </button>
 
       {rest && <RestTimer key={rest.id} request={rest} onClose={() => setRest(null)} />}
+      {summary && (
+        <Celebrate summary={summary} unit={unit} onClose={() => setSummary(null)} onSeeAll={onShowWins} />
+      )}
     </section>
   );
 }

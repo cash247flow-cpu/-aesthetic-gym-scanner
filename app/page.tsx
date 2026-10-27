@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type { PlanResult, SessionKey } from "@/lib/plan";
 import { ResultView } from "@/components/ResultView";
 import { CardioSession } from "@/components/CardioSession";
+import { WinsView } from "@/components/WinsView";
 
 type View =
   | { state: "upload" }
   | { state: "loading" }
   | { state: "cardio" }
+  | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey };
 
 const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
@@ -70,6 +72,11 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }
 
+  function showWins() {
+    setView((v) => ({ state: "wins", back: v.state === "wins" ? v.back : v }));
+    window.scrollTo({ top: 0 });
+  }
+
   function reset() {
     setPhoto(null);
     setPreview(null);
@@ -81,9 +88,18 @@ export default function Home() {
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-md px-4 pb-10 pt-6 sm:pt-10">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lime-400">
-        Aesthetic Gym Scanner
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lime-400">Aesthetic Gym Scanner</p>
+        {view.state === "upload" && (
+          <button
+            type="button"
+            onClick={showWins}
+            className="rounded-full border border-amber-400/40 px-3 py-1 text-xs font-semibold text-amber-300 transition hover:bg-amber-400/10 active:scale-95"
+          >
+            🏆 Your wins
+          </button>
+        )}
+      </div>
 
       {view.state === "upload" && (
         <section className="mt-2">
@@ -166,7 +182,16 @@ export default function Home() {
         </section>
       )}
 
-      {view.state === "cardio" && <CardioSession onBack={backToSessions} />}
+      {view.state === "cardio" && <CardioSession onBack={backToSessions} onShowWins={showWins} />}
+
+      {view.state === "wins" && (
+        <WinsView
+          onBack={() => {
+            setView(view.back);
+            window.scrollTo({ top: 0 });
+          }}
+        />
+      )}
 
       {view.state === "loading" && (
         <section className="flex min-h-[60dvh] flex-col items-center justify-center gap-4" aria-live="polite">
@@ -180,6 +205,7 @@ export default function Home() {
           plan={view.plan}
           onReset={reset}
           onEquipmentChange={(eq) => changeEquipment(view.session, eq)}
+          onShowWins={showWins}
         />
       )}
     </main>
