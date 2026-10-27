@@ -47,9 +47,10 @@ export const LEG_AESTHETIC: Record<string, { label: string; reason: string }> = 
   "Seated Leg Curl":     { label: "Hams",   reason: "Seated curl stretches the hamstring at the hip — best growth position." },
   "Standing Calf Raise": { label: "Calves", reason: "Full-stretch calves complete the lower-leg look in shorts." },
   "Hip Abduction":       { label: "Glutes", reason: "Upper glute/hip shape — the 'shelf' look from behind." },
-  "Leg Raise":           { label: "Abs · Lower", reason: "Lower-ab development that leanness alone can't create." },
-  "Decline Crunch":      { label: "Abs · Upper", reason: "Loaded spinal flexion builds blocky, visible abs." },
-  "Lat Pulldown Crunch": { label: "Abs · Flexion", reason: "Short-range spinal flexion, minimal hip flexion — developed abs make the waist look smaller, not blockier." },
+  // Abs: picks from an EMG-tested ranking — loadable, deep stretch, hip flexors kept out of it.
+  "Face-Away Crunch":    { label: "Abs · Upper", reason: "Facing away puts tension on the abs in the stretch; bracing your hips keeps them from doing the work." },
+  "Reverse Crunch":      { label: "Abs · Lower", reason: "Curling the pelvis hits the lower abs without the hip flexors taking over; the mat adds the stretch." },
+  "Garhammer Raise":     { label: "Abs · Lower", reason: "Best lower-ab emphasis of any exercise tested, with a deep stretch — add ankle weights to keep progressing." },
 };
 
 // ─── Sessions ──────────────────────────────────────────────────────────
@@ -171,24 +172,21 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         substitutes: [
           { name: "Cable Hip Abduction", cue: "Lean slightly away; sweep out and hold 1–2s at the top.", equipmentNeeded: ["cable machine","ankle strap"], aestheticKey: "Hip Abduction", aestheticMap: "legs" },
         ] },
-      { name: "Leg Raise", sets: "3", reps: "failure", restSeconds: "90–120",
-        cue: "Curl the pelvis, don't swing. Stop when you can't do a clean rep.",
-        equipmentNeeded: ["captains chair"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true,
+      { name: "Face-Away Lat Pulldown Crunch", sets: "3", reps: "failure", restSeconds: "90–120",
+        cue: "Sit facing away from the stack, seat pad raised to brace your lower back, handle behind your head. Let your spine fully extend, then curl ribs to pelvis.",
+        equipmentNeeded: ["lat pulldown"], aestheticKey: "Face-Away Crunch", aestheticMap: "legs", abs: true,
         substitutes: [
-          { name: "Hanging Leg Raise", cue: "Dead hang, curl the pelvis up; don't swing.", equipmentNeeded: ["pull-up bar"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true },
-          { name: "Lying Leg Raise", cue: "Lower back pressed down; curl the pelvis up at the top.", equipmentNeeded: ["bench"], aestheticKey: "Leg Raise", aestheticMap: "legs", abs: true },
+          { name: "Face-Away Cable Crunch (kneeling or standing)", cue: "Back to the cable, hips against the pole so they can't swing. Open up fully at the top, then round into a C on the way down.", equipmentNeeded: ["cable machine","rope attachment"], aestheticKey: "Face-Away Crunch", aestheticMap: "legs", abs: true },
+          { name: "Ab-Mat Crunch", cue: "Ab mat or rolled towel under your lower back so your spine can extend, then curl up. Hands still — don't swing the arms or pull the neck.", equipmentNeeded: [], aestheticKey: "Face-Away Crunch", aestheticMap: "legs", abs: true },
         ] },
-      { name: "Decline Crunches", sets: "3", reps: "failure", restSeconds: "90–120",
-        cue: "Pure spinal flexion — round the back, slow eccentric.",
-        equipmentNeeded: ["decline bench"], aestheticKey: "Decline Crunch", aestheticMap: "legs", abs: true,
+      { name: "Reverse Crunch", sets: "3", reps: "failure", restSeconds: "90–120",
+        cue: "Ab mat or rolled towel under your lower back, knees at 90°. Push your tailbone up and curl your pelvis into a C — slow on the way down. Straighten your legs more to make it harder.",
+        equipmentNeeded: [], aestheticKey: "Reverse Crunch", aestheticMap: "legs", abs: true },
+      { name: "Garhammer Raise", sets: "3", reps: "failure", restSeconds: "90–120",
+        cue: "Hips off the end of a bench, knees tucked. Lower your legs as far as you can without touching the floor, then raise by curling your pelvis — no swinging.",
+        equipmentNeeded: ["bench"], aestheticKey: "Garhammer Raise", aestheticMap: "legs", abs: true,
         substitutes: [
-          { name: "Cable Rope Crunch", cue: "Kneel, round the spine to bring elbows to knees; slow eccentric.", equipmentNeeded: ["cable machine","rope attachment"], aestheticKey: "Decline Crunch", aestheticMap: "legs", abs: true },
-        ] },
-      { name: "Lat Pulldown Crunch", sets: "3", reps: "failure", restSeconds: "90–120",
-        cue: "Kneel facing the pulldown, handle by your head. Curl your ribs toward your pelvis — small range, hips stay still.",
-        equipmentNeeded: ["lat pulldown"], aestheticKey: "Lat Pulldown Crunch", aestheticMap: "legs", abs: true,
-        substitutes: [
-          { name: "Bottom-Range Crunch", cue: "On the floor, crunch only through the bottom of the range — round the spine, don't sit up; slow down.", equipmentNeeded: [], aestheticKey: "Lat Pulldown Crunch", aestheticMap: "legs", abs: true },
+          { name: "Captain's Chair Leg Raise", cue: "Forearms on the pads, back against the pad. Let your abs stretch at the bottom, then curl your pelvis up — your legs come along for the ride.", equipmentNeeded: ["captains chair"], aestheticKey: "Garhammer Raise", aestheticMap: "legs", abs: true },
         ] },
     ],
   },
