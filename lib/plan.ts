@@ -3,10 +3,39 @@ import {
   LEG_AESTHETIC,
   SESSIONS,
   type AestheticMap,
+  type Exercise,
 } from "@/lib/programs";
 import { normalizeEquipment } from "@/lib/equipment";
 
-export type SessionKey = keyof typeof SESSIONS;
+// Sessions assembled from existing program exercises — nothing new is invented.
+const COMBOS = {
+  pump: {
+    label: "Chest + Rear Delts + Biceps",
+    note: "Compare with last week's pump day.",
+    picks: [
+      ["push", "Incline Dumbbell Press"],
+      ["push", "High-to-Low Cable Fly"],
+      ["push", "Machine Chest Press"],
+      ["pull", "Reverse Pec Deck"],
+      ["pull", "Spider Curl"],
+      ["pull", "Incline Dumbbell Curl"],
+      ["pull", "Cable Hammer Curl"],
+    ] as const,
+  },
+};
+
+export type SessionKey = keyof typeof SESSIONS | keyof typeof COMBOS;
+
+export function getProgram(key: SessionKey): { label: string; note: string; exercises: Exercise[] } {
+  if (key in SESSIONS) return SESSIONS[key as keyof typeof SESSIONS];
+  const combo = COMBOS[key as keyof typeof COMBOS];
+  const exercises = combo.picks.map(([from, name]) => {
+    const ex = SESSIONS[from].exercises.find((e) => e.name === name);
+    if (!ex) throw new Error(`Combo ${key} references missing exercise ${from}/${name}`);
+    return ex;
+  });
+  return { label: combo.label, note: combo.note, exercises };
+}
 
 export type PlannedExercise = {
   name: string;
@@ -30,7 +59,7 @@ export type PlanResult = {
 };
 
 export function isSessionKey(value: unknown): value is SessionKey {
-  return typeof value === "string" && value in SESSIONS;
+  return typeof value === "string" && (value in SESSIONS || value in COMBOS);
 }
 
 function resolveAesthetic(
@@ -50,7 +79,7 @@ function resolveAesthetic(
 }
 
 export function buildPlan(session: SessionKey, rawEquipment: unknown): PlanResult {
-  const program = SESSIONS[session];
+  const program = getProgram(session);
   const equipment = normalizeEquipment(rawEquipment);
   const have = new Set(equipment);
   const hasAll = (needed: string[]) => needed.every((e) => have.has(e));

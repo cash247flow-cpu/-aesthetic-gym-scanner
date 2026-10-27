@@ -6,6 +6,9 @@ import { ResultView } from "@/components/ResultView";
 import { CardioSession } from "@/components/CardioSession";
 import { WinsView } from "@/components/WinsView";
 import { BodyTracker } from "@/components/BodyTracker";
+import { TodayCard } from "@/components/TodayCard";
+import { WeekEditor } from "@/components/WeekEditor";
+import { DEFAULT_WEEK, loadWeek, saveWeek, type WeekPlan } from "@/lib/schedule";
 import { shrinkImage } from "@/lib/image";
 
 type View =
@@ -13,6 +16,7 @@ type View =
   | { state: "loading" }
   | { state: "cardio" }
   | { state: "body" }
+  | { state: "week" }
   | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey };
 
@@ -20,6 +24,7 @@ const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
   { key: "push", label: "Push", hint: "Chest · Shoulders · Triceps" },
   { key: "pull", label: "Pull", hint: "Back · Rear delts · Biceps" },
   { key: "legs", label: "Legs", hint: "Quads · Hams · Calves · Abs" },
+  { key: "pump", label: "Pump", hint: "Chest · Rear delts · Biceps" },
 ];
 
 export default function Home() {
@@ -28,6 +33,24 @@ export default function Home() {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The saved week and today's date only exist in the browser; the page is prerendered.
+  const [week, setWeek] = useState<WeekPlan>(DEFAULT_WEEK);
+  const [todayIdx, setTodayIdx] = useState<number | null>(null);
+  useEffect(() => {
+    setWeek(loadWeek());
+    setTodayIdx(new Date().getDay());
+  }, []);
+  const todayChoice = todayIdx === null ? null : week[todayIdx].choice;
+
+  function changeWeek(next: WeekPlan | null) {
+    setWeek(next ?? DEFAULT_WEEK);
+    saveWeek(next);
+  }
+
+  function go(state: "cardio" | "body" | "week") {
+    setView({ state });
+    window.scrollTo({ top: 0 });
+  }
 
   useEffect(() => {
     return () => {
@@ -112,6 +135,15 @@ export default function Home() {
             equipment you have.
           </p>
 
+          <TodayCard
+            week={week}
+            hasPhoto={!!photo}
+            photoInputId="photo"
+            onStart={run}
+            onCardio={() => go("cardio")}
+            onEditWeek={() => go("week")}
+          />
+
           <input
             ref={inputRef}
             id="photo"
@@ -151,7 +183,7 @@ export default function Home() {
           )}
 
           <h2 className="mt-7 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Choose today&apos;s session
+            Or pick any session
           </h2>
           <div className="mt-2 grid gap-3">
             {SESSION_BUTTONS.map((s) => (
@@ -162,16 +194,18 @@ export default function Home() {
                 onClick={() => run(s.key)}
                 className="flex h-16 w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-5 text-left transition enabled:hover:border-lime-400 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <span className="text-xl font-bold">{s.label}</span>
+                <span className="flex items-center gap-2 text-xl font-bold">
+                  {s.label}
+                  {todayChoice === s.key && (
+                    <span className="rounded-full bg-lime-400/15 px-2 py-0.5 text-[11px] font-semibold text-lime-300">Today</span>
+                  )}
+                </span>
                 <span className="text-xs text-zinc-400">{s.hint}</span>
               </button>
             ))}
             <button
               type="button"
-              onClick={() => {
-                setView({ state: "cardio" });
-                window.scrollTo({ top: 0 });
-              }}
+              onClick={() => go("cardio")}
               className="flex h-16 w-full items-center justify-between rounded-xl border border-sky-400/30 bg-zinc-900 px-5 text-left transition hover:border-sky-400 active:scale-[0.98]"
             >
               <span className="text-xl font-bold text-sky-300">Cardio</span>
@@ -187,10 +221,7 @@ export default function Home() {
           <div className="mt-2">
             <button
               type="button"
-              onClick={() => {
-                setView({ state: "body" });
-                window.scrollTo({ top: 0 });
-              }}
+              onClick={() => go("body")}
               className="flex h-16 w-full items-center justify-between rounded-xl border border-violet-400/30 bg-zinc-900 px-5 text-left transition hover:border-violet-400 active:scale-[0.98]"
             >
               <span className="text-xl font-bold text-violet-300">📈 Body tracker</span>
@@ -207,6 +238,8 @@ export default function Home() {
       {view.state === "cardio" && <CardioSession onBack={backToSessions} onShowWins={showWins} />}
 
       {view.state === "body" && <BodyTracker onBack={backToSessions} />}
+
+      {view.state === "week" && <WeekEditor week={week} onChange={changeWeek} onBack={backToSessions} />}
 
       {view.state === "wins" && (
         <WinsView
