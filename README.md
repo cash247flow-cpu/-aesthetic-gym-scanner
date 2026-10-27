@@ -1,4 +1,6 @@
-# Aesthetic Gym Scanner
+# AESTHETIQ
+
+*Build Your Ideal Physique.*
 
 Snap one photo of your gym, pick **Push / Pull / Legs**, and get that session of the Natty Blueprint program using only the equipment Gemini can see — with sets × reps, rest, a form cue, and an aesthetic badge per exercise. Missing equipment is swapped for a labeled substitute or the slot is dropped (never invented).
 

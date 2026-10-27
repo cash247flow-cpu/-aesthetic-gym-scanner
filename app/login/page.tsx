@@ -31,13 +31,13 @@ export default function Login() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-end px-4 pb-12 pt-10">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/icons/icon-512.png"
+        src="/icons/icon-512.png?v=2"
         alt=""
-        className="mx-auto mb-auto mt-[12vh] h-28 w-28 rounded-[2rem] shadow-[0_0_60px_-10px_rgba(198,244,50,0.6)]"
+        className="mx-auto mb-auto mt-[10vh] h-40 w-40 rounded-[2.5rem]"
       />
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lime-400">Aesthetic Gym Scanner</p>
+      <p className="text-sm font-bold uppercase tracking-[0.35em] text-lime-400">AESTHETIQ</p>
       <h1 className={`mt-2 ${TITLE} text-[2.6rem]`}>
-        Start Your <Accent>Aesthetic</Accent> <Accent>Journey</Accent>
+        Build Your Ideal <Accent>Physique</Accent>
       </h1>
       <p className="mt-2 text-sm text-zinc-400">Enter your app passcode. You&apos;ll stay signed in on this phone.</p>
 

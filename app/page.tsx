@@ -21,7 +21,7 @@ import { TabBar, type Tab } from "@/components/TabBar";
 import { MoreHub, ProgressHub } from "@/components/HubViews";
 import { SleepHelper } from "@/components/SleepHelper";
 import { loadSleep, type SleepSettings } from "@/lib/sleep";
-import { Accent, TITLE } from "@/components/ui";
+import { Accent, Brand, TITLE } from "@/components/ui";
 
 type View =
   | { state: "upload" }
@@ -202,7 +202,7 @@ export default function Home() {
 
   return (
     <main className={`mx-auto min-h-dvh w-full max-w-md px-4 pt-6 sm:pt-10 ${showTabs ? "pb-32" : "pb-10"}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lime-400">Aesthetic Gym Scanner</p>
+      <Brand />
 
       <input
         ref={inputRef}
@@ -218,7 +218,7 @@ export default function Home() {
         <section className="mt-2">
           <p className="text-sm text-zinc-400">Hello 👋</p>
           <h1 className={TITLE}>
-            Build Your <Accent>Aesthetic</Accent>
+            Build Your Ideal <Accent>Physique</Accent>
           </h1>
 
           <WeekStrip />

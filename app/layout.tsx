@@ -18,11 +18,11 @@ const accent = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Aesthetic Gym Scanner",
-  description: "Snap your gym, pick Push / Pull / Legs, get your Natty Blueprint session.",
-  applicationName: "Gym Scanner",
-  appleWebApp: { capable: true, title: "Gym Scanner", statusBarStyle: "black-translucent" },
-  icons: { icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-icon.png" },
+  title: "AESTHETIQ — Build Your Ideal Physique",
+  description: "Build Your Ideal Physique. Snap your gym, pick a session, get a workout that only uses the equipment you have.",
+  applicationName: "AESTHETIQ",
+  appleWebApp: { capable: true, title: "AESTHETIQ", statusBarStyle: "black-translucent" },
+  icons: { icon: [{ url: "/icons/icon-192.png?v=2", sizes: "192x192", type: "image/png" }], apple: "/apple-icon.png?v=2" },
 };
 
 export const viewport: Viewport = {

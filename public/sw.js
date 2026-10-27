@@ -1,7 +1,7 @@
 // Small service worker for the installed app. Pages load from the network first (so updates
 // show up right away) and fall back to the last copy when offline. Hashed build files and
 // exercise photos never change, so they come from the cache. API calls are never cached.
-const CACHE = "ags-v1";
+const CACHE = "ags-v2"; // bump to drop old cached files (e.g. after an icon change)
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {

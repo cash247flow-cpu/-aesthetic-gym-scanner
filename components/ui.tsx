@@ -17,6 +17,17 @@ export function AccentLast({ text }: { text: string }) {
   );
 }
 
+/** App name with the logo, at the top of each screen. */
+export function Brand() {
+  return (
+    <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.3em] text-lime-400">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icons/icon-192.png?v=2" alt="" className="h-6 w-6 rounded-md" />
+      AESTHETIQ
+    </p>
+  );
+}
+
 export const TITLE = "text-[2rem] font-bold leading-[1.1] tracking-tight";
 
 export function ArrowCircle({ dark = true }: { dark?: boolean }) {
