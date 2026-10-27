@@ -38,3 +38,11 @@ The "How to" photos and step-by-step instructions come from [free-exercise-db](h
 ```bash
 node scripts/build-exercise-guide.mjs
 ```
+
+Exercises it doesn't cover have a hand-picked YouTube demo in `lib/exercise-videos.ts`, loaded only when you tap play.
+
+## Supplement label data
+
+"Check label" on the Supplements screen looks up products in the NIH Office of Dietary Supplements' [Dietary Supplement Label Database](https://dsld.od.nih.gov/) (public domain, CC0) through `app/api/supp-label/*`. No API key is needed. It shows label facts for reference only — it never suggests a dose or lifts a hold.
+
+National Institutes of Health, Office of Dietary Supplements. Dietary Supplement Label Database, 2026. https://dsld.od.nih.gov/

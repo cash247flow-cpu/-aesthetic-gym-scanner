@@ -11,6 +11,7 @@ export type Supplement = {
   dose: string; // dose as the plan lists it
   note?: string;
   hold?: string; // why the plan holds it; absent = approved
+  labelGroup?: string; // DSLD ingredient group to highlight on "Check label"
 };
 
 export const SLOTS: { id: SuppSlot; title: string; when: string }[] = [
@@ -26,24 +27,27 @@ export const SUPPLEMENTS: Supplement[] = [
   {
     id: "creatine",
     name: "Creatine monohydrate",
+    labelGroup: "Creatine",
     slot: "morning",
     dose: "5 g",
     note: "Timing isn't critical — daily consistency is.",
   },
-  { id: "d3-am", name: "Vitamin D3", slot: "morning", dose: "15,000 IU (1 cap)", hold: "Hold pending dose review" },
-  { id: "vitc", name: "Vitamin C", slot: "morning", dose: "2,000 mg (2 caps)", hold: "Dose requires review" },
+  { id: "d3-am", name: "Vitamin D3", labelGroup: "Vitamin D", slot: "morning", dose: "15,000 IU (1 cap)", hold: "Hold pending dose review" },
+  { id: "vitc", name: "Vitamin C", labelGroup: "Vitamin C", slot: "morning", dose: "2,000 mg (2 caps)", hold: "Dose requires review" },
   {
     id: "psyllium",
     name: "Psyllium",
+    labelGroup: "Psyllium",
     slot: "lunch",
     dose: "1 labeled serving in ≥ 8 oz (240 mL) water",
     note: "Drink immediately. Keeps it away from your capsules so it doesn't block absorption.",
   },
-  { id: "zinc", name: "Zinc picolinate", slot: "dinner", dose: "50 mg (1 cap)", hold: "Hold pending dose review" },
-  { id: "d3-pm", name: "Vitamin D3", slot: "dinner", dose: "15,000 IU (1 cap)", hold: "Hold pending dose review" },
+  { id: "zinc", name: "Zinc picolinate", labelGroup: "Zinc", slot: "dinner", dose: "50 mg (1 cap)", hold: "Hold pending dose review" },
+  { id: "d3-pm", name: "Vitamin D3", labelGroup: "Vitamin D", slot: "dinner", dose: "15,000 IU (1 cap)", hold: "Hold pending dose review" },
   {
     id: "mag-gly",
     name: "Magnesium glycinate",
+    labelGroup: "Magnesium",
     slot: "dinner",
     dose: "800 mg (2 caps)",
     hold: "Verify elemental magnesium first",
@@ -51,6 +55,7 @@ export const SUPPLEMENTS: Supplement[] = [
   {
     id: "mag-calm",
     name: "Magnesium Calm powder",
+    labelGroup: "Magnesium",
     slot: "bed",
     dose: "1–2 scoops",
     hold: "Verify elemental magnesium per serving before combining with magnesium glycinate",
@@ -85,6 +90,13 @@ export const loadTaken = () => read<TakenLog>(TAKEN_KEY, {});
 export const saveTaken = (log: TakenLog) => write(TAKEN_KEY, log);
 export const loadCleared = () => read<Cleared>(CLEARED_KEY, {});
 export const saveCleared = (c: Cleared) => write(CLEARED_KEY, c);
+
+// The product picked on "Check label" for each item (reference only — never changes a dose or a hold).
+const LABELS_KEY = "ags:supps:labels";
+export type SavedLabel = { id: number; name: string; brand: string };
+export type SavedLabels = Record<string, SavedLabel>; // supplement id → DSLD label
+export const loadLabels = () => read<SavedLabels>(LABELS_KEY, {});
+export const saveLabels = (l: SavedLabels) => write(LABELS_KEY, l);
 
 /** Items that can be ticked today: approved by the plan, or cleared since. */
 export const activeSupplements = (cleared: Cleared) => SUPPLEMENTS.filter((s) => !s.hold || cleared[s.id]);

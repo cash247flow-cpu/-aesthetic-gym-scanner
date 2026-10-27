@@ -5,13 +5,18 @@ import {
   SLOTS,
   SUPPLEMENTS,
   loadCleared,
+  loadLabels,
   loadTaken,
   saveCleared,
+  saveLabels,
   saveTaken,
   takenCount,
   type Cleared,
+  type SavedLabel,
+  type SavedLabels,
   type Supplement,
 } from "@/lib/supplements";
+import { LabelCheck } from "@/components/LabelCheck";
 import { todayStr } from "@/lib/habits";
 
 export function SupplementsView({ onBack }: { onBack: () => void }) {
@@ -19,6 +24,8 @@ export function SupplementsView({ onBack }: { onBack: () => void }) {
   const [taken, setTaken] = useState(loadTaken);
   const [cleared, setCleared] = useState<Cleared>(loadCleared);
   const [clearing, setClearing] = useState<string | null>(null);
+  const [labels, setLabels] = useState<SavedLabels>(loadLabels);
+  const [checking, setChecking] = useState<Supplement | null>(null);
   const day = taken[today] ?? {};
   const { taken: done, total } = takenCount(taken, today, cleared);
   const onHold = SUPPLEMENTS.filter((s) => s.hold && !cleared[s.id]);
@@ -27,6 +34,14 @@ export function SupplementsView({ onBack }: { onBack: () => void }) {
     const next = { ...taken, [today]: { ...day, [id]: !day[id] } };
     setTaken(next);
     saveTaken(next);
+  }
+
+  function updateLabel(id: string, label: SavedLabel | null) {
+    const next = { ...labels };
+    if (label) next[id] = label;
+    else delete next[id];
+    setLabels(next);
+    saveLabels(next);
   }
 
   function updateCleared(next: Cleared) {
@@ -67,6 +82,8 @@ export function SupplementsView({ onBack }: { onBack: () => void }) {
                   cleared={cleared[s.id]}
                   taken={!!day[s.id]}
                   clearing={clearing === s.id}
+                  label={labels[s.id]}
+                  onCheckLabel={() => setChecking(s)}
                   onToggle={() => toggle(s.id)}
                   onStartClear={() => setClearing(s.id)}
                   onCancelClear={() => setClearing(null)}
@@ -86,6 +103,15 @@ export function SupplementsView({ onBack }: { onBack: () => void }) {
           </section>
         );
       })}
+
+      {checking && (
+        <LabelCheck
+          supp={checking}
+          saved={labels[checking.id]}
+          onSave={(l) => updateLabel(checking.id, l)}
+          onClose={() => setChecking(null)}
+        />
+      )}
 
       <p className="mt-5 text-xs text-zinc-500">
         Reference list from your plan, not medical advice. Doses and timing are your clinician&apos;s call.
@@ -107,6 +133,8 @@ function SupplementRow({
   cleared,
   taken,
   clearing,
+  label,
+  onCheckLabel,
   onToggle,
   onStartClear,
   onCancelClear,
@@ -117,6 +145,8 @@ function SupplementRow({
   cleared?: { dose: string; date: string };
   taken: boolean;
   clearing: boolean;
+  label?: SavedLabel;
+  onCheckLabel: () => void;
   onToggle: () => void;
   onStartClear: () => void;
   onCancelClear: () => void;
@@ -125,6 +155,16 @@ function SupplementRow({
 }) {
   const [dose, setDose] = useState("");
   const held = !!supp.hold && !cleared;
+  const labelLink = (
+    <button
+      type="button"
+      onClick={onCheckLabel}
+      aria-label={`Check label: ${supp.name}`}
+      className="mt-1 block px-1 text-left text-xs font-semibold text-teal-300/90 hover:text-teal-200"
+    >
+      🔎 Check label{label && <span className="font-normal text-zinc-400"> · {label.brand} {label.name}</span>}
+    </button>
+  );
 
   if (held) {
     return (
@@ -169,6 +209,7 @@ function SupplementRow({
             </div>
           </div>
         )}
+        {labelLink}
       </li>
     );
   }
@@ -197,6 +238,7 @@ function SupplementRow({
           {supp.note && <span className="mt-0.5 block text-xs text-zinc-500">{supp.note}</span>}
         </span>
       </button>
+      {labelLink}
       {cleared && (
         <button type="button" onClick={onUnclear} className="mt-1 px-1 text-xs text-zinc-500 hover:text-zinc-300">
           Put back on hold
