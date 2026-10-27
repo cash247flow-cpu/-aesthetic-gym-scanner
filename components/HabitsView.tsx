@@ -14,6 +14,8 @@ import {
   type DayLog,
   type Habit,
 } from "@/lib/habits";
+import { SleepHelper } from "@/components/SleepHelper";
+import { formatClockTime, loadSleep, sleepTimes } from "@/lib/sleep";
 
 // Logging is allowed for the past week (Sleep Lock is easiest to tick the next morning).
 const BACKFILL_DAYS = 6;
@@ -29,11 +31,28 @@ export function HabitsView({ onBack }: { onBack: () => void }) {
   const [today] = useState(todayStr);
   const [date, setDate] = useState(today);
   const [logs, setLogs] = useState(loadHabitLogs);
+  const [sleep, setSleep] = useState(loadSleep);
+  const [editingSleep, setEditingSleep] = useState(false);
   const log = logs[date] ?? {};
   const done = doneCount(log);
   const perfect = streak(logs, "all", today);
   const best = bestPerfectStreak(logs);
   const week = Array.from({ length: 7 }, (_, i) => addDays(date, i - 6));
+
+  if (editingSleep) {
+    return (
+      <SleepHelper
+        settings={sleep}
+        onChange={setSleep}
+        onBack={() => {
+          setEditingSleep(false);
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
+  }
+
+  const tonight = sleepTimes(sleep);
 
   function update(patch: DayLog) {
     const next = { ...logs, [date]: { ...log, ...patch } };
@@ -78,6 +97,26 @@ export function HabitsView({ onBack }: { onBack: () => void }) {
             streakDays={streak(logs, h, today)}
             history={week.map((d) => ({ date: d, done: isDone(logs[d], h) }))}
             onChange={update}
+            extra={
+              h.id === "sleep" ? (
+                <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-indigo-400/10 px-3 py-2.5">
+                  <p className="text-xs text-indigo-100">
+                    Last meal by <b>{formatClockTime(tonight.lastMealLatest)}</b> · screens off{" "}
+                    <b>{formatClockTime(tonight.screensOff)}</b> · in bed <b>{formatClockTime(tonight.inBed)}</b>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSleep(true);
+                      window.scrollTo({ top: 0 });
+                    }}
+                    className="shrink-0 rounded-lg bg-indigo-400 px-2.5 py-1.5 text-xs font-semibold text-zinc-950 hover:bg-indigo-300"
+                  >
+                    ⏰ Times
+                  </button>
+                </div>
+              ) : null
+            }
           />
         ))}
       </ul>
@@ -99,12 +138,14 @@ function HabitCard({
   streakDays,
   history,
   onChange,
+  extra,
 }: {
   habit: Habit;
   log: DayLog;
   streakDays: number;
   history: { date: string; done: boolean }[];
   onChange: (patch: DayLog) => void;
+  extra?: React.ReactNode;
 }) {
   const done = isDone(log, habit);
 
@@ -127,6 +168,7 @@ function HabitCard({
         </span>
       </div>
       <p className="mt-1 text-sm text-zinc-400">{habit.what}</p>
+      {extra}
 
       <div className="mt-3">
         {habit.kind === "check" && (
