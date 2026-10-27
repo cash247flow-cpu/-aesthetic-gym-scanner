@@ -25,6 +25,11 @@ const MATCHES = {
   "Overhead Cable Extension": { db: "Cable Rope Overhead Triceps Extension" },
   "Dumbbell Overhead Press": { db: "Dumbbell Shoulder Press" },
   "Machine Chest Press": { db: "Machine Bench Press" },
+  "Tricep Dumbbell Kickback": { db: "Tricep Dumbbell Kickback" },
+  "Lying Dumbbell Tricep Extension": { db: "Lying Dumbbell Tricep Extension" },
+  "Decline Dumbbell Fly": { db: "Decline Dumbbell Flyes" },
+  "Dumbbell Fly": { db: "Dumbbell Flyes" },
+  "Seated Side Lateral Raise": { db: "Seated Side Lateral Raise" },
   // Pull
   "Lat Pulldown": { db: "Wide-Grip Lat Pulldown" },
   "Unilateral Pulldown": { db: "One Arm Lat Pulldown" },
@@ -38,6 +43,12 @@ const MATCHES = {
   "Cable Hammer Curl": { db: "Cable Hammer Curls - Rope Attachment" },
   "Reverse Pec Deck": { db: "Reverse Machine Flyes" },
   "Cable Rear Delt Fly": { db: "Cable Rear Delt Fly" },
+  "Pull-Up": { db: "Pullups" },
+  "Straight-Arm Dumbbell Pullover": { db: "Straight-Arm Dumbbell Pullover" },
+  "Prone Incline Dumbbell Curl": { db: "Dumbbell Prone Incline Curl" },
+  "Concentration Curl": { db: "Concentration Curls" },
+  "Dumbbell Hammer Curl": { db: "Hammer Curls" },
+  "Rear Delt Raise (head on bench)": { db: "Bent Over Dumbbell Rear Delt Raise With Head On Bench" },
   // Legs
   "Hack Squat": { db: "Hack Squat" },
   "Leg Press": { db: "Leg Press" },
@@ -49,6 +60,14 @@ const MATCHES = {
   "Lying Leg Curl": { db: "Lying Leg Curls" },
   "Standing Calf Raise": { db: "Standing Calf Raises" },
   "Hip Abduction": { db: "Thigh Abductor" },
+  "Goblet Squat": { db: "Goblet Squat", note: "Photos show a kettlebell — hold one dumbbell vertically at your chest instead." },
+  "Dumbbell Split Squat": { db: "Split Squat with Dumbbells" },
+  "Standing Dumbbell Calf Raise": { db: "Standing Dumbbell Calf Raise" },
+  "Standing Barbell Calf Raise": { db: "Standing Barbell Calf Raise" },
+  "Nordic Curl": {
+    db: "Natural Glute Ham Raise",
+    note: "Same movement as a Nordic curl — keep your hips straight so the hamstrings do the work.",
+  },
   // Abs
   "Reverse Crunch": {
     db: "Reverse Crunch",
