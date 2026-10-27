@@ -68,6 +68,7 @@ export type PlannedExercise = {
   abs?: boolean;
   // Other listed options for this slot that the gym has equipment for (the Swap button).
   alternatives?: Alternative[];
+  savedSwap?: boolean; // set in the browser when a swap remembered from an earlier workout is used
 };
 
 export type Alternative = Omit<PlannedExercise, "alternatives">;

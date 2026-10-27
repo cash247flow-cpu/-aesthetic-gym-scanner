@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { Alternative, PlannedExercise, PlanResult } from "@/lib/plan";
+import { loadSwaps, saveSwaps, type SavedSwaps } from "@/lib/swaps";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
 import { SetLogger, loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
@@ -49,9 +50,8 @@ export function ResultView({
   onShowWins: () => void;
 }) {
   const isLegs = plan.sessionLabel === "Legs & Abs";
-  // Swap button: slot index → the listed alternative chosen instead. A new plan starts fresh.
-  const [swaps, setSwaps] = useState<Record<number, string>>({});
-  useEffect(() => setSwaps({}), [plan]);
+  // Swap button choices, remembered between workouts (programmed exercise → chosen alternative).
+  const [swaps, setSwaps] = useState<SavedSwaps>(loadSwaps);
   const exercises = applySwaps(plan.exercises, swaps);
   // Abs marker goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = exercises.findIndex((e) => e.abs === true);
@@ -173,11 +173,17 @@ export function ResultView({
     saveUnit(u);
   }
 
-  function swap(slot: number, from: string, to: string) {
+  function swap(planned: PlannedExercise, from: string, to: string) {
     if (progress[from]?.done && !window.confirm(`Swap ${from} for ${to}? The sets you logged stay saved under ${from}.`)) {
       return;
     }
-    setSwaps((prev) => ({ ...prev, [slot]: to }));
+    const slot = planned.swappedFrom ?? planned.name;
+    const next = { ...swaps };
+    // Going back to the plan's own pick forgets the saved swap.
+    if (to === planned.name) delete next[slot];
+    else next[slot] = to;
+    setSwaps(next);
+    saveSwaps(next);
   }
 
   function startRest(ex: PlannedExercise) {
@@ -339,7 +345,7 @@ export function ResultView({
                 onStartRest={() => startRest(sl.ex)}
                 onSetDone={(allDone) => onSetDone(i, sl.ex, allDone)}
                 onProgress={reportProgress}
-                onSwap={(to) => swap(sl.liftIndex, sl.ex.name, to)}
+                onSwap={(to) => swap(plan.exercises[sl.liftIndex], sl.ex.name, to)}
               />
             ) : null}
           </div>
@@ -511,7 +517,12 @@ function ExerciseCard({
         <div className="min-w-0">
           <p className="text-[11px] font-medium text-zinc-500">{String(index).padStart(2, "0")}</p>
           <h3 className="text-lg font-semibold leading-tight">{ex.name}</h3>
-          {ex.swappedFrom && <p className="mt-0.5 text-xs text-zinc-500">Swapped from {ex.swappedFrom}</p>}
+          {ex.swappedFrom && (
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Swapped from {ex.swappedFrom}
+              {ex.savedSwap && <span className="text-lime-300/80"> · your saved swap</span>}
+            </p>
+          )}
         </div>
         <span className="shrink-0 whitespace-nowrap rounded-full bg-lime-400/15 px-2.5 py-1 text-xs font-semibold text-lime-300">
           {ex.badge}
@@ -600,11 +611,18 @@ function ExerciseCard({
 }
 
 /** Apply the Swap button's choices; each card's options never include a name another card shows. */
-function applySwaps(planned: PlannedExercise[], swaps: Record<number, string>): PlannedExercise[] {
-  const chosen = planned.map(({ alternatives = [], ...programmed }, i) => {
+function applySwaps(planned: PlannedExercise[], swaps: SavedSwaps): PlannedExercise[] {
+  // A saved swap is skipped when another card already shows that exercise.
+  const taken = new Set(planned.map((ex) => ex.name));
+  const chosen = planned.map(({ alternatives = [], ...programmed }) => {
     const options: Alternative[] = [programmed, ...alternatives];
-    const pick = options.find((o) => o.name === swaps[i]) ?? programmed;
-    return { pick, options };
+    const want = swaps[programmed.swappedFrom ?? programmed.name];
+    const saved = want && want !== programmed.name && !taken.has(want) ? options.find((o) => o.name === want) : undefined;
+    if (saved) {
+      taken.delete(programmed.name);
+      taken.add(saved.name);
+    }
+    return { pick: saved ? { ...saved, savedSwap: true } : programmed, options };
   });
   const shown = new Set(chosen.map((c) => c.pick.name));
   return chosen.map(({ pick, options }) => ({ ...pick, alternatives: options.filter((o) => !shown.has(o.name)) }));
