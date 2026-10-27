@@ -59,6 +59,7 @@ export function CardioCard({
   onRemove,
   onDone,
   onFinishedChange,
+  standalone = false,
 }: {
   plan: CardioPlan;
   unit: Unit;
@@ -67,6 +68,8 @@ export function CardioCard({
   /** Called once when the cardio is finished (timer ran out or "Finish" tapped). */
   onDone: () => void;
   onFinishedChange: (finished: boolean) => void;
+  /** Cardio-only day: no before/after lifting, nothing to move or remove. */
+  standalone?: boolean;
 }) {
   const { machine, minutes, position } = plan;
   const speedUnit = unit === "kg" ? "km/h" : "mph";
@@ -124,6 +127,7 @@ export function CardioCard({
       const log = { ...todayLog, [key]: value };
       saveLog(machine, log);
       setTodayLog(log);
+      setLast(log);
     }
   }
 
@@ -133,6 +137,7 @@ export function CardioCard({
     const log: CardioLog = { date: today(), minutes: elapsedMinutes, speed, incline, level };
     saveLog(machine, log);
     setTodayLog(log);
+    setLast(log);
     setEndAt(null);
     setPausedLeft(null);
     setFinished(true);
@@ -196,7 +201,7 @@ export function CardioCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-wider text-sky-300">
-            Cardio · {position === "before" ? "before lifting" : "after lifting"}
+            {standalone ? "Cardio session" : `Cardio · ${position === "before" ? "before lifting" : "after lifting"}`}
           </p>
           <h3 className="text-lg font-semibold leading-tight">{MACHINE_LABEL[machine]}</h3>
         </div>
@@ -311,18 +316,20 @@ export function CardioCard({
         </p>
       )}
 
-      <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-3 text-sm">
-        <button
-          type="button"
-          onClick={() => onChange({ ...plan, position: position === "before" ? "after" : "before" })}
-          className="text-zinc-400 hover:text-zinc-100"
-        >
-          Move {position === "before" ? "after" : "before"} lifting
-        </button>
-        <button type="button" onClick={onRemove} className="text-zinc-500 hover:text-red-300">
-          Remove cardio
-        </button>
-      </div>
+      {!standalone && (
+        <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-3 text-sm">
+          <button
+            type="button"
+            onClick={() => onChange({ ...plan, position: position === "before" ? "after" : "before" })}
+            className="text-zinc-400 hover:text-zinc-100"
+          >
+            Move {position === "before" ? "after" : "before"} lifting
+          </button>
+          <button type="button" onClick={onRemove} className="text-zinc-500 hover:text-red-300">
+            Remove cardio
+          </button>
+        </div>
+      )}
     </div>
   );
 }

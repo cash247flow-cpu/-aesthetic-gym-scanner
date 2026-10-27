@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { PlanResult, SessionKey } from "@/lib/plan";
 import { ResultView } from "@/components/ResultView";
+import { CardioSession } from "@/components/CardioSession";
 
 type View =
   | { state: "upload" }
   | { state: "loading" }
+  | { state: "cardio" }
   | { state: "result"; plan: PlanResult; session: SessionKey };
 
 const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
@@ -60,6 +62,12 @@ export default function Home() {
   async function changeEquipment(session: SessionKey, equipment: string[]) {
     const plan = await fetchPlan(session, equipment);
     setView({ state: "result", plan, session });
+  }
+
+  // Back from a cardio-only day: keep the photo so a lifting session can still be picked.
+  function backToSessions() {
+    setView({ state: "upload" });
+    window.scrollTo({ top: 0 });
   }
 
   function reset() {
@@ -139,9 +147,26 @@ export default function Home() {
                 <span className="text-xs text-zinc-400">{s.hint}</span>
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                setView({ state: "cardio" });
+                window.scrollTo({ top: 0 });
+              }}
+              className="flex h-16 w-full items-center justify-between rounded-xl border border-sky-400/30 bg-zinc-900 px-5 text-left transition hover:border-sky-400 active:scale-[0.98]"
+            >
+              <span className="text-xl font-bold text-sky-300">Cardio</span>
+              <span className="text-right text-xs text-zinc-400">
+                Treadmill · StairMaster
+                <br />
+                <span className="text-zinc-500">No photo needed</span>
+              </span>
+            </button>
           </div>
         </section>
       )}
+
+      {view.state === "cardio" && <CardioSession onBack={backToSessions} />}
 
       {view.state === "loading" && (
         <section className="flex min-h-[60dvh] flex-col items-center justify-center gap-4" aria-live="polite">
