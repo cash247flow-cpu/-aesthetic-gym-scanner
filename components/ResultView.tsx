@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
-import type { PlannedExercise, PlanResult } from "@/lib/plan";
+import type { Alternative, PlannedExercise, PlanResult } from "@/lib/plan";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
 import { SetLogger, loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
@@ -49,8 +49,12 @@ export function ResultView({
   onShowWins: () => void;
 }) {
   const isLegs = plan.sessionLabel === "Legs & Abs";
+  // Swap button: slot index → the listed alternative chosen instead. A new plan starts fresh.
+  const [swaps, setSwaps] = useState<Record<number, string>>({});
+  useEffect(() => setSwaps({}), [plan]);
+  const exercises = applySwaps(plan.exercises, swaps);
   // Abs marker goes before the first abs card, but only if a non-abs card precedes it.
-  const firstAbsIndex = plan.exercises.findIndex((e) => e.abs === true);
+  const firstAbsIndex = exercises.findIndex((e) => e.abs === true);
   const [rest, setRest] = useState<RestRequest | null>(null);
   const [unit, setUnit] = useState<Unit>(loadUnit);
   const [cardio, setCardio] = useState<CardioPlan | null>(loadCardioPlan);
@@ -61,7 +65,7 @@ export function ResultView({
   const navRef = useRef<HTMLElement>(null);
 
   // Pages in order: optional cardio, the lifts, optional cardio.
-  const liftSlides: Slide[] = plan.exercises.map((ex, i) => ({ kind: "lift", key: ex.name, ex, liftIndex: i }));
+  const liftSlides: Slide[] = exercises.map((ex, i) => ({ kind: "lift", key: ex.name, ex, liftIndex: i }));
   const cardioSlide: Slide | null = cardio ? { kind: "cardio", key: CARDIO_KEY } : null;
   const slides: Slide[] = [
     ...(cardioSlide && cardio?.position === "before" ? [cardioSlide] : []),
@@ -69,7 +73,7 @@ export function ResultView({
     ...(cardioSlide && cardio?.position === "after" ? [cardioSlide] : []),
   ];
   const count = slides.length;
-  const liftCount = plan.exercises.length;
+  const liftCount = exercises.length;
   const isComplete = (key: string) => {
     const p = progress[key];
     return !!p && p.total > 0 && p.done >= p.total;
@@ -85,7 +89,7 @@ export function ResultView({
       finishWorkout({
         session: plan.sessionLabel,
         label: plan.sessionLabel,
-        exercises: plan.exercises.map((e) => e.name),
+        exercises: exercises.map((e) => e.name),
         unit,
         includeCardio: cardio !== null,
       }),
@@ -167,6 +171,13 @@ export function ResultView({
   function changeUnit(u: Unit) {
     setUnit(u);
     saveUnit(u);
+  }
+
+  function swap(slot: number, from: string, to: string) {
+    if (progress[from]?.done && !window.confirm(`Swap ${from} for ${to}? The sets you logged stay saved under ${from}.`)) {
+      return;
+    }
+    setSwaps((prev) => ({ ...prev, [slot]: to }));
   }
 
   function startRest(ex: PlannedExercise) {
@@ -328,6 +339,7 @@ export function ResultView({
                 onStartRest={() => startRest(sl.ex)}
                 onSetDone={(allDone) => onSetDone(i, sl.ex, allDone)}
                 onProgress={reportProgress}
+                onSwap={(to) => swap(sl.liftIndex, sl.ex.name, to)}
               />
             ) : null}
           </div>
@@ -476,6 +488,7 @@ function ExerciseCard({
   onStartRest,
   onSetDone,
   onProgress,
+  onSwap,
 }: {
   ex: PlannedExercise;
   index: number;
@@ -483,11 +496,14 @@ function ExerciseCard({
   onStartRest: () => void;
   onSetDone: (allDone: boolean) => void;
   onProgress: (name: string, done: number, total: number) => void;
+  onSwap: (name: string) => void;
 }) {
   const name = ex.name;
   const reportProgress = useCallback((done: number, total: number) => onProgress(name, done, total), [onProgress, name]);
   const [showGuide, setShowGuide] = useState(false);
   const closeGuide = useCallback(() => setShowGuide(false), []);
+  const [swapping, setSwapping] = useState(false);
+  const alternatives = ex.alternatives ?? [];
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
@@ -525,7 +541,44 @@ function ExerciseCard({
             ▶ How to
           </button>
         )}
+        {alternatives.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSwapping((v) => !v)}
+            aria-expanded={swapping}
+            aria-label={`Swap ${ex.name}`}
+            className={`rounded-full border px-2.5 py-1 text-sm transition active:scale-95 ${
+              swapping
+                ? "border-lime-400 text-lime-300"
+                : "border-zinc-700 text-zinc-300 hover:border-lime-400 hover:text-lime-300"
+            }`}
+          >
+            ⇄ Swap
+          </button>
+        )}
       </div>
+      {swapping && (
+        <div className="mt-3 rounded-xl border border-zinc-700 bg-zinc-950/60 p-2">
+          <p className="px-1.5 pb-1.5 text-xs text-zinc-400">Machine taken? Pick another option from your program:</p>
+          <ul className="grid grid-cols-1 gap-1.5">
+            {alternatives.map((alt) => (
+              <li key={alt.name}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSwapping(false);
+                    onSwap(alt.name);
+                  }}
+                  className="w-full rounded-lg bg-zinc-800 px-3 py-2 text-left transition hover:bg-zinc-700 active:scale-[0.99]"
+                >
+                  <span className="block font-semibold text-zinc-100">{alt.name}</span>
+                  <span className="mt-0.5 block text-xs text-zinc-400">{alt.cue}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {showGuide && <ExerciseGuide exercise={ex.name} onClose={closeGuide} />}
 
       <p className="mt-3 text-sm text-zinc-200">
@@ -544,6 +597,17 @@ function ExerciseCard({
       />
     </div>
   );
+}
+
+/** Apply the Swap button's choices; each card's options never include a name another card shows. */
+function applySwaps(planned: PlannedExercise[], swaps: Record<number, string>): PlannedExercise[] {
+  const chosen = planned.map(({ alternatives = [], ...programmed }, i) => {
+    const options: Alternative[] = [programmed, ...alternatives];
+    const pick = options.find((o) => o.name === swaps[i]) ?? programmed;
+    return { pick, options };
+  });
+  const shown = new Set(chosen.map((c) => c.pick.name));
+  return chosen.map(({ pick, options }) => ({ ...pick, alternatives: options.filter((o) => !shown.has(o.name)) }));
 }
 
 function TimerIcon() {

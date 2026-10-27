@@ -66,7 +66,11 @@ export type PlannedExercise = {
   reason: string;
   swappedFrom?: string;
   abs?: boolean;
+  // Other listed options for this slot that the gym has equipment for (the Swap button).
+  alternatives?: Alternative[];
 };
+
+export type Alternative = Omit<PlannedExercise, "alternatives">;
 
 export type PlanResult = {
   sessionLabel: string;
@@ -104,6 +108,7 @@ export function buildPlan(session: SessionKey, rawEquipment: unknown, opts: { wi
   const hasAll = (needed: string[]) => needed.every((e) => have.has(e));
 
   const exercises: PlannedExercise[] = [];
+  const slotOptions: Alternative[][] = [];
   const dropped: string[] = [];
   const duplicates: string[] = [];
   // Never repeat a movement: a substitute already used by an earlier slot is skipped.
@@ -134,21 +139,38 @@ export function buildPlan(session: SessionKey, rawEquipment: unknown, opts: { wi
     }
     used.add(pick.name);
 
-    const abs = pick.abs ?? original.abs;
-    const { badge, reason } = resolveAesthetic(pick.aestheticKey, pick.aestheticMap, abs);
+    const toPlanned = (
+      c: { name: string; cue?: string; aestheticKey: string; aestheticMap: AestheticMap; abs?: boolean },
+      from: string | undefined,
+    ): Alternative => {
+      const abs = c.abs ?? original.abs;
+      const { badge, reason } = resolveAesthetic(c.aestheticKey, c.aestheticMap, abs);
+      return {
+        name: c.name,
+        sets: original.sets,
+        reps: original.reps,
+        restSeconds: original.restSeconds,
+        cue: c.cue ?? original.cue,
+        badge,
+        reason,
+        ...(from ? { swappedFrom: from } : {}),
+        ...(abs ? { abs: true } : {}),
+      };
+    };
 
-    exercises.push({
-      name: pick.name,
-      sets: original.sets,
-      reps: original.reps,
-      restSeconds: original.restSeconds,
-      cue: pick.cue ?? original.cue,
-      badge,
-      reason,
-      ...(swappedFrom ? { swappedFrom } : {}),
-      ...(abs ? { abs: true } : {}),
-    });
+    exercises.push(toPlanned(pick, swappedFrom));
+    slotOptions.push(
+      [original, ...(original.substitutes ?? [])]
+        .filter((c) => c.name !== pick.name && hasAll(c.equipmentNeeded))
+        .map((c) => toPlanned(c, c === original ? undefined : original.name)),
+    );
   }
+
+  // Swap options never include an exercise another slot already uses.
+  exercises.forEach((ex, i) => {
+    const alternatives = slotOptions[i].filter((a) => !used.has(a.name));
+    if (alternatives.length > 0) ex.alternatives = alternatives;
+  });
 
   const absCount = exercises.filter((e) => e.abs).length;
 
