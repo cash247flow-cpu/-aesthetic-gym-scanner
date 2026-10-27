@@ -1,7 +1,15 @@
 // Reads Cronometer's "Daily Nutrition" CSV export (there's no public Cronometer API).
 // Columns are matched by name, so extra or reordered columns don't matter.
 
-export type DayTotals = { date: string; kcal: number | null; protein: number | null; carbs: number | null; netCarbs: number | null; fat: number | null };
+export type DayTotals = {
+  date: string;
+  kcal: number | null;
+  protein: number | null;
+  carbs: number | null;
+  netCarbs: number | null;
+  fat: number | null;
+  completed?: boolean; // Cronometer's "Completed" flag; false = day still being logged
+};
 
 const KEY = "ags:cronometer";
 
@@ -71,25 +79,51 @@ export function parseCronometerDaily(text: string): { days: DayTotals[] } | { er
   const iCarbs = column(headers, /^carbs \(g\)$/, /^carbohydrates? \(g\)$/, /^carbs/);
   const iNet = column(headers, /^net carbs \(g\)$/, /^net carbs/);
   const iFat = column(headers, /^fat \(g\)$/, /^total fat/, /^fat/);
+  // Exports can have one row per meal ("Group": Breakfast, Lunch…) plus a "Total" row per date.
+  const iGroup = column(headers, /^group$/);
+  const iDone = column(headers, /^completed$/);
   if (iDate === -1 || (iProtein === -1 && iCarbs === -1 && iFat === -1)) {
     return {
       error:
         "This doesn't look like a Cronometer Daily Nutrition export (no Date / Protein / Carbs / Fat columns). Food & recipe entries exports aren't supported.",
     };
   }
-  const days: DayTotals[] = [];
+  const read = (r: string[], i: number) => (i === -1 ? null : num(r[i]));
+  const totalsOf = (r: string[]): Omit<DayTotals, "date"> => ({
+    kcal: read(r, iKcal),
+    protein: read(r, iProtein),
+    carbs: read(r, iCarbs),
+    netCarbs: read(r, iNet),
+    fat: read(r, iFat),
+    ...(iDone === -1 ? {} : { completed: /^true$/i.test((r[iDone] ?? "").trim()) }),
+  });
+
+  // Group rows by date; a "Total" row wins, otherwise the meal rows are added up.
+  const byDate = new Map<string, { total?: string[]; parts: string[][] }>();
   for (const r of rows.slice(1)) {
     const date = toIsoDate(r[iDate] ?? "");
     if (!date) continue;
-    days.push({
-      date,
-      kcal: iKcal === -1 ? null : num(r[iKcal]),
-      protein: iProtein === -1 ? null : num(r[iProtein]),
-      carbs: iCarbs === -1 ? null : num(r[iCarbs]),
-      netCarbs: iNet === -1 ? null : num(r[iNet]),
-      fat: iFat === -1 ? null : num(r[iFat]),
-    });
+    const entry = byDate.get(date) ?? { parts: [] };
+    if (iGroup === -1 || /^total$/i.test((r[iGroup] ?? "").trim())) entry.total = r;
+    else entry.parts.push(r);
+    byDate.set(date, entry);
   }
+
+  const sum = (vals: (number | null)[]) =>
+    vals.some((v) => v !== null) ? Math.round(vals.reduce<number>((a, v) => a + (v ?? 0), 0) * 10) / 10 : null;
+  const days: DayTotals[] = [...byDate.entries()].map(([date, { total, parts }]) => {
+    if (total) return { date, ...totalsOf(total) };
+    const each = parts.map(totalsOf);
+    return {
+      date,
+      kcal: sum(each.map((t) => t.kcal)),
+      protein: sum(each.map((t) => t.protein)),
+      carbs: sum(each.map((t) => t.carbs)),
+      netCarbs: sum(each.map((t) => t.netCarbs)),
+      fat: sum(each.map((t) => t.fat)),
+      ...(iDone === -1 ? {} : { completed: each.every((t) => t.completed) }),
+    };
+  });
   if (!days.length) return { error: "Couldn't find any dated rows in that file." };
   return { days };
 }

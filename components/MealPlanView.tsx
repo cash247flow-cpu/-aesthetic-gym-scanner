@@ -172,12 +172,16 @@ function MacroTargets({ macros }: { macros: Macros }) {
   );
 }
 
-/** Actual vs target; within ±10% of target counts as on track. */
+/**
+ * Actual vs target; within ±10% of target counts as on track. On a day Cronometer marks as not
+ * completed, being under target is expected (meals still to log), so it isn't flagged.
+ */
 function CronometerTable({ days, target }: { days: DayTotals[]; target: Macros }) {
-  const cell = (actual: number | null, goal: number) => {
+  const cell = (actual: number | null, goal: number, inProgress: boolean) => {
     if (actual == null) return <span className="text-zinc-600">—</span>;
     const off = (actual - goal) / goal;
-    const tone = Math.abs(off) <= 0.1 ? "text-lime-300" : off < 0 ? "text-sky-300" : "text-amber-300";
+    const tone =
+      Math.abs(off) <= 0.1 ? "text-lime-300" : off > 0 ? "text-amber-300" : inProgress ? "text-zinc-300" : "text-sky-300";
     return <span className={`font-semibold tabular-nums ${tone}`}>{Math.round(actual)}</span>;
   };
   return (
@@ -197,19 +201,26 @@ function CronometerTable({ days, target }: { days: DayTotals[]; target: Macros }
         <span className="text-right tabular-nums">{kcalOf(target).toLocaleString()}</span>
       </div>
       <ul className="mt-1 grid gap-0.5">
-        {days.map((d) => (
-          <li key={d.date} className="grid grid-cols-[1fr_3rem_3rem_3rem_3.5rem] gap-x-2 px-1 py-1.5 text-sm">
-            <span className="truncate text-zinc-300">{shortDate(d.date)}</span>
-            <span className="text-right">{cell(d.protein, target.protein)}</span>
-            <span className="text-right">{cell(d.carbs, target.carbs)}</span>
-            <span className="text-right">{cell(d.fat, target.fat)}</span>
-            <span className="text-right">{cell(d.kcal, kcalOf(target))}</span>
-          </li>
-        ))}
+        {days.map((d) => {
+          const inProgress = d.completed === false;
+          return (
+            <li key={d.date} className="grid grid-cols-[1fr_3rem_3rem_3rem_3.5rem] items-center gap-x-2 px-1 py-1.5 text-sm">
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate text-zinc-300">{shortDate(d.date)}</span>
+                {inProgress && <span className="block text-[10px] text-zinc-500">in progress</span>}
+              </span>
+              <span className="text-right">{cell(d.protein, target.protein, inProgress)}</span>
+              <span className="text-right">{cell(d.carbs, target.carbs, inProgress)}</span>
+              <span className="text-right">{cell(d.fat, target.fat, inProgress)}</span>
+              <span className="text-right">{cell(d.kcal, kcalOf(target), inProgress)}</span>
+            </li>
+          );
+        })}
       </ul>
       <p className="mt-2 text-[11px] text-zinc-500">
         <span className="text-lime-300">Green</span> within 10% of target · <span className="text-sky-300">blue</span> under ·{" "}
-        <span className="text-amber-300">amber</span> over. Carbs are total carbs.
+        <span className="text-amber-300">amber</span> over. Days still being logged in Cronometer show “in progress”. Carbs
+        are total carbs.
       </p>
     </div>
   );
