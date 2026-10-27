@@ -13,6 +13,7 @@ import {
   withChoice,
   type WeekPlan,
 } from "@/lib/schedule";
+import { AccentLast, TITLE } from "@/components/ui";
 
 /** Weekly split editor: pick Push / Pull / Legs / Pump / Rest for each day. */
 export function WeekEditor({
@@ -30,7 +31,7 @@ export function WeekEditor({
 
   return (
     <section className="mt-2">
-      <h1 className="text-3xl font-bold tracking-tight">Your week</h1>
+      <h1 className={TITLE}><AccentLast text="Your week" /></h1>
       <p className="mt-1 text-sm text-zinc-400">
         Pick what each day is for. Rest days open Cardio Day. Changes save automatically.
       </p>

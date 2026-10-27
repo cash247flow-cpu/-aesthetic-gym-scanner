@@ -23,6 +23,7 @@ export type HistoryEntry = {
   sets: number;
   prs: number;
   cardioMin: number;
+  exercises?: string[]; // ones with logged sets (for the weekly muscle map); older entries lack it
 };
 export type Totals = { volumeLb: number; workouts: number; prs: number; cardioMin: number };
 export type BadgeGroup = "lift" | "workouts" | "prs" | "cardio" | "habits";
@@ -171,6 +172,7 @@ export function finishWorkout(opts: {
   let volumeLb = 0;
   let sets = 0;
   let exercisesDone = 0;
+  const doneNames: string[] = [];
   const prs: PR[] = [];
   const prUpdates: [string, PrRecord][] = [];
 
@@ -180,6 +182,7 @@ export function finishWorkout(opts: {
     const done = rec.sets.filter((r) => r.done && (r.weight.trim() !== "" || r.reps.trim() !== ""));
     if (!done.length) continue;
     exercisesDone++;
+    doneNames.push(exercise);
     sets += done.length;
     volumeLb += done.reduce((v, r) => v + num(r.weight) * toLb * num(r.reps), 0);
 
@@ -210,7 +213,7 @@ export function finishWorkout(opts: {
   const empty = sets === 0 && cardioMin === 0;
   const prev = [...others].reverse().find((h) => h.session === session && h.date < t && h.volumeLb > 0);
   const badgesBefore = badgesFor(totalsOf(others), unit);
-  const entry: HistoryEntry = { date: t, session, label, volumeLb, sets, prs: prs.length, cardioMin };
+  const entry: HistoryEntry = { date: t, session, label, volumeLb, sets, prs: prs.length, cardioMin, exercises: doneNames };
   const nextHistory = empty ? history : [...others, entry].slice(-500);
   const totals = totalsOf(nextHistory);
 

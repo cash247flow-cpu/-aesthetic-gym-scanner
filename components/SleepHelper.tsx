@@ -1,6 +1,7 @@
 "use client";
 
 import { formatClockTime, saveSleep, SLEEP_OPTIONS, sleepTimes, type SleepSettings } from "@/lib/sleep";
+import { AccentLast, TITLE } from "@/components/ui";
 
 /** Pick a wake time and sleep goal; shows tonight's Sleep Lock timeline. */
 export function SleepHelper({
@@ -29,7 +30,7 @@ export function SleepHelper({
 
   return (
     <section className="mt-2">
-      <h1 className="text-3xl font-bold tracking-tight">Sleep times</h1>
+      <h1 className={TITLE}><AccentLast text="Sleep times" /></h1>
       <p className="mt-1 text-sm text-zinc-400">Set when you wake and how much sleep you want. Same times every day.</p>
 
       <div className="mt-5 grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">

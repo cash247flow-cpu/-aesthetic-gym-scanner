@@ -3,6 +3,8 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { Alternative, PlannedExercise, PlanResult } from "@/lib/plan";
 import { loadSwaps, saveSwaps, type SavedSwaps } from "@/lib/swaps";
+import { MuscleMap } from "@/components/MuscleMap";
+import { musclesFor } from "@/lib/muscles";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
 import { SetLogger, loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
@@ -19,6 +21,7 @@ import { Celebrate } from "@/components/Celebrate";
 import { PreWorkoutReminder } from "@/components/PreWorkoutReminder";
 import { ExerciseGuide, hasGuide } from "@/components/ExerciseGuide";
 import { finishWorkout, type Summary } from "@/lib/wins";
+import { AccentLast, TITLE } from "@/components/ui";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -195,7 +198,7 @@ export function ResultView({
     <section className={`mt-2 ${rest ? "pb-44" : ""}`}>
       <header>
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">{plan.sessionLabel}</h1>
+          <h1 className={TITLE}><AccentLast text={plan.sessionLabel} /></h1>
           <div role="group" aria-label="Weight unit" className="flex shrink-0 rounded-full border border-zinc-700 p-0.5 text-xs font-semibold">
             {(["lb", "kg"] as const).map((u) => (
               <button
@@ -228,6 +231,10 @@ export function ResultView({
           {plan.missingNote}
         </div>
       )}
+
+      <div className="mt-4">
+        <MuscleMap {...musclesFor(exercises.map((e) => e.name))} compact />
+      </div>
 
       {!cardio && (
         <div className="mt-4">

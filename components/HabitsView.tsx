@@ -16,6 +16,7 @@ import {
 } from "@/lib/habits";
 import { SleepHelper } from "@/components/SleepHelper";
 import { formatClockTime, loadSleep, sleepTimes } from "@/lib/sleep";
+import { AccentLast, TITLE } from "@/components/ui";
 
 // Logging is allowed for the past week (Sleep Lock is easiest to tick the next morning).
 const BACKFILL_DAYS = 6;
@@ -62,7 +63,7 @@ export function HabitsView({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="mt-2">
-      <h1 className="text-3xl font-bold tracking-tight">Daily habits</h1>
+      <h1 className={TITLE}><AccentLast text="Daily habits" /></h1>
       <p className="mt-1 text-sm text-zinc-400">
         {perfect > 0 ? `🔥 ${perfect}-day perfect streak` : "Do all five for a perfect day"}
         {best > perfect ? ` · best ${best}` : ""}

@@ -20,6 +20,7 @@ import {
 import { shrinkImage } from "@/lib/image";
 import { fromLb } from "@/lib/wins";
 import type { ScaleReading } from "@/lib/scaleReading";
+import { AccentLast, TITLE } from "@/components/ui";
 
 const LB_PER_KG = 2.20462;
 const today = () => new Date().toLocaleDateString("en-CA");
@@ -210,7 +211,7 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
   return (
     <section className="mt-2">
       <header className="flex items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold tracking-tight">Body tracker</h1>
+        <h1 className={TITLE}><AccentLast text="Body tracker" /></h1>
         <div role="group" aria-label="Weight unit" className="flex shrink-0 rounded-full border border-zinc-700 p-0.5 text-xs font-semibold">
           {(["lb", "kg"] as const).map((u) => (
             <button

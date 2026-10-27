@@ -16,6 +16,7 @@ import {
 } from "@/lib/meals";
 import { loadCronometer, parseCronometerDaily, saveCronometer, type DayTotals } from "@/lib/cronometer";
 import { todayStr } from "@/lib/habits";
+import { AccentLast, TITLE } from "@/components/ui";
 
 const KIND_STYLE: Record<FoodKind, { tag: string; className: string }> = {
   P: { tag: "Protein", className: "bg-rose-400/15 text-rose-200" },
@@ -61,7 +62,7 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="mt-2">
-      <h1 className="text-3xl font-bold tracking-tight">Meal plan</h1>
+      <h1 className={TITLE}><AccentLast text="Meal plan" /></h1>
       <p className="mt-1 text-sm text-zinc-400">
         Every meal in PFC order: protein first, fiber second, carbs last. {eatenCount}/{meals.length} eaten today.
       </p>

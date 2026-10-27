@@ -4,6 +4,7 @@ import { useState } from "react";
 import { loadUnit } from "@/components/SetLogger";
 import { WinBadge } from "@/components/WinBadge";
 import { formatWeight, loadWins, type BadgeGroup } from "@/lib/wins";
+import { Accent, TITLE } from "@/components/ui";
 
 const GROUP_TITLE: Record<BadgeGroup, string> = {
   lift: "Weight lifted",
@@ -26,7 +27,7 @@ export function WinsView({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="mt-2">
-      <h1 className="text-3xl font-bold tracking-tight">Your wins 🏆</h1>
+      <h1 className={TITLE}>Your <Accent>wins</Accent> 🏆</h1>
       <p className="mt-1 text-sm text-zinc-400">
         {totals.workouts === 0
           ? "Finish your first workout to start collecting badges and PRs."

@@ -18,6 +18,7 @@ import {
 } from "@/lib/supplements";
 import { LabelCheck } from "@/components/LabelCheck";
 import { todayStr } from "@/lib/habits";
+import { Accent, TITLE } from "@/components/ui";
 
 export function SupplementsView({ onBack }: { onBack: () => void }) {
   const [today] = useState(todayStr);
@@ -51,7 +52,7 @@ export function SupplementsView({ onBack }: { onBack: () => void }) {
 
   return (
     <section className="mt-2">
-      <h1 className="text-3xl font-bold tracking-tight">Supplements</h1>
+      <h1 className={TITLE}><Accent>Supplements</Accent></h1>
       <p className="mt-1 text-sm text-zinc-400">
         {done}/{total} taken today
         {onHold.length > 0 && ` · ${onHold.length} on hold`}

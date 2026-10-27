@@ -5,6 +5,7 @@ import { CardioCard, DEFAULT_CARDIO, type CardioPlan } from "@/components/Cardio
 import { loadUnit } from "@/components/SetLogger";
 import { Celebrate } from "@/components/Celebrate";
 import { finishWorkout, type Summary } from "@/lib/wins";
+import { AccentLast, TITLE } from "@/components/ui";
 
 // Cardio-only days keep their own machine/duration, separate from cardio added to a lifting day.
 // v2: starts from the plan's StairMaster default rather than older saved settings.
@@ -46,7 +47,7 @@ export function CardioSession({ onBack, onShowWins }: { onBack: () => void; onSh
   return (
     <section className="mt-2">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight">Cardio Day</h1>
+        <h1 className={TITLE}><AccentLast text="Cardio Day" /></h1>
         <p className="mt-1 text-sm text-zinc-400">
           {done ? "Cardio complete 💪" : "Pick a machine and a duration, then hit Start."}
         </p>

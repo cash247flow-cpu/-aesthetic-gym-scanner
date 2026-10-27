@@ -16,6 +16,12 @@ import { HABITS, doneCount, loadHabitLogs, streak, todayStr } from "@/lib/habits
 import { WeekEditor } from "@/components/WeekEditor";
 import { DEFAULT_WEEK, loadWeek, saveWeek, type WeekPlan } from "@/lib/schedule";
 import { shrinkImage } from "@/lib/image";
+import { WeekStrip } from "@/components/WeekStrip";
+import { TabBar, type Tab } from "@/components/TabBar";
+import { MoreHub, ProgressHub } from "@/components/HubViews";
+import { SleepHelper } from "@/components/SleepHelper";
+import { loadSleep, type SleepSettings } from "@/lib/sleep";
+import { Accent, TITLE } from "@/components/ui";
 
 type View =
   | { state: "upload" }
@@ -26,6 +32,9 @@ type View =
   | { state: "habits" }
   | { state: "meals" }
   | { state: "supps" }
+  | { state: "sleep" }
+  | { state: "progress" }
+  | { state: "more" }
   | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean };
 
@@ -39,19 +48,24 @@ const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
 
 export default function Home() {
   const [view, setView] = useState<View>({ state: "upload" });
+  // Where a screen opened from the Progress or More tab goes back to.
+  const [returnTo, setReturnTo] = useState<View>({ state: "upload" });
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // A session tapped before there's a gym photo: it starts as soon as the photo is taken.
+  const [pending, setPending] = useState<{ session: SessionKey; withAbs: boolean } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // The saved week and today's date only exist in the browser; the page is prerendered.
   const [week, setWeek] = useState<WeekPlan>(DEFAULT_WEEK);
   const [todayIdx, setTodayIdx] = useState<number | null>(null);
+  const [sleep, setSleep] = useState<SleepSettings | null>(null);
   useEffect(() => {
     setWeek(loadWeek());
     setTodayIdx(new Date().getDay());
   }, []);
   const todayChoice = todayIdx === null ? null : week[todayIdx].choice;
-  // Today's habit progress for the home row; re-read whenever the home screen shows.
+  // Today's habit, meal and supplement progress for the home tiles; re-read whenever home shows.
   const [habitSummary, setHabitSummary] = useState<{ done: number; streak: number } | null>(null);
   const [mealsEaten, setMealsEaten] = useState<number | null>(null);
   const [supps, setSupps] = useState<{ taken: number; total: number } | null>(null);
@@ -64,14 +78,53 @@ export default function Home() {
     setSupps(takenCount(loadTaken(), todayStr(), loadCleared()));
   }, [view.state]);
 
+  // Closing the camera without a photo cancels the session that was waiting for it.
+  useEffect(() => {
+    const input = inputRef.current;
+    const onCancel = () => setPending(null);
+    input?.addEventListener("cancel", onCancel);
+    return () => input?.removeEventListener("cancel", onCancel);
+  }, []);
+
   function changeWeek(next: WeekPlan | null) {
     setWeek(next ?? DEFAULT_WEEK);
     saveWeek(next);
   }
 
-  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps") {
-    setView({ state });
+  function show(next: View) {
+    setView(next);
     window.scrollTo({ top: 0 });
+  }
+
+  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep") {
+    const hub = view.state === "progress" || view.state === "more" ? view : ({ state: "upload" } as View);
+    setReturnTo(hub);
+    if (state === "sleep") setSleep(loadSleep());
+    show({ state });
+  }
+
+  function onTab(tab: Tab) {
+    if (tab === "meals") {
+      setReturnTo({ state: "upload" });
+      show({ state: "meals" });
+    } else show({ state: tab === "home" ? "upload" : tab });
+  }
+
+  function openCamera() {
+    inputRef.current?.click();
+  }
+
+  function scan() {
+    setPending(null);
+    if (view.state !== "upload") show({ state: "upload" });
+    openCamera();
+  }
+
+  // Start a session: right away with a gym photo, or open the camera and start once it's taken.
+  function start(session: SessionKey, withAbs = false) {
+    if (photo) return void run(session, withAbs, photo);
+    setPending({ session, withAbs });
+    openCamera();
   }
 
   useEffect(() => {
@@ -86,22 +139,24 @@ export default function Home() {
     setError(null);
     setPhoto(file);
     setPreview(URL.createObjectURL(file));
+    if (pending) {
+      setPending(null);
+      void run(pending.session, pending.withAbs, file);
+    }
   }
 
-  async function run(session: SessionKey, withAbs = false) {
-    if (!photo) return;
+  async function run(session: SessionKey, withAbs: boolean, file: File) {
     setError(null);
     setView({ state: "loading" });
     try {
       const form = new FormData();
-      form.append("image", await shrinkImage(photo), "gym.jpg");
+      form.append("image", await shrinkImage(file), "gym.jpg");
       const idRes = await fetch("/api/identify", { method: "POST", body: form });
       const idData = await idRes.json();
       if (!idRes.ok) throw new Error(idData.error || "Couldn't read the photo.");
 
       const plan = await fetchPlan(session, idData.equipment, withAbs);
-      setView({ state: "result", plan, session, withAbs });
-      window.scrollTo({ top: 0 });
+      show({ state: "result", plan, session, withAbs });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setView({ state: "upload" });
@@ -114,10 +169,9 @@ export default function Home() {
     setView({ state: "result", plan, session, withAbs });
   }
 
-  // Back from a cardio-only day: keep the photo so a lifting session can still be picked.
-  function backToSessions() {
-    setView({ state: "upload" });
-    window.scrollTo({ top: 0 });
+  // Back from a screen: to the tab it was opened from. Keeps the photo so a session can still be picked.
+  function back() {
+    show(returnTo);
   }
 
   function showWins() {
@@ -130,200 +184,148 @@ export default function Home() {
     setPreview(null);
     setError(null);
     if (inputRef.current) inputRef.current.value = "";
-    setView({ state: "upload" });
-    window.scrollTo({ top: 0 });
+    show({ state: "upload" });
   }
 
+  const tab: Tab | null =
+    view.state === "upload"
+      ? "home"
+      : view.state === "meals"
+        ? "meals"
+        : ["progress", "wins", "body"].includes(view.state)
+          ? "progress"
+          : ["more", "habits", "supps", "week", "sleep"].includes(view.state)
+            ? "more"
+            : null;
+  // Workouts, cardio and loading get the whole screen.
+  const showTabs = !["loading", "result", "cardio"].includes(view.state);
+
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-md px-4 pb-10 pt-6 sm:pt-10">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lime-400">Aesthetic Gym Scanner</p>
-        {view.state === "upload" && (
-          <button
-            type="button"
-            onClick={showWins}
-            className="rounded-full border border-amber-400/40 px-3 py-1 text-xs font-semibold text-amber-300 transition hover:bg-amber-400/10 active:scale-95"
-          >
-            🏆 Your wins
-          </button>
-        )}
-      </div>
+    <main className={`mx-auto min-h-dvh w-full max-w-md px-4 pt-6 sm:pt-10 ${showTabs ? "pb-32" : "pb-10"}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-lime-400">Aesthetic Gym Scanner</p>
+
+      <input
+        ref={inputRef}
+        id="photo"
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={onPick}
+        className="sr-only"
+      />
 
       {view.state === "upload" && (
         <section className="mt-2">
-          <h1 className="text-3xl font-bold tracking-tight">Scan your gym</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            One photo of the floor. Pick a session. Get your Natty Blueprint workout with only the
-            equipment you have.
-          </p>
+          <p className="text-sm text-zinc-400">Hello 👋</p>
+          <h1 className={TITLE}>
+            Build Your <Accent>Aesthetic</Accent>
+          </h1>
 
-          <TodayCard
-            week={week}
-            hasPhoto={!!photo}
-            photoInputId="photo"
-            onStart={run}
-            onCardio={() => go("cardio")}
-            onEditWeek={() => go("week")}
-          />
+          <WeekStrip />
 
-          <button
-            type="button"
-            onClick={() => go("habits")}
-            className="mt-3 flex h-14 w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-left transition hover:border-lime-400/60 active:scale-[0.98]"
-          >
-            <span className="font-semibold">✅ Daily habits</span>
-            <span className="flex items-center gap-3 text-sm tabular-nums text-zinc-400">
-              {habitSummary && (
-                <>
-                  <span>
-                    {habitSummary.done}/{HABITS.length} today
-                  </span>
-                  {habitSummary.streak > 0 && <span className="font-semibold text-amber-300">🔥 {habitSummary.streak}</span>}
-                </>
-              )}
-              <span aria-hidden>›</span>
-            </span>
-          </button>
+          <TodayCard week={week} hasPhoto={!!photo} onStart={start} onCardio={() => go("cardio")} onEditWeek={() => go("week")} />
 
-          <button
-            type="button"
-            onClick={() => go("meals")}
-            className="mt-2 flex h-14 w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-left transition hover:border-lime-400/60 active:scale-[0.98]"
-          >
-            <span className="font-semibold">🍽️ Meal plan</span>
-            <span className="flex items-center gap-3 text-sm tabular-nums text-zinc-400">
-              {mealsEaten !== null && <span>{mealsEaten}/3 eaten</span>}
-              <span aria-hidden>›</span>
-            </span>
-          </button>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <Tile
+              icon="✅"
+              label="Habits"
+              value={habitSummary ? `${habitSummary.done}/${HABITS.length}` : ""}
+              extra={habitSummary && habitSummary.streak > 0 ? `🔥 ${habitSummary.streak}` : undefined}
+              onClick={() => go("habits")}
+            />
+            <Tile icon="🍽️" label="Meals" value={mealsEaten !== null ? `${mealsEaten}/3` : ""} onClick={() => go("meals")} />
+            <Tile icon="💊" label="Supps" value={supps ? `${supps.taken}/${supps.total}` : ""} onClick={() => go("supps")} />
+          </div>
 
-          <button
-            type="button"
-            onClick={() => go("supps")}
-            className="mt-2 flex h-14 w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-left transition hover:border-teal-400/60 active:scale-[0.98]"
-          >
-            <span className="font-semibold">💊 Supplements</span>
-            <span className="flex items-center gap-3 text-sm tabular-nums text-zinc-400">
-              {supps && (
-                <span>
-                  {supps.taken}/{supps.total} taken
-                </span>
-              )}
-              <span aria-hidden>›</span>
-            </span>
-          </button>
-
-          <input
-            ref={inputRef}
-            id="photo"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={onPick}
-            className="sr-only"
-          />
+          <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Pick a session</h2>
+          <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {SESSION_BUTTONS.map((s) => {
+              const isToday = todayChoice === s.key;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => start(s.key)}
+                  aria-label={`${s.label}: ${s.hint}${isToday ? " (today)" : ""}`}
+                  className={`h-11 shrink-0 rounded-full border px-5 text-sm font-semibold transition active:scale-95 ${
+                    isToday ? "border-lime-400 bg-lime-400/10 text-lime-300" : "border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-zinc-500"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => go("cardio")}
+              className="h-11 shrink-0 rounded-full border border-sky-400/50 bg-zinc-900 px-5 text-sm font-semibold text-sky-300 transition hover:border-sky-400 active:scale-95"
+            >
+              Cardio
+            </button>
+          </div>
 
           {preview ? (
-            <div className="mt-5 overflow-hidden rounded-2xl border border-zinc-800">
+            <div className="relative mt-4 overflow-hidden rounded-2xl border border-zinc-800">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={preview} alt="Selected gym photo" className="aspect-[4/3] w-full object-cover" />
+              <img src={preview} alt="Selected gym photo" className="h-40 w-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/90 to-transparent px-3 pb-2.5 pt-8">
+                <span className="text-sm font-semibold text-lime-300">Gym scanned ✓ · pick a session</span>
+                <label htmlFor="photo" className="cursor-pointer rounded-full bg-zinc-100/90 px-3 py-1 text-xs font-semibold text-zinc-900">
+                  Retake
+                </label>
+              </div>
             </div>
           ) : (
             <label
               htmlFor="photo"
-              className="mt-5 flex aspect-[4/3] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900/60 text-zinc-400 transition hover:border-lime-400/60 hover:text-zinc-200"
+              onClick={() => setPending(null)}
+              className="mt-4 flex w-full cursor-pointer items-center gap-3 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900/60 p-4 text-zinc-300 transition hover:border-lime-400/60"
             >
-              <CameraIcon />
-              <span className="text-sm">No photo yet</span>
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-zinc-800 text-lime-300">
+                <CameraIcon />
+              </span>
+              <span className="min-w-0 text-sm">
+                <span className="block font-semibold text-zinc-100">Scan your gym</span>
+                One photo of the floor — your workout only uses the equipment in it.
+              </span>
             </label>
           )}
-
-          <label
-            htmlFor="photo"
-            className="mt-3 flex h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-zinc-100 text-base font-semibold text-zinc-900 transition active:scale-[0.98] hover:bg-white"
-          >
-            {photo ? "Retake / change photo" : "Take / Upload photo"}
-          </label>
 
           {error && (
             <p role="alert" className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
               {error}
             </p>
           )}
-
-          <h2 className="mt-7 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Or pick any session
-          </h2>
-          <div className="mt-2 grid gap-3">
-            {SESSION_BUTTONS.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                disabled={!photo}
-                onClick={() => run(s.key)}
-                className="flex h-16 w-full items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 px-5 text-left transition enabled:hover:border-lime-400 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <span className="flex items-center gap-2 text-xl font-bold">
-                  {s.label}
-                  {todayChoice === s.key && (
-                    <span className="rounded-full bg-lime-400/15 px-2 py-0.5 text-[11px] font-semibold text-lime-300">Today</span>
-                  )}
-                </span>
-                <span className="text-xs text-zinc-400">{s.hint}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => go("cardio")}
-              className="flex h-16 w-full items-center justify-between rounded-xl border border-sky-400/30 bg-zinc-900 px-5 text-left transition hover:border-sky-400 active:scale-[0.98]"
-            >
-              <span className="text-xl font-bold text-sky-300">Cardio</span>
-              <span className="text-right text-xs text-zinc-400">
-                Treadmill · StairMaster
-                <br />
-                <span className="text-zinc-500">No photo needed</span>
-              </span>
-            </button>
-          </div>
-
-          <h2 className="mt-7 text-xs font-semibold uppercase tracking-wider text-zinc-500">Track your body</h2>
-          <div className="mt-2">
-            <button
-              type="button"
-              onClick={() => go("body")}
-              className="flex h-16 w-full items-center justify-between rounded-xl border border-violet-400/30 bg-zinc-900 px-5 text-left transition hover:border-violet-400 active:scale-[0.98]"
-            >
-              <span className="text-xl font-bold text-violet-300">📈 Body tracker</span>
-              <span className="text-right text-xs text-zinc-400">
-                Weight goal · graph
-                <br />
-                <span className="text-zinc-500">Scale photo · scan reports</span>
-              </span>
-            </button>
-          </div>
         </section>
       )}
 
-      {view.state === "cardio" && <CardioSession onBack={backToSessions} onShowWins={showWins} />}
+      {view.state === "progress" && <ProgressHub onWins={showWins} onBody={() => go("body")} />}
 
-      {view.state === "body" && <BodyTracker onBack={backToSessions} />}
-
-      {view.state === "week" && <WeekEditor week={week} onChange={changeWeek} onBack={backToSessions} />}
-
-      {view.state === "habits" && <HabitsView onBack={backToSessions} />}
-
-      {view.state === "meals" && <MealPlanView onBack={backToSessions} />}
-
-      {view.state === "supps" && <SupplementsView onBack={backToSessions} />}
-
-      {view.state === "wins" && (
-        <WinsView
-          onBack={() => {
-            setView(view.back);
-            window.scrollTo({ top: 0 });
-          }}
+      {view.state === "more" && (
+        <MoreHub
+          onHabits={() => go("habits")}
+          onSupps={() => go("supps")}
+          onWeek={() => go("week")}
+          onSleep={() => go("sleep")}
+          onCardio={() => go("cardio")}
         />
       )}
+
+      {view.state === "cardio" && <CardioSession onBack={back} onShowWins={showWins} />}
+
+      {view.state === "body" && <BodyTracker onBack={back} />}
+
+      {view.state === "week" && <WeekEditor week={week} onChange={changeWeek} onBack={back} />}
+
+      {view.state === "habits" && <HabitsView onBack={back} />}
+
+      {view.state === "sleep" && sleep && <SleepHelper settings={sleep} onChange={setSleep} onBack={back} />}
+
+      {view.state === "meals" && <MealPlanView onBack={back} />}
+
+      {view.state === "supps" && <SupplementsView onBack={back} />}
+
+      {view.state === "wins" && <WinsView onBack={() => show(view.back)} />}
 
       {view.state === "loading" && (
         <section className="flex min-h-[60dvh] flex-col items-center justify-center gap-4" aria-live="polite">
@@ -340,7 +342,28 @@ export default function Home() {
           onShowWins={showWins}
         />
       )}
+
+      {showTabs && <TabBar active={tab} onTab={onTab} onScan={scan} />}
     </main>
+  );
+}
+
+function Tile({ icon, label, value, extra, onClick }: { icon: string; label: string; value: string; extra?: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-start rounded-2xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-left transition hover:border-lime-400/60 active:scale-[0.97]"
+    >
+      <span aria-hidden className="text-lg">
+        {icon}
+      </span>
+      <span className="mt-1 text-xs text-zinc-400">{label}</span>
+      <span className="flex items-baseline gap-1.5 text-base font-bold tabular-nums">
+        {value}
+        {extra && <span className="text-xs font-semibold text-amber-300">{extra}</span>}
+      </span>
+    </button>
   );
 }
 

@@ -3,7 +3,14 @@
 @tailwind utilities;
 
 body {
-  @apply bg-zinc-950 text-zinc-100;
+  @apply bg-black text-zinc-100;
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  /* Main call to action: lime → mint pill with a dark arrow circle on the right. */
+  .btn-glow {
+    @apply flex h-14 w-full items-center justify-between gap-3 rounded-full bg-gradient-to-r from-lime-400 to-emerald-300 pl-6 pr-1.5 text-left text-base font-semibold text-zinc-950 shadow-[0_0_24px_-6px_rgba(198,244,50,0.55)] transition active:scale-[0.98] disabled:opacity-40;
+  }
 }
