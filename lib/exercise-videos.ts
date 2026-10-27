@@ -13,5 +13,6 @@ export const VIDEOS: Record<string, ExerciseVideo[]> = {
   "Cable Lateral Raise": [{ id: "Sp8be0IFNvk" }, { id: "ozpcrgmwyto" }],
   "Chest-Supported Lateral Raise": [{ id: "zOQxJm7sEAg" }],
   "Cable Hip Abduction": [{ id: "3ryh7PNhz3E", start: 500 }],
+  "Side-Lying Hip Abduction": [{ id: "s6lDpy4AO6w" }],
   "Smith Machine Shrug": [{ id: "kJUypIT1Txo" }],
 };
