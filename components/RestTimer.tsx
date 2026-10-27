@@ -33,7 +33,7 @@ export function unlockAudio() {
   }
 }
 
-function beep() {
+export function beep() {
   if (!audioCtx) return;
   const now = audioCtx.currentTime;
   for (let i = 0; i < 3; i++) {
@@ -51,6 +51,25 @@ function beep() {
 
 type WakeLockSentinelLike = { release: () => Promise<void> };
 
+/** Keep the screen on while `active` (works on https/localhost; silently skipped otherwise). */
+export function useWakeLock(active: boolean) {
+  const wakeRef = useRef<WakeLockSentinelLike | null>(null);
+  useEffect(() => {
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<WakeLockSentinelLike> } };
+    if (!active || !nav.wakeLock) return;
+    let cancelled = false;
+    nav.wakeLock
+      .request("screen")
+      .then((lock) => (cancelled ? void lock.release() : (wakeRef.current = lock)))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      void wakeRef.current?.release().catch(() => {});
+      wakeRef.current = null;
+    };
+  }, [active]);
+}
+
 export function RestTimer({ request, onClose }: { request: RestRequest; onClose: () => void }) {
   const [total, setTotal] = useState(request.seconds);
   // Timestamps, not tick counting, so the clock stays right if the phone throttles the tab.
@@ -58,7 +77,6 @@ export function RestTimer({ request, onClose }: { request: RestRequest; onClose:
   const [pausedLeft, setPausedLeft] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const firedRef = useRef(false);
-  const wakeRef = useRef<WakeLockSentinelLike | null>(null);
 
   const running = endAt !== null;
   const left = running ? Math.max(0, (endAt - now) / 1000) : (pausedLeft ?? 0);
@@ -70,21 +88,7 @@ export function RestTimer({ request, onClose }: { request: RestRequest; onClose:
     return () => clearInterval(id);
   }, [running]);
 
-  // Keep the screen on while resting (works on https/localhost; silently skipped otherwise).
-  useEffect(() => {
-    const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<WakeLockSentinelLike> } };
-    if (!running || done || !nav.wakeLock) return;
-    let cancelled = false;
-    nav.wakeLock
-      .request("screen")
-      .then((lock) => (cancelled ? void lock.release() : (wakeRef.current = lock)))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-      void wakeRef.current?.release().catch(() => {});
-      wakeRef.current = null;
-    };
-  }, [running, done]);
+  useWakeLock(running && !done);
 
   useEffect(() => {
     if (!done || firedRef.current) return;

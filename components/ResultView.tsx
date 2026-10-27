@@ -5,6 +5,14 @@ import type { PlannedExercise, PlanResult } from "@/lib/plan";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
 import { SetLogger, loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
+import {
+  CardioCard,
+  MACHINE_LABEL,
+  loadCardioPlan,
+  saveCardioPlan,
+  type CardioPlan,
+  type CardioPosition,
+} from "@/components/CardioCard";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -15,6 +23,14 @@ export function formatRest(restSeconds: string): string {
 }
 
 const plural = (n: number) => (n === 1 ? "exercise" : "exercises");
+
+const CARDIO_KEY = "__cardio__";
+const CARDIO_CHOICE =
+  "rounded-full bg-sky-400 px-3 py-1.5 text-sm font-semibold text-zinc-950 transition hover:bg-sky-300 active:scale-95";
+
+type Slide =
+  | { kind: "lift"; key: string; ex: PlannedExercise; liftIndex: number }
+  | { kind: "cardio"; key: string };
 
 export function ResultView({
   plan,
@@ -30,16 +46,29 @@ export function ResultView({
   const firstAbsIndex = plan.exercises.findIndex((e) => e.abs === true);
   const [rest, setRest] = useState<RestRequest | null>(null);
   const [unit, setUnit] = useState<Unit>(loadUnit);
+  const [cardio, setCardio] = useState<CardioPlan | null>(loadCardioPlan);
+  const [choosingCardio, setChoosingCardio] = useState(false);
   const [active, setActive] = useState(0);
   const [progress, setProgress] = useState<Record<string, { done: number; total: number }>>({});
   const trackRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
-  const count = plan.exercises.length;
-  const isComplete = (name: string) => {
-    const p = progress[name];
+
+  // Pages in order: optional cardio, the lifts, optional cardio.
+  const liftSlides: Slide[] = plan.exercises.map((ex, i) => ({ kind: "lift", key: ex.name, ex, liftIndex: i }));
+  const cardioSlide: Slide | null = cardio ? { kind: "cardio", key: CARDIO_KEY } : null;
+  const slides: Slide[] = [
+    ...(cardioSlide && cardio?.position === "before" ? [cardioSlide] : []),
+    ...liftSlides,
+    ...(cardioSlide && cardio?.position === "after" ? [cardioSlide] : []),
+  ];
+  const count = slides.length;
+  const liftCount = plan.exercises.length;
+  const isComplete = (key: string) => {
+    const p = progress[key];
     return !!p && p.total > 0 && p.done >= p.total;
   };
-  const allComplete = count > 0 && plan.exercises.every((e) => isComplete(e.name));
+  const allComplete = count > 0 && slides.every((sl) => isComplete(sl.key));
+  const current = slides[Math.min(active, count - 1)];
 
   // One exercise per page: the track scrolls horizontally and snaps to each card.
   const goTo = useCallback((i: number) => {
@@ -53,23 +82,21 @@ export function ResultView({
     if (track && track.clientWidth > 0) setActive(Math.round(track.scrollLeft / track.clientWidth));
   }
 
-  // Editing equipment can shorten the list; don't leave the view past the last card.
+  // Editing equipment or removing cardio can shorten the list; don't leave the view past the last card.
   useEffect(() => {
     if (active > count - 1) goTo(Math.max(0, count - 1));
   }, [active, count, goTo]);
 
-  const reportProgress = useCallback((name: string, done: number, total: number) => {
+  const reportProgress = useCallback((key: string, done: number, total: number) => {
     setProgress((prev) =>
-      prev[name]?.done === done && prev[name]?.total === total ? prev : { ...prev, [name]: { done, total } },
+      prev[key]?.done === done && prev[key]?.total === total ? prev : { ...prev, [key]: { done, total } },
     );
   }, []);
 
-  function onSetDone(i: number, allDone: boolean) {
-    startRest(plan.exercises[i]);
-    if (!allDone) return;
-    // Finished every set here: move on to the next exercise that still has open sets.
+  // Finished a page: move on to the next one that still has work left (wrapping around).
+  function advanceFrom(i: number) {
     const next = Array.from({ length: count - 1 }, (_, k) => (i + 1 + k) % count).find(
-      (j) => !isComplete(plan.exercises[j].name),
+      (j) => !isComplete(slides[j].key),
     );
     if (next === undefined) return;
     setTimeout(() => {
@@ -78,6 +105,37 @@ export function ResultView({
       const nav = navRef.current;
       if (nav && nav.getBoundingClientRect().top < 0) nav.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 450);
+  }
+
+  function onSetDone(slideIndex: number, ex: PlannedExercise, allDone: boolean) {
+    startRest(ex);
+    if (allDone) advanceFrom(slideIndex);
+  }
+
+  const onCardioFinishedChange = useCallback(
+    (finished: boolean) => reportProgress(CARDIO_KEY, finished ? 1 : 0, 1),
+    [reportProgress],
+  );
+
+  function updateCardio(next: CardioPlan | null) {
+    const moved = next && cardio && next.position !== cardio.position;
+    setCardio(next);
+    saveCardioPlan(next);
+    if (!next) {
+      setProgress((prev) => {
+        const next = { ...prev };
+        delete next[CARDIO_KEY];
+        return next;
+      });
+      return;
+    }
+    // Follow the cardio card to its new spot (or show it when first added).
+    if (moved || !cardio) setTimeout(() => goTo(next.position === "before" ? 0 : liftCount), 50);
+  }
+
+  function addCardio(position: CardioPosition) {
+    setChoosingCardio(false);
+    updateCardio({ position, machine: cardio?.machine ?? "treadmill", minutes: cardio?.minutes ?? 20 });
   }
 
   function changeUnit(u: Unit) {
@@ -124,11 +182,46 @@ export function ResultView({
         </div>
       )}
 
+      {!cardio && (
+        <div className="mt-4">
+          {choosingCardio ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-sky-400/30 bg-sky-400/5 p-2.5">
+              <span className="px-1 text-sm text-zinc-300">Cardio:</span>
+              <button type="button" onClick={() => addCardio("before")} className={CARDIO_CHOICE}>
+                Before lifting
+              </button>
+              <button type="button" onClick={() => addCardio("after")} className={CARDIO_CHOICE}>
+                After lifting
+              </button>
+              <button
+                type="button"
+                onClick={() => setChoosingCardio(false)}
+                className="ml-auto px-2 text-sm text-zinc-500 hover:text-zinc-300"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setChoosingCardio(true)}
+              className="rounded-full border border-dashed border-sky-400/60 px-3 py-1.5 text-sm font-medium text-sky-300 transition hover:bg-sky-400/10 active:scale-95"
+            >
+              + Add cardio (treadmill / StairMaster)
+            </button>
+          )}
+        </div>
+      )}
+
       {count > 0 && (
         <nav ref={navRef} aria-label="Exercises" className="mt-5 scroll-mt-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              {allComplete ? "Workout complete 💪" : `Exercise ${Math.min(active, count - 1) + 1} of ${count}`}
+              {allComplete
+                ? "Workout complete 💪"
+                : current?.kind === "cardio"
+                  ? `Cardio · ${cardio?.position === "before" ? "warm-up" : "finisher"}`
+                  : `Exercise ${(current?.kind === "lift" ? current.liftIndex : 0) + 1} of ${liftCount}`}
             </p>
             <div className="flex gap-1.5">
               <ArrowButton dir="prev" disabled={active <= 0} onClick={() => goTo(active - 1)} />
@@ -136,12 +229,13 @@ export function ResultView({
             </div>
           </div>
           <ol className="mt-2 flex flex-wrap items-center gap-1.5">
-            {plan.exercises.map((ex, i) => {
-              const done = isComplete(ex.name);
-              const current = i === active;
+            {slides.map((sl, i) => {
+              const done = isComplete(sl.key);
+              const isCurrent = i === active;
+              const isCardio = sl.kind === "cardio";
               return (
-                <Fragment key={`${ex.name}-${i}`}>
-                  {isLegs && i === firstAbsIndex && i > 0 && (
+                <Fragment key={sl.key}>
+                  {isLegs && sl.kind === "lift" && sl.liftIndex === firstAbsIndex && sl.liftIndex > 0 && (
                     <li aria-hidden className="px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                       Abs
                     </li>
@@ -150,17 +244,21 @@ export function ResultView({
                     <button
                       type="button"
                       onClick={() => goTo(i)}
-                      aria-label={`${ex.name}${done ? " (done)" : ""}`}
-                      aria-current={current ? "step" : undefined}
+                      aria-label={`${isCardio && cardio ? `Cardio: ${MACHINE_LABEL[cardio.machine]}` : sl.kind === "lift" ? sl.ex.name : ""}${done ? " (done)" : ""}`}
+                      aria-current={isCurrent ? "step" : undefined}
                       className={`grid h-8 w-8 place-items-center rounded-full text-xs font-bold tabular-nums transition active:scale-90 ${
                         done
-                          ? "bg-lime-400 text-zinc-950"
-                          : current
+                          ? isCardio
+                            ? "bg-sky-400 text-zinc-950"
+                            : "bg-lime-400 text-zinc-950"
+                          : isCurrent
                             ? "bg-zinc-100 text-zinc-900"
-                            : "bg-zinc-800 text-zinc-400 hover:text-zinc-100"
-                      } ${current && done ? "ring-2 ring-zinc-100 ring-offset-2 ring-offset-zinc-950" : ""}`}
+                            : isCardio
+                              ? "bg-sky-400/15 text-sky-300"
+                              : "bg-zinc-800 text-zinc-400 hover:text-zinc-100"
+                      } ${isCurrent && done ? "ring-2 ring-zinc-100 ring-offset-2 ring-offset-zinc-950" : ""}`}
                     >
-                      {done ? "✓" : i + 1}
+                      {done ? "✓" : isCardio ? <RunIcon /> : sl.kind === "lift" ? sl.liftIndex + 1 : null}
                     </button>
                   </li>
                 </Fragment>
@@ -174,23 +272,34 @@ export function ResultView({
         ref={trackRef}
         onScroll={onTrackScroll}
         aria-roledescription="carousel"
-        className="-mx-1 mt-3 flex snap-x snap-mandatory items-start overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-1 mt-3 flex snap-x snap-mandatory items-start overflow-x-auto overscroll-x-contain [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {plan.exercises.map((ex, i) => (
+        {slides.map((sl, i) => (
           <div
-            key={`${ex.name}-${i}`}
+            key={sl.key}
             aria-roledescription="slide"
             aria-label={`${i + 1} of ${count}`}
             className="w-full shrink-0 snap-center snap-always px-1"
           >
-            <ExerciseCard
-              ex={ex}
-              index={i + 1}
-              unit={unit}
-              onStartRest={() => startRest(ex)}
-              onSetDone={(allDone) => onSetDone(i, allDone)}
-              onProgress={reportProgress}
-            />
+            {sl.kind === "cardio" && cardio ? (
+              <CardioCard
+                plan={cardio}
+                unit={unit}
+                onChange={updateCardio}
+                onRemove={() => updateCardio(null)}
+                onDone={() => advanceFrom(i)}
+                onFinishedChange={onCardioFinishedChange}
+              />
+            ) : sl.kind === "lift" ? (
+              <ExerciseCard
+                ex={sl.ex}
+                index={sl.liftIndex + 1}
+                unit={unit}
+                onStartRest={() => startRest(sl.ex)}
+                onSetDone={(allDone) => onSetDone(i, sl.ex, allDone)}
+                onProgress={reportProgress}
+              />
+            ) : null}
           </div>
         ))}
       </div>
@@ -387,6 +496,15 @@ function TimerIcon() {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <circle cx="12" cy="13" r="8" />
       <path d="M12 9v4l2.5 2.5M9 2h6" />
+    </svg>
+  );
+}
+
+function RunIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="14" cy="4" r="2" />
+      <path d="M8 21l3-6 3 2v5M6 12l3-4 4 1 3 4 3 1M9 8l-2 4" />
     </svg>
   );
 }
