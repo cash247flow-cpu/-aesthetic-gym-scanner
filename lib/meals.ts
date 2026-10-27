@@ -5,6 +5,7 @@ export type MealId = "breakfast" | "lunch" | "dinner";
 export type FoodKind = "P" | "F" | "C" | "note";
 export type Food = { kind: FoodKind; text: string };
 export type Meal = { id: MealId; title: string; when: string; foods: Food[] };
+// carbs are net carbs (total minus fiber), as Cronometer is set to track them.
 export type Macros = { carbs: number; protein: number; fat: number };
 
 export const PHASES: Record<MealPhase, { label: string; macros: Macros }> = {

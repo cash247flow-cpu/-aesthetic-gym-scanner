@@ -77,7 +77,7 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
               phase === p ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:text-zinc-100"
             }`}
           >
-            {PHASES[p].label} · {PHASES[p].macros.carbs} g carbs
+            {PHASES[p].label} · {PHASES[p].macros.carbs} g net carbs
           </button>
         ))}
       </div>
@@ -153,7 +153,7 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
 function MacroTargets({ macros }: { macros: Macros }) {
   const items = [
     { label: "Protein", value: macros.protein, className: "text-rose-200" },
-    { label: "Carbs", value: macros.carbs, className: "text-amber-200" },
+    { label: "Net carbs", value: macros.carbs, className: "text-amber-200" },
     { label: "Fat", value: macros.fat, className: "text-lime-200" },
   ];
   return (
@@ -189,7 +189,7 @@ function CronometerTable({ days, target }: { days: DayTotals[]; target: Macros }
       <div className="grid grid-cols-[1fr_3rem_3rem_3rem_3.5rem] gap-x-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
         <span>Day</span>
         <span className="text-right">P</span>
-        <span className="text-right">C</span>
+        <span className="text-right">Net C</span>
         <span className="text-right">F</span>
         <span className="text-right">kcal</span>
       </div>
@@ -210,7 +210,8 @@ function CronometerTable({ days, target }: { days: DayTotals[]; target: Macros }
                 {inProgress && <span className="block text-[10px] text-zinc-500">in progress</span>}
               </span>
               <span className="text-right">{cell(d.protein, target.protein, inProgress)}</span>
-              <span className="text-right">{cell(d.carbs, target.carbs, inProgress)}</span>
+              {/* Targets are net carbs (Cronometer is set to net); older imports may only have total. */}
+              <span className="text-right">{cell(d.netCarbs ?? d.carbs, target.carbs, inProgress)}</span>
               <span className="text-right">{cell(d.fat, target.fat, inProgress)}</span>
               <span className="text-right">{cell(d.kcal, kcalOf(target), inProgress)}</span>
             </li>
@@ -220,7 +221,7 @@ function CronometerTable({ days, target }: { days: DayTotals[]; target: Macros }
       <p className="mt-2 text-[11px] text-zinc-500">
         <span className="text-lime-300">Green</span> within 10% of target · <span className="text-sky-300">blue</span> under ·{" "}
         <span className="text-amber-300">amber</span> over. Days still being logged in Cronometer show “in progress”. Carbs
-        are total carbs.
+        are net carbs (total minus fiber), matching Cronometer.
       </p>
     </div>
   );
