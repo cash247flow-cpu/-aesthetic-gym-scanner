@@ -29,6 +29,7 @@ const COMBOS = {
     picks: [
       ["legs", "Leg Raise"],
       ["legs", "Decline Crunches"],
+      ["legs", "Lat Pulldown Crunch"],
     ] as const,
   },
 };

@@ -49,6 +49,7 @@ export const LEG_AESTHETIC: Record<string, { label: string; reason: string }> = 
   "Hip Abduction":       { label: "Glutes", reason: "Upper glute/hip shape — the 'shelf' look from behind." },
   "Leg Raise":           { label: "Abs · Lower", reason: "Lower-ab development that leanness alone can't create." },
   "Decline Crunch":      { label: "Abs · Upper", reason: "Loaded spinal flexion builds blocky, visible abs." },
+  "Lat Pulldown Crunch": { label: "Abs · Flexion", reason: "Short-range spinal flexion, minimal hip flexion — developed abs make the waist look smaller, not blockier." },
 };
 
 // ─── Sessions ──────────────────────────────────────────────────────────
@@ -182,6 +183,12 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         equipmentNeeded: ["decline bench"], aestheticKey: "Decline Crunch", aestheticMap: "legs", abs: true,
         substitutes: [
           { name: "Cable Rope Crunch", cue: "Kneel, round the spine to bring elbows to knees; slow eccentric.", equipmentNeeded: ["cable machine","rope attachment"], aestheticKey: "Decline Crunch", aestheticMap: "legs", abs: true },
+        ] },
+      { name: "Lat Pulldown Crunch", sets: "3", reps: "failure", restSeconds: "90–120",
+        cue: "Kneel facing the pulldown, handle by your head. Curl your ribs toward your pelvis — small range, hips stay still.",
+        equipmentNeeded: ["lat pulldown"], aestheticKey: "Lat Pulldown Crunch", aestheticMap: "legs", abs: true,
+        substitutes: [
+          { name: "Bottom-Range Crunch", cue: "On the floor, crunch only through the bottom of the range — round the spine, don't sit up; slow down.", equipmentNeeded: [], aestheticKey: "Lat Pulldown Crunch", aestheticMap: "legs", abs: true },
         ] },
     ],
   },
