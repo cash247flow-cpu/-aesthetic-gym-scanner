@@ -8,6 +8,8 @@ import { WinsView } from "@/components/WinsView";
 import { BodyTracker } from "@/components/BodyTracker";
 import { TodayCard } from "@/components/TodayCard";
 import { HabitsView } from "@/components/HabitsView";
+import { MealPlanView } from "@/components/MealPlanView";
+import { MEALS, loadEaten, loadPhase } from "@/lib/meals";
 import { HABITS, doneCount, loadHabitLogs, streak, todayStr } from "@/lib/habits";
 import { WeekEditor } from "@/components/WeekEditor";
 import { DEFAULT_WEEK, loadWeek, saveWeek, type WeekPlan } from "@/lib/schedule";
@@ -20,6 +22,7 @@ type View =
   | { state: "body" }
   | { state: "week" }
   | { state: "habits" }
+  | { state: "meals" }
   | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean };
 
@@ -47,10 +50,13 @@ export default function Home() {
   const todayChoice = todayIdx === null ? null : week[todayIdx].choice;
   // Today's habit progress for the home row; re-read whenever the home screen shows.
   const [habitSummary, setHabitSummary] = useState<{ done: number; streak: number } | null>(null);
+  const [mealsEaten, setMealsEaten] = useState<number | null>(null);
   useEffect(() => {
     if (view.state !== "upload") return;
     const logs = loadHabitLogs();
     setHabitSummary({ done: doneCount(logs[todayStr()]), streak: streak(logs, "all") });
+    const eaten = loadEaten()[todayStr()] ?? {};
+    setMealsEaten(MEALS[loadPhase()].filter((m) => eaten[m.id]).length);
   }, [view.state]);
 
   function changeWeek(next: WeekPlan | null) {
@@ -58,7 +64,7 @@ export default function Home() {
     saveWeek(next);
   }
 
-  function go(state: "cardio" | "body" | "week" | "habits") {
+  function go(state: "cardio" | "body" | "week" | "habits" | "meals") {
     setView({ state });
     window.scrollTo({ top: 0 });
   }
@@ -174,6 +180,18 @@ export default function Home() {
             </span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => go("meals")}
+            className="mt-2 flex h-14 w-full items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-4 text-left transition hover:border-lime-400/60 active:scale-[0.98]"
+          >
+            <span className="font-semibold">🍽️ Meal plan</span>
+            <span className="flex items-center gap-3 text-sm tabular-nums text-zinc-400">
+              {mealsEaten !== null && <span>{mealsEaten}/3 eaten</span>}
+              <span aria-hidden>›</span>
+            </span>
+          </button>
+
           <input
             ref={inputRef}
             id="photo"
@@ -272,6 +290,8 @@ export default function Home() {
       {view.state === "week" && <WeekEditor week={week} onChange={changeWeek} onBack={backToSessions} />}
 
       {view.state === "habits" && <HabitsView onBack={backToSessions} />}
+
+      {view.state === "meals" && <MealPlanView onBack={backToSessions} />}
 
       {view.state === "wins" && (
         <WinsView
