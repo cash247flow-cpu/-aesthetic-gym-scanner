@@ -56,6 +56,7 @@ export async function askGeminiJson(opts: {
   const primary = process.env.GEMINI_MODEL || "gemini-3.5-flash";
   const models = Array.from(new Set([primary, FALLBACK_MODEL]));
   let lastStatus: number | undefined;
+  let lastMessage = "";
 
   for (const name of models) {
     try {
@@ -77,17 +78,25 @@ export async function askGeminiJson(opts: {
       return { data: data ?? {} };
     } catch (err) {
       lastStatus = (err as { status?: number }).status;
+      lastMessage = (err as Error).message ?? "";
       console.error(`[${opts.tag}] ${name} failed:`, lastStatus ?? "timeout/network", (err as Error).message);
       if (lastStatus && !RETRYABLE.has(lastStatus)) break;
     }
   }
 
+  const badKey = /api key|api_key|permission|unauthori[sz]ed/i.test(lastMessage);
   const message =
     lastStatus === 429
       ? "Gemini quota reached for this API key. Wait a minute (or until tomorrow on the free tier) and try again."
       : lastStatus === 503
         ? "Gemini is overloaded right now. Try again in a minute."
-        : "Couldn't read the photo. Try again.";
+        : badKey || lastStatus === 401 || lastStatus === 403
+          ? "Gemini rejected the API key. Check GEMINI_API_KEY in your hosting settings (no spaces, current key), then redeploy."
+          : lastStatus === 404
+            ? `Gemini model "${primary}" wasn't found. Check GEMINI_MODEL, or remove it to use the default.`
+            : lastStatus === undefined
+              ? "Gemini didn't answer in time (or couldn't be reached). Try again in a minute."
+              : `Couldn't read the photo (Gemini error ${lastStatus}). Try again.`;
   return NextResponse.json({ error: message }, { status: 502 });
 }
 
