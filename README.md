@@ -46,3 +46,11 @@ Exercises it doesn't cover have a hand-picked YouTube demo in `lib/exercise-vide
 "Check label" on the Supplements screen looks up products in the NIH Office of Dietary Supplements' [Dietary Supplement Label Database](https://dsld.od.nih.gov/) (public domain, CC0) through `app/api/supp-label/*`. No API key is needed. It shows label facts for reference only — it never suggests a dose or lifts a hold.
 
 National Institutes of Health, Office of Dietary Supplements. Dietary Supplement Label Database, 2026. https://dsld.od.nih.gov/
+
+## Use it on your phone
+
+1. Deploy on [Vercel](https://vercel.com): **Add New → Project**, import this GitHub repo, keep the defaults.
+2. In the project's **Settings → Environment Variables** add `GEMINI_API_KEY` (your key) and `APP_PASSCODE` (a long passcode only you know), then redeploy.
+3. On the phone, open the `https://….vercel.app` link in Chrome or Samsung Internet, enter the passcode, then menu (⋮) → **Add to Home screen / Install app**.
+
+With `APP_PASSCODE` set, every page and API route needs the passcode cookie (`middleware.ts`), so nobody who finds the link can use your Gemini key. Changing the passcode signs every device out. Your logs are stored per browser, so the phone starts with fresh data.
