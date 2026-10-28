@@ -132,9 +132,16 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         equipmentNeeded: ["t-bar row machine"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper",
         substitutes: [
           { name: "Chest-Supported Dumbbell Row (Helms Row)", cue: "Chest braced against an incline bench, neutral grip. Full stretch at the bottom, pull elbows back without lifting your chest off the pad.", equipmentNeeded: ["dumbbells","incline bench"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
-          { name: "Seated Cable Row", cue: "Sit tall, let the weight pull your shoulders forward for a stretch, then row to your stomach — no rocking back.", equipmentNeeded: ["cable machine"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
           { name: "Meadows Row", cue: "One end of a barbell in a landmine or corner, stand side-on and grab the thick end overhand. Hinge, stretch at the bottom, drive the elbow up and back.", equipmentNeeded: ["barbell"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
+          { name: "Single-Arm Dumbbell Row", cue: "Hand and knee on a bench, flat back. Full stretch at the bottom, drive the elbow to your hip. Straps are fine if your grip goes first.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
           { name: "Wide-Grip Cable Row", cue: "Wide bar, elbows flared out about 45°. Pull to your lower chest and squeeze the upper back; control the stretch forward.", equipmentNeeded: ["cable machine"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
+        ] },
+      { name: "Seated Cable Row", sets: "2–3", reps: "8–12", restSeconds: "120–180",
+        cue: "Sit tall, let the weight pull your shoulders forward for a stretch, then row to your stomach — no rocking back.",
+        equipmentNeeded: ["cable machine"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper",
+        substitutes: [
+          { name: "Wide-Grip Cable Row", cue: "Wide bar, elbows flared out about 45°. Pull to your lower chest and squeeze the upper back; control the stretch forward.", equipmentNeeded: ["cable machine"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
+          { name: "Meadows Row", cue: "One end of a barbell in a landmine or corner, stand side-on and grab the thick end overhand. Hinge, stretch at the bottom, drive the elbow up and back.", equipmentNeeded: ["barbell"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
           { name: "Single-Arm Dumbbell Row", cue: "Hand and knee on a bench, flat back. Full stretch at the bottom, drive the elbow to your hip. Straps are fine if your grip goes first.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Single-Arm Dumbbell Row", aestheticMap: "upper" },
         ] },
       { name: "Incline Dumbbell Curl", sets: "2", reps: "10–12", restSeconds: "90–120",

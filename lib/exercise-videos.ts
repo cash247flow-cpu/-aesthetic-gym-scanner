@@ -3,6 +3,7 @@
 
 export type ExerciseVideo = { id: string; start?: number };
 
+const BACK_VIDEO = "jLvqKgW-_G8";
 const FACE_AWAY_CRUNCH: ExerciseVideo[] = [{ id: "0ShG8aVIvms" }];
 
 export const VIDEOS: Record<string, ExerciseVideo[]> = {
@@ -16,5 +17,14 @@ export const VIDEOS: Record<string, ExerciseVideo[]> = {
   "Chest-Supported Lateral Raise": [{ id: "zOQxJm7sEAg" }],
   "Cable Hip Abduction": [{ id: "3ryh7PNhz3E", start: 500 }],
   "Side-Lying Hip Abduction": [{ id: "s6lDpy4AO6w" }],
+  // Jeff Nippard's back-exercise ranking, each starting at that exercise's chapter.
+  "Wide-Grip Lat Pulldown": [{ id: BACK_VIDEO, start: 218 }],
+  "Neutral-Grip Pulldown": [{ id: BACK_VIDEO, start: 239 }],
+  "Half-Kneeling One-Arm Cable Pulldown": [{ id: BACK_VIDEO, start: 248 }],
+  "Meadows Row": [{ id: BACK_VIDEO, start: 388 }],
+  "Chest-Supported T-Bar Row": [{ id: BACK_VIDEO, start: 533 }],
+  "Chest-Supported Dumbbell Row (Helms Row)": [{ id: BACK_VIDEO, start: 533 }],
+  "Seated Cable Row": [{ id: BACK_VIDEO, start: 562 }],
+  "Wide-Grip Cable Row": [{ id: BACK_VIDEO, start: 577 }],
   "Smith Machine Shrug": [{ id: "kJUypIT1Txo" }],
 };
