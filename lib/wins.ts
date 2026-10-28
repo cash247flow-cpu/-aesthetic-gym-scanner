@@ -1,6 +1,7 @@
 import { loadRecord, type Row, type Unit } from "@/components/SetLogger";
 import { loadLog as loadCardioLog } from "@/components/CardioCard";
 import { bestPerfectStreak, loadHabitLogs } from "@/lib/habits";
+import { statsTotal } from "@/lib/cardioStats";
 
 // Weights are typed in whatever unit the toggle shows; everything stored here is in lb.
 const LB_PER_KG = 2.20462;
@@ -26,6 +27,8 @@ export type HistoryEntry = {
   exercises?: string[]; // ones with logged sets (for the weekly muscle map); older entries lack it
   makeupFor?: string; // date of the missed day this workout made up
   durationMin?: number; // workout timer total (pauses excluded)
+  steps?: number; // cardio steps/floors logged today (lib/cardioStats)
+  floors?: number;
 };
 export type Totals = { volumeLb: number; workouts: number; prs: number; cardioMin: number };
 export type BadgeGroup = "lift" | "workouts" | "prs" | "cardio" | "habits";
@@ -43,6 +46,8 @@ export type Summary = {
   totals: Totals;
   empty: boolean;
   durationMin?: number;
+  steps?: number;
+  floors?: number;
 };
 
 export const PR_LABEL: Record<PRKind, string> = {
@@ -213,6 +218,8 @@ export function finishWorkout(opts: {
     return log?.date === t ? m + log.minutes : m;
   }, 0);
 
+  // Steps/floors are typed or photo-read on the cardio card; count today's when cardio is included.
+  const stepStats = includeCardio ? statsTotal(t, t) : { steps: 0, floors: 0 };
   const history = loadHistory();
   const others = history.filter((h) => !(h.date === t && h.session === session && h.makeupFor === makeupFor));
   const empty = sets === 0 && cardioMin === 0;
@@ -229,6 +236,8 @@ export function finishWorkout(opts: {
     exercises: doneNames,
     ...(makeupFor ? { makeupFor } : {}),
     ...(durationMin ? { durationMin } : {}),
+    ...(stepStats.steps ? { steps: stepStats.steps } : {}),
+    ...(stepStats.floors ? { floors: stepStats.floors } : {}),
   };
   const nextHistory = empty ? history : [...others, entry].slice(-500);
   const totals = totalsOf(nextHistory);
@@ -253,6 +262,8 @@ export function finishWorkout(opts: {
     totals,
     empty,
     ...(durationMin ? { durationMin } : {}),
+    ...(stepStats.steps ? { steps: stepStats.steps } : {}),
+    ...(stepStats.floors ? { floors: stepStats.floors } : {}),
   };
 }
 

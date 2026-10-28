@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { beep, formatClock, unlockAudio, useWakeLock } from "@/components/RestTimer";
 import type { Unit } from "@/components/SetLogger";
+import { CardioStats } from "@/components/CardioStats";
 
 export type CardioMachine = "treadmill" | "stairmaster";
 export type CardioPosition = "before" | "after";
@@ -321,6 +322,7 @@ export function CardioCard({
           <Field label="Level" value={level} onChange={(v) => editField("level", v)} placeholder={last?.level || plan.level || "8"} className="col-span-2" />
         )}
       </div>
+      <CardioStats machine={machine} />
       {lastText && (
         <p className="mt-2 text-xs text-zinc-500">
           {todayLog ? "Logged today" : "Last time"}: {lastText}

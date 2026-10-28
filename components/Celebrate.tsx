@@ -75,6 +75,14 @@ export function Celebrate({
               </>
             )}
           </p>
+          {!summary.empty && (summary.steps || summary.floors) ? (
+            <p className="mt-1 text-sm text-zinc-400">
+              👟{" "}
+              {[summary.steps && `${summary.steps.toLocaleString()} steps`, summary.floors && `${summary.floors} floors`]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
           {!summary.empty && summary.durationMin ? (
             <p className="mt-1 text-sm text-zinc-400">
               ⏱ Workout time <span className="font-semibold text-zinc-200">{summary.durationMin} min</span>

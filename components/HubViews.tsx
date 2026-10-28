@@ -10,6 +10,7 @@ import { loadUnit } from "@/components/SetLogger";
 import { loadEntries } from "@/lib/bodyLog";
 import { weekCounts, weekStatus } from "@/lib/missed";
 import { loadOverload, saveOverload } from "@/lib/overload";
+import { statsTotal, weekStartOf } from "@/lib/cardioStats";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
 
@@ -39,6 +40,7 @@ export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: ()
   const [week, setWeek] = useState<{ exercises: string[]; workouts: number; untracked: number } | null>(null);
   const [lastWeight, setLastWeight] = useState<string | null>(null);
   const [plan, setPlan] = useState<{ done: number; madeUp: number; missed: number } | null>(null);
+  const [cardioStats, setCardioStats] = useState<{ steps: number; floors: number } | null>(null);
 
   useEffect(() => {
     const t = todayStr();
@@ -50,6 +52,7 @@ export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: ()
       untracked: thisWeek.filter((h) => !h.exercises).length,
     });
     setPlan(weekCounts(weekStatus()));
+    setCardioStats(statsTotal(weekStartOf(todayStr())));
     const last = [...loadEntries()].sort((a, b) => a.date.localeCompare(b.date)).pop();
     setLastWeight(last ? `Last weigh-in ${formatWeight(last.weightLb, loadUnit())} · ${last.date}` : null);
   }, []);
@@ -71,6 +74,17 @@ export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: ()
           <Stat value={plan.madeUp} label="Made up" tone="text-emerald-300" />
           <Stat value={plan.missed} label="Missed" tone="text-amber-300" />
         </div>
+      )}
+
+      {cardioStats && (cardioStats.steps > 0 || cardioStats.floors > 0) && (
+        <p className="mt-3 rounded-2xl border border-sky-400/30 bg-sky-400/5 px-4 py-2.5 text-sm text-sky-100">
+          👟 Cardio this week:{" "}
+          <span className="font-bold">
+            {[cardioStats.steps > 0 && `${cardioStats.steps.toLocaleString()} steps`, cardioStats.floors > 0 && `${cardioStats.floors} floors`]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </p>
       )}
 
       <div className="mt-4">
