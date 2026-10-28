@@ -9,6 +9,7 @@ import { formatWeight, loadHistory } from "@/lib/wins";
 import { loadUnit } from "@/components/SetLogger";
 import { loadEntries } from "@/lib/bodyLog";
 import { weekCounts, weekStatus } from "@/lib/missed";
+import { loadOverload, saveOverload } from "@/lib/overload";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
 
@@ -96,21 +97,19 @@ function Stat({ value, label, tone }: { value: number; label: string; tone: stri
   );
 }
 
-/** Scan mode on/off: photo-based workouts, or the standard S-tier program. */
-function ScanToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+/** A setting row with an on/off switch. */
+function SwitchRow({ label, desc, on, onChange }: { label: string; desc: string; on: boolean; onChange: (on: boolean) => void }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3">
       <span className="min-w-0 flex-1">
-        <span className="block font-semibold">📷 Scan gym equipment</span>
-        <span className="block text-xs text-zinc-400">
-          {on ? "Workouts use only the equipment in your gym photo." : "Off: your standard S-tier program — no photo needed."}
-        </span>
+        <span className="block font-semibold">{label}</span>
+        <span className="block text-xs text-zinc-400">{desc}</span>
       </span>
       <button
         type="button"
         role="switch"
         aria-checked={on}
-        aria-label="Scan gym equipment"
+        aria-label={label.replace(/^\S+\s/, "")}
         onClick={() => onChange(!on)}
         className={`relative h-8 w-14 shrink-0 rounded-full transition ${on ? "bg-lime-400" : "bg-zinc-700"}`}
       >
@@ -138,13 +137,34 @@ export function MoreHub({
   onSleep: () => void;
   onCardio: () => void;
 }) {
+  const [overload, setOverload] = useState(true);
+  useEffect(() => setOverload(loadOverload()), []);
+
   return (
     <section className="mt-2">
       <h1 className={TITLE}>
         <AccentLast text="More" />
       </h1>
       <div className="mt-4 grid grid-cols-1 gap-2">
-        <ScanToggle on={scanMode} onChange={onScanMode} />
+        <SwitchRow
+          label="📷 Scan gym equipment"
+          desc={scanMode ? "Workouts use only the equipment in your gym photo." : "Off: your standard S-tier program — no photo needed."}
+          on={scanMode}
+          onChange={onScanMode}
+        />
+        <SwitchRow
+          label="📈 Progressive overload"
+          desc={
+            overload
+              ? "Sets are pre-filled with this session's targets: +1 rep, or more weight once you hit the top of the range."
+              : "Off: set boxes start empty (Previous still shows last time)."
+          }
+          on={overload}
+          onChange={(on) => {
+            setOverload(on);
+            saveOverload(on);
+          }}
+        />
         <HubRow icon="✅" label="Daily habits" sub={HABITS.map((h) => h.title).join(" · ")} onClick={onHabits} />
         <HubRow icon="💊" label="Supplements" sub="Daily checklist and label check" onClick={onSupps} />
         <HubRow icon="🗓️" label="Your week" sub="Which session on which day, and ab days" onClick={onWeek} />

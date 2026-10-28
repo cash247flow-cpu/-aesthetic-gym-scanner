@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { loadOverload, overloadPlan } from "@/lib/overload";
 
 export type Unit = "lb" | "kg";
 export type Row = { weight: string; reps: string; done: boolean };
@@ -73,10 +74,21 @@ export function SetLogger({
     const rec = loadRecord(exercise);
     const isToday = rec?.date === today();
     const prev = (isToday ? rec?.prevSets : rec?.sets)?.filter(hasData) ?? [];
-    const rows = isToday && rec?.sets.length ? rec.sets : Array.from({ length: targetSetCount(sets) }, emptyRow);
-    return { prev, rows };
+    const count = targetSetCount(sets);
+    // Progressive overload: today's targets from last session, prefilled but editable.
+    const plan = loadOverload() ? overloadPlan(prev, reps, unit, isToday && rec?.sets.length ? rec.sets.length : count) : null;
+    const rows =
+      isToday && rec?.sets.length
+        ? rec.sets
+        : plan
+          ? plan.targets.map((t) => ({ weight: t.weight, reps: t.reps, done: false }))
+          : Array.from({ length: count }, emptyRow);
+    return { prev, rows, plan };
   });
   const prev = initial.prev;
+  const plan = initial.plan;
+  const isTarget = (i: number, field: "weight" | "reps", value: string) =>
+    !!plan?.targets[i] && plan.targets[i][field] === value && value !== "";
   const [rows, setRows] = useState<Row[]>(initial.rows);
 
   const doneCount = rows.filter((r) => r.done).length;
@@ -114,6 +126,12 @@ export function SetLogger({
 
   return (
     <div className="mt-4 border-t border-zinc-800 pt-3">
+      {plan && (
+        <p className="mb-2 rounded-lg bg-lime-400/10 px-2.5 py-1.5 text-xs text-lime-200">
+          <span className="font-semibold">🎯 Progressive overload · </span>
+          {plan.note} Targets are filled in — edit any box.
+        </p>
+      )}
       <div className="grid grid-cols-[1.75rem_1fr_4.25rem_3.5rem_2.5rem] items-center gap-x-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
         <span>Set</span>
         <span>Previous</span>
@@ -148,7 +166,9 @@ export function SetLogger({
                 value={row.weight}
                 placeholder={p?.weight || "0"}
                 onChange={(e) => update(i, { weight: e.target.value.replace(/[^\d.,]/g, "") })}
-                className="h-9 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                className={`h-9 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400 ${
+                  !row.done && isTarget(i, "weight", row.weight) ? "text-lime-300" : "text-zinc-100"
+                }`}
               />
               <input
                 inputMode="numeric"
@@ -156,7 +176,9 @@ export function SetLogger({
                 value={row.reps}
                 placeholder={p?.reps || repsHint}
                 onChange={(e) => update(i, { reps: e.target.value.replace(/\D/g, "") })}
-                className="h-9 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400"
+                className={`h-9 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400 ${
+                  !row.done && isTarget(i, "reps", row.reps) ? "text-lime-300" : "text-zinc-100"
+                }`}
               />
               <button
                 type="button"
