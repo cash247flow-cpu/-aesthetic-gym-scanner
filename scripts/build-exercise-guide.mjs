@@ -50,7 +50,7 @@ const MATCHES = {
   "Barbell Shrugs": { db: "Barbell Shrug" },
   "Cable Hammer Curl": { db: "Cable Hammer Curls - Rope Attachment" },
   "Reverse Pec Deck": { db: "Reverse Machine Flyes" },
-  "Cable Rear Delt Fly": { db: "Cable Rear Delt Fly" },
+  "Reverse Cable Crossover": { db: "Cable Rear Delt Fly" },
   "Pull-Up": { db: "Pullups" },
   "Straight-Arm Dumbbell Pullover": { db: "Straight-Arm Dumbbell Pullover" },
   "Prone Incline Dumbbell Curl": { db: "Dumbbell Prone Incline Curl" },

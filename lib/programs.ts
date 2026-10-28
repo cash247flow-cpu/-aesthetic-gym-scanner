@@ -78,6 +78,8 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         substitutes: [
           { name: "Machine Lateral Raise", cue: "Pads on the elbows; lead with the elbow, no shrug.", equipmentNeeded: ["lateral raise machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
           { name: "Cable Lateral Raise", cue: "Cable behind your body; lead with the elbow, no shrug.", equipmentNeeded: ["cable machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
+          { name: "Behind-the-Back Cuffed Lateral Raise", cue: "Cuff on the wrist, cable running behind your back from the low pulley. Stretch across the body at the bottom, raise out to the side leading with the elbow.", equipmentNeeded: ["cable machine","ankle strap"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
+          { name: "Cable Y-Raise", cue: "Two low cables crossed, one in each hand. Raise up and out into a Y, thumbs up, without shrugging — side delts do the work.", equipmentNeeded: ["cable machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
           { name: "Seated Side Lateral Raise", cue: "Sit tall, lead with the elbow, no shrug or swing.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
         ] },
       { name: "High-to-Low Cable Fly", sets: "2–3", reps: "12–15", restSeconds: "90–120",
@@ -164,7 +166,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         cue: "45° angle, lead with the elbow.",
         equipmentNeeded: ["reverse pec deck"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper",
         substitutes: [
-          { name: "Cable Rear Delt Fly", cue: "Cross the cables; sweep out at 45°, lead with the elbow.", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
+          { name: "Reverse Cable Crossover", cue: "Cables at shoulder height, crossed — left hand holds the right cable. Sweep out wide at 45°, leading with the elbows; let them cross back for a full stretch.", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
           { name: "Rear Delt Raise (head on bench)", cue: "Forehead on the bench, sweep out wide and lead with the elbows.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
         ] },
     ],

@@ -12,6 +12,7 @@ const BATCHES: { key: string; renames: Record<string, string> }[] = [
     },
   },
   { key: "ags:renames:v2", renames: { "Lat Pulldown": "Wide-Grip Lat Pulldown" } },
+  { key: "ags:renames:v3", renames: { "Cable Rear Delt Fly": "Reverse Cable Crossover" } },
 ];
 
 export function migrateRenamedExercises() {

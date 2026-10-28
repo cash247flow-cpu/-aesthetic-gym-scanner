@@ -13,6 +13,8 @@ const BY_HAND: Record<string, Targets> = {
   "Chest-Supported Lateral Raise": { primaryMuscles: ["shoulders"], secondaryMuscles: [] },
   "Machine Lateral Raise": { primaryMuscles: ["shoulders"], secondaryMuscles: [] },
   "Cable Lateral Raise": { primaryMuscles: ["shoulders"], secondaryMuscles: [] },
+  "Behind-the-Back Cuffed Lateral Raise": { primaryMuscles: ["shoulders"], secondaryMuscles: [] },
+  "Cable Y-Raise": { primaryMuscles: ["shoulders"], secondaryMuscles: ["traps"] },
   "Smith Machine Shrug": { primaryMuscles: ["traps"], secondaryMuscles: [] },
   "Cable Hip Abduction": { primaryMuscles: ["abductors"], secondaryMuscles: ["glutes"] },
   "Side-Lying Hip Abduction": { primaryMuscles: ["abductors"], secondaryMuscles: ["glutes"] },
