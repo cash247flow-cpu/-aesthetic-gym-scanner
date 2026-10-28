@@ -27,6 +27,7 @@ export const CANONICAL_EQUIPMENT = [
   "abductor machine",
   "pull-up bar",
   "captains chair",
+  "t-bar row machine",
 ] as const;
 
 const CANONICAL_SET = new Set<string>(CANONICAL_EQUIPMENT);

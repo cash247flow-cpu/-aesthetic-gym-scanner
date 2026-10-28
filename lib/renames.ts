@@ -1,14 +1,24 @@
 // Exercises renamed in lib/programs.ts. Set logs, PRs, workout history and saved swaps are
 // keyed by name, so they're moved to the new name once (on the first load after the rename).
 
-const RENAMES: Record<string, string> = {
-  "Face-Away Lat Pulldown Crunch": "Lat Pulldown Cable Crunch (Face-Away)",
-  "Face-Away Cable Crunch (kneeling or standing)": "Standing Cable Crunch (Facing Away)",
-  "Reverse Crunch": "Reverse Crunch (with Ab Mat)",
-};
-const DONE_KEY = "ags:renames:v1";
+// Each batch runs once (tracked by its key); add a new batch for later renames.
+const BATCHES: { key: string; renames: Record<string, string> }[] = [
+  {
+    key: "ags:renames:v1",
+    renames: {
+      "Face-Away Lat Pulldown Crunch": "Lat Pulldown Cable Crunch (Face-Away)",
+      "Face-Away Cable Crunch (kneeling or standing)": "Standing Cable Crunch (Facing Away)",
+      "Reverse Crunch": "Reverse Crunch (with Ab Mat)",
+    },
+  },
+  { key: "ags:renames:v2", renames: { "Lat Pulldown": "Wide-Grip Lat Pulldown" } },
+];
 
 export function migrateRenamedExercises() {
+  for (const { key, renames } of BATCHES) migrate(key, renames);
+}
+
+function migrate(DONE_KEY: string, RENAMES: Record<string, string>) {
   try {
     if (localStorage.getItem(DONE_KEY)) return;
     for (const [from, to] of Object.entries(RENAMES)) {
