@@ -21,6 +21,8 @@ export const metadata: Metadata = {
   title: "AESTHETIQ — Build Your Ideal Physique",
   description: "Build Your Ideal Physique. Snap your gym, pick a session, get a workout that only uses the equipment you have.",
   applicationName: "AESTHETIQ",
+  // Private app: keep every page out of search engines.
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false, noimageindex: true } },
   appleWebApp: { capable: true, title: "AESTHETIQ", statusBarStyle: "black-translucent" },
   icons: { icon: [{ url: "/icons/icon-192.png?v=2", sizes: "192x192", type: "image/png" }], apple: "/apple-icon.png?v=2" },
 };

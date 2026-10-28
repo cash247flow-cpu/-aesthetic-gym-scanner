@@ -86,6 +86,14 @@ const counts = (kind: ItemKind, h: HistoryEntry) =>
 
 /** This week, Sunday–Saturday, with each day's planned items and how they went. */
 export function weekStatus(today = todayStr()): DayStatus[] {
+  return rangeStatus(weekStart(today), 7, today);
+}
+
+/**
+ * Any run of days (e.g. a weekly review period) with each day's planned items and how they went.
+ * Days before tracking started, or never seen by the app, have no planned items (unknown).
+ */
+export function rangeStatus(start: string, days: number, today = todayStr()): DayStatus[] {
   let since = read<string | null>(SINCE_KEY, null);
   if (!since) {
     since = today;
@@ -94,9 +102,8 @@ export function weekStatus(today = todayStr()): DayStatus[] {
   const snaps = snapshots(today, since);
   const history = loadHistory();
   const skipped = new Set(read<string[]>(SKIP_KEY, []));
-  const start = weekStart(today);
 
-  return Array.from({ length: 7 }, (_, i) => {
+  return Array.from({ length: days }, (_, i) => {
     const date = addDays(start, i);
     const own = history.filter((h) => h.date === date && !h.makeupFor);
     const makeups = history.filter((h) => h.makeupFor === date);

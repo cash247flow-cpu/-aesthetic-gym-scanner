@@ -82,3 +82,45 @@ progress) and Discipline (workouts completed and perfect habit streaks).
 - **Artwork:** the emblem in `public/achievements/` is cropped from the AESTHETIQ certificate
   artwork. The Cinzel font is in `public/fonts/` under the SIL Open Font License.
 - **Tests:** `npm test` runs the rule tests in `tests/`, which use example data only.
+
+## V2: Weekly Evolution, Visual Evolution and sharing
+
+Progress has four rows: **Weekly evolution**, **Visual evolution**, **Your wins** and **Body tracker**.
+When last week has ended and hasn't been reviewed, the home screen shows a "Your weekly review is
+ready" card.
+
+- **Weekly review** (`lib/review/`, `components/WeeklyReview.tsx`)
+  - Built from records the app already keeps: workouts and the missed/made-up plan, PRs and
+    awards, weigh-ins, waist, body fat, habits, meal ticks, imported Cronometer days, cardio and
+    photos.
+  - Anything not recorded shows as "not recorded", never as 0.
+  - Meal ticks are reported as ticks, not as calories eaten. Hours of sleep aren't tracked; only
+    the Sleep Lock routine is.
+  - The review week starts on Sunday by default; this can be changed on the review screen.
+  - Saving a review keeps a versioned snapshot. If data is corrected later, the app says so and
+    lets you save an updated version. Earlier versions are kept.
+- **Coach** (`lib/review/coach.ts`, thresholds in `lib/review/config.ts`)
+  - Deterministic, conservative rules; no AI.
+  - It needs at least 2 weigh-ins in a week before it uses weekly averages. It only flags a
+    possible plateau after 3 flat weeks with good adherence.
+  - Pain, very low energy or unusually fast loss point you to a professional.
+  - It never changes targets or training. Suggestions are approved or dismissed by the user, kept
+    as a history, and followed up with "did it help?".
+- **Visual Evolution** (`lib/photos.ts`, `components/VisualEvolution.tsx`)
+  - Front, side, back or other photos, taken or uploaded, with dates and private notes.
+  - Photos are stored in this phone's IndexedDB only and are never uploaded.
+  - Features: timeline, presets (this week vs last, Week 1 vs 4/8/12, custom), a slider or
+    side-by-side view, and optional measurement overlays. Each overlay says which day it was
+    measured. Photos can be replaced, saved as a copy or deleted.
+- **Sharing** (`lib/achievements/cards.ts`, `components/ArtifactShare.tsx`)
+  - Weekly Wins cards, Transformation Comparison images and the existing certificates all use one
+    preview, save and share panel at 1080×1920, 1080×1350 and 1080×1080.
+  - Comparison images require an explicit confirmation of the photos and numbers.
+  - Counts of previews, saves and shares stay on the phone (More → Sharing activity).
+- **Referral (optional):** with `NEXT_PUBLIC_REFERRAL_URL` set, QR codes and "Copy referral link"
+  use that https URL plus a random 12-character token (and an optional coach slug). Without a
+  backend, the app can't count link visits or signups; only the destination site can.
+- **Not included:** public achievement pages (no server), cloud photo sync, and AI explanations.
+  The coach is rules-only.
+- **Privacy:** pages carry `noindex`, `robots.txt` disallows everything, and the app stays behind
+  the passcode.

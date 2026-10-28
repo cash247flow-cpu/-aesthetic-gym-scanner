@@ -18,11 +18,14 @@ import { DEFAULT_WEEK, loadWeek, saveWeek, type WeekPlan } from "@/lib/schedule"
 import { shrinkImage } from "@/lib/image";
 import { WeekStrip } from "@/components/WeekStrip";
 import { TabBar, type Tab } from "@/components/TabBar";
-import { MoreHub, ProgressHub } from "@/components/HubViews";
+import { ActivityView, MoreHub, ProgressHub } from "@/components/HubViews";
 import { SleepHelper } from "@/components/SleepHelper";
 import { loadSleep, type SleepSettings } from "@/lib/sleep";
 import { Accent, Brand, TITLE } from "@/components/ui";
 import { MissedCard } from "@/components/MissedCard";
+import { ReviewReadyCard } from "@/components/ReviewReadyCard";
+import { WeeklyReview } from "@/components/WeeklyReview";
+import { VisualEvolution } from "@/components/VisualEvolution";
 import { migrateRenamedExercises } from "@/lib/renames";
 import { buildPlan } from "@/lib/plan";
 import { loadActive, saveActive, sameWorkout, type ActiveWorkout } from "@/lib/activeWorkout";
@@ -42,6 +45,9 @@ type View =
   | { state: "sleep" }
   | { state: "progress" }
   | { state: "more" }
+  | { state: "review" }
+  | { state: "photos" }
+  | { state: "activity" }
   | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean; standard?: boolean };
 
@@ -56,8 +62,8 @@ const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
 
 export default function Home() {
   const [view, setView] = useState<View>({ state: "upload" });
-  // Where a screen opened from the Progress or More tab goes back to.
-  const [returnTo, setReturnTo] = useState<View>({ state: "upload" });
+  // Where a screen opened from Progress, More or another screen goes back to: a short stack, so e.g. Review → Photos → Body backs out step by step.
+  const [returnTo, setReturnTo] = useState<View[]>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   // Scan mode: workouts use only the equipment in a gym photo. Off = the standard S-tier program,
   // no photo needed (and it works without signal, since the plan is built on the phone).
@@ -111,18 +117,21 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }
 
-  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep") {
-    const hub = view.state === "progress" || view.state === "more" ? view : ({ state: "upload" } as View);
-    setReturnTo(hub);
+  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep" | "review" | "photos" | "activity", from?: View) {
+    const hub = from ?? (view.state === "progress" || view.state === "more" ? view : ({ state: "upload" } as View));
+    setReturnTo((stack) => [...stack.slice(-5), hub]);
     if (state === "sleep") setSleep(loadSleep());
     show({ state });
   }
 
   function onTab(tab: Tab) {
     if (tab === "meals") {
-      setReturnTo({ state: "upload" });
+      setReturnTo([]);
       show({ state: "meals" });
-    } else show({ state: tab === "home" ? "upload" : tab });
+    } else {
+      setReturnTo([]);
+      show({ state: tab === "home" ? "upload" : tab });
+    }
   }
 
   function openCamera() {
@@ -219,7 +228,8 @@ export default function Home() {
 
   // Back from a screen: to the tab it was opened from. Keeps the photo so a session can still be picked.
   function back() {
-    show(returnTo);
+    show(returnTo[returnTo.length - 1] ?? { state: "upload" });
+    setReturnTo((stack) => stack.slice(0, -1));
   }
 
   function showWins() {
@@ -252,9 +262,9 @@ export default function Home() {
       ? "home"
       : view.state === "meals"
         ? "meals"
-        : ["progress", "wins", "body"].includes(view.state)
+        : ["progress", "wins", "body", "review", "photos"].includes(view.state)
           ? "progress"
-          : ["more", "habits", "supps", "week", "sleep"].includes(view.state)
+          : ["more", "habits", "supps", "week", "sleep", "activity"].includes(view.state)
             ? "more"
             : null;
   // Workouts, cardio and loading get the whole screen.
@@ -288,6 +298,8 @@ export default function Home() {
           <ResumeCard onResume={resumeWorkout} />
 
           <MissedCard onMakeUp={makeUp} />
+
+          <ReviewReadyCard onOpen={() => go("review")} />
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <Tile
@@ -365,7 +377,21 @@ export default function Home() {
         </section>
       )}
 
-      {view.state === "progress" && <ProgressHub onWins={showWins} onBody={() => go("body")} />}
+      {view.state === "progress" && (
+        <ProgressHub onWins={showWins} onBody={() => go("body")} onReview={() => go("review")} onPhotos={() => go("photos")} />
+      )}
+
+      {view.state === "review" && (
+        <WeeklyReview
+          onBack={back}
+          onPhotos={() => go("photos", { state: "review" })}
+          onTargets={() => go("meals", { state: "review" })}
+        />
+      )}
+
+      {view.state === "photos" && <VisualEvolution onBack={back} onBody={() => go("body", { state: "photos" })} />}
+
+      {view.state === "activity" && <ActivityView onBack={back} />}
 
       {view.state === "more" && (
         <MoreHub
@@ -376,12 +402,13 @@ export default function Home() {
           onWeek={() => go("week")}
           onSleep={() => go("sleep")}
           onCardio={() => openCardio()}
+          onActivity={() => go("activity")}
         />
       )}
 
       {view.state === "cardio" && <CardioSession onBack={back} onShowWins={showWins} makeup={makeup ?? undefined} />}
 
-      {view.state === "body" && <BodyTracker onBack={back} />}
+      {view.state === "body" && <BodyTracker onBack={back} onPhotos={() => go("photos", { state: "body" })} />}
 
       {view.state === "week" && <WeekEditor week={week} onChange={changeWeek} onBack={back} />}
 

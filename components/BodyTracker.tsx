@@ -43,6 +43,7 @@ type Draft = {
   weight: string;
   bodyFat: string;
   muscle: string;
+  waist: string;
   bmi: string;
   visceral: string;
   bmr: string;
@@ -58,13 +59,14 @@ const emptyDraft = (source: BodySource): Draft => ({
   weight: "",
   bodyFat: "",
   muscle: "",
+  waist: "",
   bmi: "",
   visceral: "",
   bmr: "",
   reading: false,
 });
 
-export function BodyTracker({ onBack }: { onBack: () => void }) {
+export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos?: () => void }) {
   const [unit, setUnit] = useState<Unit>(loadUnit);
   const [entries, setEntries] = useState<BodyEntry[]>(loadEntries);
   const [goal, setGoal] = useState<BodyGoal | null>(loadGoal);
@@ -172,6 +174,8 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
       weightLb: Math.round(toLb(weight, unit) * 10) / 10,
       bodyFatPct: opt(draft.bodyFat),
       muscleLb: opt(draft.muscle) !== undefined ? Math.round(toLb(num(draft.muscle)!, unit) * 10) / 10 : undefined,
+      // Waist is typed in inches (lb users) or cm (kg users) and stored in inches.
+      waistIn: opt(draft.waist) !== undefined ? Math.round((unit === "kg" ? num(draft.waist)! / 2.54 : num(draft.waist)!) * 10) / 10 : undefined,
       bmi: opt(draft.bmi),
       visceralFat: opt(draft.visceral),
       bmr: opt(draft.bmr),
@@ -269,6 +273,16 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
         <AddButton icon="📷" label="Scale photo" onClick={() => scaleInput.current?.click()} />
         <AddButton icon="📄" label="Scan report" onClick={() => reportInput.current?.click()} />
       </div>
+      {onPhotos && (
+        <button type="button" onClick={onPhotos} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-left text-sm">
+          <span aria-hidden>📸</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Progress photos</span>
+            <span className="block text-xs text-zinc-400">Visual Evolution — front, side and back, compared over time</span>
+          </span>
+          <span aria-hidden className="text-zinc-500">›</span>
+        </button>
+      )}
       <input ref={scaleInput} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => onFile(e, "scale")} />
       <input ref={reportInput} type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => onFile(e, "report")} />
 
@@ -305,6 +319,7 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
                     {shortDate(e.date)}
                     {e.bodyFatPct != null && ` · ${e.bodyFatPct}% fat`}
                     {e.muscleLb != null && ` · ${fmt(e.muscleLb, unit)} muscle`}
+                    {e.waistIn != null && ` · waist ${unit === "kg" ? `${Math.round(e.waistIn * 2.54 * 10) / 10} cm` : `${e.waistIn} in`}`}
                     {e.bmi != null && ` · BMI ${e.bmi}`}
                   </p>
                 </div>
@@ -552,6 +567,7 @@ function EntryForm({
         <Field label={`Weight (${unit})*`} value={draft.weight} onChange={set("weight")} placeholder="0.0" />
         <Field label="Body fat %" value={draft.bodyFat} onChange={set("bodyFat")} placeholder="optional" />
         <Field label={`Muscle (${unit})`} value={draft.muscle} onChange={set("muscle")} placeholder="optional" />
+        <Field label={`Waist (${unit === "kg" ? "cm" : "in"})`} value={draft.waist} onChange={set("waist")} placeholder="optional" className="col-span-2" />
         {(draft.source === "report" || draft.bmi || draft.visceral || draft.bmr) && (
           <>
             <Field label="BMI" value={draft.bmi} onChange={set("bmi")} placeholder="optional" />

@@ -33,9 +33,9 @@ export type CertOptions = {
 
 export type RenderReport = { overflow: boolean; shrunkText: string[]; emblemH: number };
 
-const SERIF = "Cinzel, 'Times New Roman', serif";
+export const SERIF = "Cinzel, 'Times New Roman', serif";
 
-const METAL: Record<Tier, { stops: string[]; line: string; glow: string; bg: [string, string, string]; ray: string; text: string; dim: string }> = {
+export const METAL: Record<Tier, { stops: string[]; line: string; glow: string; bg: [string, string, string]; ray: string; text: string; dim: string }> = {
   gold: {
     stops: ["#fff7d6", "#f3d58a", "#c99a3e", "#fbe7a8", "#9b6a1f"],
     line: "#c9a14f",
@@ -66,7 +66,7 @@ const METAL: Record<Tier, { stops: string[]; line: string; glow: string; bg: [st
 };
 
 let fontReady: Promise<void> | null = null;
-function loadFont(): Promise<void> {
+export function loadFont(): Promise<void> {
   fontReady ??= (async () => {
     try {
       const face = new FontFace("Cinzel", "url(/fonts/Cinzel.ttf)", { weight: "400 900" });
@@ -79,7 +79,7 @@ function loadFont(): Promise<void> {
 }
 
 const images = new Map<string, Promise<HTMLImageElement>>();
-function loadImage(src: string): Promise<HTMLImageElement> {
+export function loadImage(src: string): Promise<HTMLImageElement> {
   if (!images.has(src)) {
     images.set(
       src,
@@ -95,18 +95,18 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 // ─── drawing helpers ────────────────────────────────────────────────────
-type Ctx = CanvasRenderingContext2D;
+export type Ctx = CanvasRenderingContext2D;
 
-function setFont(ctx: Ctx, size: number, weight = 600) {
+export function setFont(ctx: Ctx, size: number, weight = 600) {
   ctx.font = `${weight} ${size}px ${SERIF}`;
 }
 
-function spacedWidth(ctx: Ctx, text: string, spacing: number) {
+export function spacedWidth(ctx: Ctx, text: string, spacing: number) {
   return ctx.measureText(text).width + spacing * Math.max(0, [...text].length - 1);
 }
 
 /** Text with letter-spacing, drawn char by char so it works in every browser. */
-function spaced(ctx: Ctx, text: string, x: number, y: number, spacing: number, align: "center" | "left" | "right" = "center") {
+export function spaced(ctx: Ctx, text: string, x: number, y: number, spacing: number, align: "center" | "left" | "right" = "center") {
   const w = spacedWidth(ctx, text, spacing);
   let cx = align === "center" ? x - w / 2 : align === "right" ? x - w : x;
   const prev = ctx.textAlign;
@@ -119,7 +119,7 @@ function spaced(ctx: Ctx, text: string, x: number, y: number, spacing: number, a
 }
 
 /** Largest font size (down to min) at which the text fits the width. */
-function fit(ctx: Ctx, text: string, maxW: number, size: number, min: number, weight: number, spacing = 0, report?: RenderReport): number {
+export function fit(ctx: Ctx, text: string, maxW: number, size: number, min: number, weight: number, spacing = 0, report?: RenderReport): number {
   let s = size;
   setFont(ctx, s, weight);
   while (s > min && spacedWidth(ctx, text, spacing * (s / size)) > maxW) {
@@ -131,7 +131,7 @@ function fit(ctx: Ctx, text: string, maxW: number, size: number, min: number, we
   return s;
 }
 
-function metalFill(ctx: Ctx, tier: Tier, y0: number, y1: number) {
+export function metalFill(ctx: Ctx, tier: Tier, y0: number, y1: number) {
   const g = ctx.createLinearGradient(0, y0, 0, y1);
   const stops = METAL[tier].stops;
   stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c));
@@ -139,7 +139,7 @@ function metalFill(ctx: Ctx, tier: Tier, y0: number, y1: number) {
 }
 
 /** Monumental metallic title line with depth: dark extrusion, gradient face, soft glow. */
-function metalText(ctx: Ctx, text: string, cx: number, baseline: number, size: number, tier: Tier, spacing: number) {
+export function metalText(ctx: Ctx, text: string, cx: number, baseline: number, size: number, tier: Tier, spacing: number) {
   setFont(ctx, size, 800);
   ctx.save();
   ctx.fillStyle = "rgba(0,0,0,0.85)";
@@ -151,7 +151,7 @@ function metalText(ctx: Ctx, text: string, cx: number, baseline: number, size: n
   ctx.restore();
 }
 
-function wrap(ctx: Ctx, text: string, maxW: number): string[] {
+export function wrap(ctx: Ctx, text: string, maxW: number): string[] {
   const words = text.split(" ");
   const lines: string[] = [];
   let line = "";
@@ -167,7 +167,7 @@ function wrap(ctx: Ctx, text: string, maxW: number): string[] {
   return lines;
 }
 
-function rule(ctx: Ctx, x0: number, x1: number, y: number, color: string, alpha = 1) {
+export function rule(ctx: Ctx, x0: number, x1: number, y: number, color: string, alpha = 1) {
   const g = ctx.createLinearGradient(x0, 0, x1, 0);
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(0.5, color);
@@ -180,7 +180,7 @@ function rule(ctx: Ctx, x0: number, x1: number, y: number, color: string, alpha 
 }
 
 /** The AESTHETIQ double chevron mark. */
-function chevron(ctx: Ctx, cx: number, top: number, size: number, tier: Tier) {
+export function chevron(ctx: Ctx, cx: number, top: number, size: number, tier: Tier) {
   ctx.save();
   ctx.strokeStyle = metalFill(ctx, tier, top, top + size);
   ctx.lineWidth = size * 0.12;
@@ -195,7 +195,7 @@ function chevron(ctx: Ctx, cx: number, top: number, size: number, tier: Tier) {
   ctx.restore();
 }
 
-function diamond(ctx: Ctx, x: number, y: number, r: number, color: string) {
+export function diamond(ctx: Ctx, x: number, y: number, r: number, color: string) {
   ctx.save();
   ctx.fillStyle = color;
   ctx.beginPath();
@@ -208,7 +208,7 @@ function diamond(ctx: Ctx, x: number, y: number, r: number, color: string) {
   ctx.restore();
 }
 
-function background(ctx: Ctx, W: number, H: number, tier: Tier) {
+export function background(ctx: Ctx, W: number, H: number, tier: Tier) {
   const m = METAL[tier];
   const g = ctx.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, m.bg[0]);
@@ -250,7 +250,7 @@ function background(ctx: Ctx, W: number, H: number, tier: Tier) {
   ctx.fillRect(0, 0, W, H);
 }
 
-function frame(ctx: Ctx, W: number, H: number, tier: Tier) {
+export function frame(ctx: Ctx, W: number, H: number, tier: Tier) {
   const m = METAL[tier];
   ctx.save();
   ctx.strokeStyle = m.line;
@@ -279,7 +279,7 @@ function frame(ctx: Ctx, W: number, H: number, tier: Tier) {
   }
 }
 
-function ribbon(ctx: Ctx, cx: number, y: number, text: string, size: number, tier: Tier, maxW: number, report: RenderReport) {
+export function ribbon(ctx: Ctx, cx: number, y: number, text: string, size: number, tier: Tier, maxW: number, report: RenderReport) {
   const s = fit(ctx, text, maxW - 120, size, 14, 700, size * 0.32, report);
   const w = spacedWidth(ctx, text, s * 0.32) + 110;
   const h = s * 2.1;
@@ -303,7 +303,7 @@ function ribbon(ctx: Ctx, cx: number, y: number, text: string, size: number, tie
 }
 
 // Small line icons for the four columns.
-function icon(ctx: Ctx, kind: number, cx: number, cy: number, s: number, color: string) {
+export function icon(ctx: Ctx, kind: number, cx: number, cy: number, s: number, color: string) {
   ctx.save();
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
@@ -629,7 +629,7 @@ export async function renderCertificate(a: Achievement, opts: CertOptions, forma
 }
 
 /** Real, scannable QR code (error correction M, quiet zone included). */
-async function qrToCanvas(url: string): Promise<HTMLCanvasElement> {
+export async function qrToCanvas(url: string): Promise<HTMLCanvasElement> {
   const c = document.createElement("canvas");
   await QRCode.toCanvas(c, url, { errorCorrectionLevel: "M", margin: 2, width: 400, color: { dark: "#000000", light: "#ffffff" } });
   return c;

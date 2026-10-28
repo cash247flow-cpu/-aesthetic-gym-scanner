@@ -11,6 +11,8 @@ import { loadEntries } from "@/lib/bodyLog";
 import { weekCounts, weekStatus } from "@/lib/missed";
 import { loadOverload, saveOverload } from "@/lib/overload";
 import { statsTotal, weekStartOf } from "@/lib/cardioStats";
+import { EVENT_LABEL, loadEvents, type EventName } from "@/lib/events";
+import { referralUrl } from "@/lib/achievements/sharePrefs";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
 
@@ -36,7 +38,7 @@ function HubRow({ icon, label, sub, onClick }: Row) {
 }
 
 /** Progress tab: muscles trained this week, then wins and the body tracker. */
-export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: () => void }) {
+export function ProgressHub({ onWins, onBody, onReview, onPhotos }: { onWins: () => void; onBody: () => void; onReview: () => void; onPhotos: () => void }) {
   const [week, setWeek] = useState<{ exercises: string[]; workouts: number; untracked: number } | null>(null);
   const [lastWeight, setLastWeight] = useState<string | null>(null);
   const [plan, setPlan] = useState<{ done: number; madeUp: number; missed: number } | null>(null);
@@ -95,7 +97,9 @@ export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: ()
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-2">
-        <HubRow icon="🏆" label="Your wins" sub="Personal bests, badges and workout history" onClick={onWins} />
+        <HubRow icon="📊" label="Weekly evolution" sub="Weekly review and coaching summary" onClick={onReview} />
+        <HubRow icon="📸" label="Visual evolution" sub="Private progress photos and comparisons" onClick={onPhotos} />
+        <HubRow icon="🏆" label="Your wins" sub="Trophies, certificates, personal bests and history" onClick={onWins} />
         <HubRow icon="📈" label="Body tracker" sub={lastWeight ?? "Weight goal, graph, scale photos and scan reports"} onClick={onBody} />
       </div>
     </section>
@@ -142,6 +146,7 @@ export function MoreHub({
   onWeek,
   onSleep,
   onCardio,
+  onActivity,
 }: {
   scanMode: boolean;
   onScanMode: (on: boolean) => void;
@@ -150,6 +155,7 @@ export function MoreHub({
   onWeek: () => void;
   onSleep: () => void;
   onCardio: () => void;
+  onActivity: () => void;
 }) {
   const [overload, setOverload] = useState(true);
   useEffect(() => setOverload(loadOverload()), []);
@@ -184,6 +190,43 @@ export function MoreHub({
         <HubRow icon="🗓️" label="Your week" sub="Which session on which day, and ab days" onClick={onWeek} />
         <HubRow icon="😴" label="Sleep times" sub="Wake time and tonight's Sleep Lock timeline" onClick={onSleep} />
         <HubRow icon="🏃" label="Cardio Day" sub="Treadmill or StairMaster, no photo needed" onClick={onCardio} />
+        <HubRow icon="📈" label="Sharing activity" sub="Reviews, saved images and shares — counted on this phone only" onClick={onActivity} />
+      </div>
+    </section>
+  );
+}
+
+/** Lightweight metrics view: what was counted on this phone. No server, so no visits or signups. */
+export function ActivityView({ onBack }: { onBack: () => void }) {
+  const [ev, setEv] = useState<ReturnType<typeof loadEvents> | null>(null);
+  useEffect(() => setEv(loadEvents()), []);
+  const ref = referralUrl();
+  return (
+    <section className="mt-2">
+      <button type="button" onClick={onBack} className="text-sm text-zinc-400">
+        ← Back
+      </button>
+      <h1 className={`${TITLE} mt-2`}>
+        <AccentLast text="Sharing activity" />
+      </h1>
+      <p className="mt-1 text-sm text-zinc-400">Counted on this phone only{ev ? ` since ${ev.since}` : ""}. Nothing here is sent anywhere.</p>
+      <ul className="mt-4 grid gap-1.5">
+        {(Object.keys(EVENT_LABEL) as EventName[]).map((k) => (
+          <li key={k} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm">
+            <span className="min-w-0">{EVENT_LABEL[k]}</span>
+            <span className="shrink-0 font-semibold tabular-nums">{ev?.counts[k] ?? 0}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 text-xs text-zinc-400">
+        <p>
+          Opening the share sheet isn&apos;t proof anything was posted — the app can&apos;t see what happens in Instagram or other apps.
+        </p>
+        <p className="mt-1.5">
+          {ref
+            ? `Referral link: ${new URL(ref).host}. Link visits, signups and active referred users can only be counted by that site — not by this app.`
+            : "Referral links and QR codes are off: no signup page is configured (NEXT_PUBLIC_REFERRAL_URL)."}
+        </p>
       </div>
     </section>
   );

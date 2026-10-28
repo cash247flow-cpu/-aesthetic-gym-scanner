@@ -58,3 +58,38 @@ export function referralUrl(): string | null {
     return null;
   }
 }
+
+const TOKEN_KEY = "ags:ref:token";
+
+/** Random, non-guessable referral token for this phone (no user id, name or email in it). */
+export function referralToken(): string {
+  try {
+    const saved = localStorage.getItem(TOKEN_KEY);
+    if (saved && /^[A-Za-z0-9]{12}$/.test(saved)) return saved;
+  } catch {
+    /* ignore */
+  }
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  const token = [...bytes].map((b) => chars[b % chars.length]).join("");
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch {
+    /* ignore */
+  }
+  return token;
+}
+
+/**
+ * The configured signup link with this phone's referral token (and optional coach), or null when
+ * no referral URL is configured. Visits and signups can only be counted by the destination site.
+ */
+export function referralLink(base = referralUrl(), token?: string, coach?: string | null): string | null {
+  if (!base) return null;
+  const u = new URL(base);
+  u.searchParams.set("ref", token ?? referralToken());
+  const c = coach?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  if (c) u.searchParams.set("coach", c.slice(0, 40));
+  return u.toString();
+}

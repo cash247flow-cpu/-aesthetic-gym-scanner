@@ -8,6 +8,7 @@ export type BodyEntry = {
   weightLb: number;
   bodyFatPct?: number;
   muscleLb?: number;
+  waistIn?: number; // waist circumference, stored in inches (shown in cm with kg)
   bmi?: number;
   visceralFat?: number;
   bmr?: number;
