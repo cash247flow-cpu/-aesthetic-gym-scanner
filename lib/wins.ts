@@ -24,6 +24,7 @@ export type HistoryEntry = {
   prs: number;
   cardioMin: number;
   exercises?: string[]; // ones with logged sets (for the weekly muscle map); older entries lack it
+  makeupFor?: string; // date of the missed day this workout made up
 };
 export type Totals = { volumeLb: number; workouts: number; prs: number; cardioMin: number };
 export type BadgeGroup = "lift" | "workouts" | "prs" | "cardio" | "habits";
@@ -164,8 +165,9 @@ export function finishWorkout(opts: {
   exercises: string[];
   unit: Unit;
   includeCardio: boolean;
+  makeupFor?: string;
 }): Summary {
-  const { session, label, exercises, unit, includeCardio } = opts;
+  const { session, label, exercises, unit, includeCardio, makeupFor } = opts;
   const t = today();
   const toLb = unit === "kg" ? LB_PER_KG : 1;
 
@@ -209,11 +211,21 @@ export function finishWorkout(opts: {
   }, 0);
 
   const history = loadHistory();
-  const others = history.filter((h) => !(h.date === t && h.session === session));
+  const others = history.filter((h) => !(h.date === t && h.session === session && h.makeupFor === makeupFor));
   const empty = sets === 0 && cardioMin === 0;
   const prev = [...others].reverse().find((h) => h.session === session && h.date < t && h.volumeLb > 0);
   const badgesBefore = badgesFor(totalsOf(others), unit);
-  const entry: HistoryEntry = { date: t, session, label, volumeLb, sets, prs: prs.length, cardioMin, exercises: doneNames };
+  const entry: HistoryEntry = {
+    date: t,
+    session,
+    label,
+    volumeLb,
+    sets,
+    prs: prs.length,
+    cardioMin,
+    exercises: doneNames,
+    ...(makeupFor ? { makeupFor } : {}),
+  };
   const nextHistory = empty ? history : [...others, entry].slice(-500);
   const totals = totalsOf(nextHistory);
 

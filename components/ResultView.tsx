@@ -21,6 +21,7 @@ import { Celebrate } from "@/components/Celebrate";
 import { PreWorkoutReminder } from "@/components/PreWorkoutReminder";
 import { ExerciseGuide, hasGuide } from "@/components/ExerciseGuide";
 import { finishWorkout, type Summary } from "@/lib/wins";
+import type { MakeupFor } from "@/lib/missed";
 import { AccentLast, TITLE } from "@/components/ui";
 
 export function formatRest(restSeconds: string): string {
@@ -46,11 +47,13 @@ export function ResultView({
   onReset,
   onEquipmentChange,
   onShowWins,
+  makeup,
 }: {
   plan: PlanResult;
   onReset: () => void;
   onEquipmentChange: (equipment: string[]) => Promise<void>;
   onShowWins: () => void;
+  makeup?: MakeupFor; // set when this workout makes up a missed day
 }) {
   const isLegs = plan.sessionLabel === "Legs & Abs";
   // Swap button choices, remembered between workouts (programmed exercise → chosen alternative).
@@ -86,18 +89,35 @@ export function ResultView({
   const [summary, setSummary] = useState<Summary | null>(null);
   const anySetDone = Object.values(progress).some((p) => p.done > 0);
 
+  const record = () =>
+    finishWorkout({
+      session: plan.sessionLabel,
+      label: plan.sessionLabel,
+      exercises: exercises.map((e) => e.name),
+      unit,
+      includeCardio: cardio !== null,
+      makeupFor: makeup?.date,
+    });
+
   function finish() {
     setRest(null);
-    setSummary(
-      finishWorkout({
-        session: plan.sessionLabel,
-        label: plan.sessionLabel,
-        exercises: exercises.map((e) => e.name),
-        unit,
-        includeCardio: cardio !== null,
-      }),
-    );
+    setSummary(record());
   }
+
+  // Leaving (or closing the app) without tapping Finish still records the sets you logged,
+  // so the day counts as trained. Same-day re-saves replace the entry; nothing is doubled.
+  const leaveRef = useRef<() => void>(() => {});
+  leaveRef.current = () => {
+    if (anySetDone || (cardio && progress[CARDIO_KEY]?.done)) record();
+  };
+  useEffect(() => {
+    const onHide = () => leaveRef.current();
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      leaveRef.current();
+    };
+  }, []);
 
   // One exercise per page: the track scrolls horizontally and snaps to each card.
   const goTo = useCallback((i: number) => {
@@ -198,7 +218,14 @@ export function ResultView({
     <section className={`mt-2 ${rest ? "pb-44" : ""}`}>
       <header>
         <div className="flex items-center justify-between gap-3">
-          <h1 className={TITLE}><AccentLast text={plan.sessionLabel} /></h1>
+          <div className="min-w-0">
+            {makeup && (
+              <p className="mb-1 inline-block rounded-full bg-amber-400/15 px-2.5 py-0.5 text-xs font-semibold text-amber-200">
+                ↺ Make-up for {makeup.label}
+              </p>
+            )}
+            <h1 className={TITLE}><AccentLast text={plan.sessionLabel} /></h1>
+          </div>
           <div role="group" aria-label="Weight unit" className="flex shrink-0 rounded-full border border-zinc-700 p-0.5 text-xs font-semibold">
             {(["lb", "kg"] as const).map((u) => (
               <button

@@ -5,6 +5,7 @@ import { CardioCard, DEFAULT_CARDIO, type CardioPlan } from "@/components/Cardio
 import { loadUnit } from "@/components/SetLogger";
 import { Celebrate } from "@/components/Celebrate";
 import { finishWorkout, type Summary } from "@/lib/wins";
+import type { MakeupFor } from "@/lib/missed";
 import { AccentLast, TITLE } from "@/components/ui";
 
 // Cardio-only days keep their own machine/duration, separate from cardio added to a lifting day.
@@ -29,14 +30,24 @@ function saveSoloPlan(plan: CardioPlan) {
   }
 }
 
-export function CardioSession({ onBack, onShowWins }: { onBack: () => void; onShowWins: () => void }) {
+export function CardioSession({
+  onBack,
+  onShowWins,
+  makeup,
+}: {
+  onBack: () => void;
+  onShowWins: () => void;
+  makeup?: MakeupFor; // set when this cardio makes up a missed day
+}) {
   const [plan, setPlan] = useState<CardioPlan>(loadSoloPlan);
   const [unit] = useState(loadUnit);
   const [done, setDone] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
 
   function celebrate() {
-    setSummary(finishWorkout({ session: "Cardio Day", label: "Cardio Day", exercises: [], unit, includeCardio: true }));
+    setSummary(
+      finishWorkout({ session: "Cardio Day", label: "Cardio Day", exercises: [], unit, includeCardio: true, makeupFor: makeup?.date }),
+    );
   }
 
   function change(next: CardioPlan) {
@@ -47,6 +58,11 @@ export function CardioSession({ onBack, onShowWins }: { onBack: () => void; onSh
   return (
     <section className="mt-2">
       <header>
+        {makeup && (
+          <p className="mb-1 inline-block rounded-full bg-amber-400/15 px-2.5 py-0.5 text-xs font-semibold text-amber-200">
+            ↺ Make-up for {makeup.label}
+          </p>
+        )}
         <h1 className={TITLE}><AccentLast text="Cardio Day" /></h1>
         <p className="mt-1 text-sm text-zinc-400">
           {done ? "Cardio complete 💪" : "Pick a machine and a duration, then hit Start."}

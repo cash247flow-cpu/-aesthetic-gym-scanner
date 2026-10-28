@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HABITS, addDays, doneCount, loadHabitLogs, todayStr } from "@/lib/habits";
-import { loadHistory } from "@/lib/wins";
+import { HABITS, doneCount, loadHabitLogs, todayStr } from "@/lib/habits";
+import { weekStatus } from "@/lib/missed";
 
-type Day = { date: string; letter: string; num: number; trained: boolean; habits: number };
+type Day = { date: string; letter: string; num: number; trained: boolean; missed: boolean; madeUp: boolean; habits: number };
 
 /**
- * This week, Sunday to Saturday: a lime dot over days you trained, and a bar under each day
- * that fills in as you tick off habits. Browser-only data, so it renders after mount.
+ * This week, Sunday to Saturday: a lime dot over days you trained, an amber dot over days with
+ * a missed workout or cardio, a dashed ring on days you made up later, and a bar under each
+ * day that fills in as you tick off habits. Browser-only data, so it renders after mount.
  */
 export function WeekStrip() {
   const [days, setDays] = useState<Day[] | null>(null);
@@ -16,19 +17,18 @@ export function WeekStrip() {
 
   useEffect(() => {
     const t = todayStr();
-    const start = addDays(t, -new Date(t + "T12:00").getDay());
-    const trained = new Set(loadHistory().filter((h) => h.sets > 0 || h.cardioMin > 0).map((h) => h.date));
     const logs = loadHabitLogs();
     setToday(t);
     setDays(
-      Array.from({ length: 7 }, (_, i) => {
-        const date = addDays(start, i);
+      weekStatus(t).map(({ date, items, trained }) => {
         const d = new Date(date + "T12:00");
         return {
           date,
           letter: d.toLocaleDateString(undefined, { weekday: "narrow" }),
           num: d.getDate(),
-          trained: trained.has(date),
+          trained,
+          missed: items.some((i) => i.status === "missed" || i.status === "skipped"),
+          madeUp: items.some((i) => i.status === "madeUp"),
           habits: doneCount(logs[date]) / HABITS.length,
         };
       }),
@@ -48,14 +48,24 @@ export function WeekStrip() {
           return (
             <li
               key={d.date}
-              aria-label={`${d.date}${d.trained ? ", trained" : ""}, habits ${Math.round(d.habits * HABITS.length)}/${HABITS.length}`}
+              aria-label={`${d.date}${d.trained ? ", trained" : ""}${d.missed ? ", missed" : ""}${d.madeUp ? ", made up" : ""}, habits ${Math.round(d.habits * HABITS.length)}/${HABITS.length}`}
               className={`relative flex flex-col items-center rounded-full border py-2 ${
-                isToday ? "border-lime-400 bg-lime-400/10" : "border-zinc-800 bg-zinc-900/60"
+                isToday
+                  ? "border-lime-400 bg-lime-400/10"
+                  : d.madeUp
+                    ? "border-dashed border-lime-400/70 bg-zinc-900/60"
+                    : "border-zinc-800 bg-zinc-900/60"
               } ${future ? "opacity-50" : ""}`}
             >
               <span
                 aria-hidden
-                className={`absolute -top-1 h-2 w-2 rounded-full ${d.trained ? "bg-lime-400 shadow-[0_0_6px_rgba(198,244,50,0.8)]" : "bg-transparent"}`}
+                className={`absolute -top-1 h-2 w-2 rounded-full ${
+                  d.missed
+                    ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.8)]"
+                    : d.trained
+                      ? "bg-lime-400 shadow-[0_0_6px_rgba(198,244,50,0.8)]"
+                      : "bg-transparent"
+                }`}
               />
               <span className="text-[11px] text-zinc-400">{d.letter}</span>
               <span className={`text-sm font-semibold tabular-nums ${isToday ? "text-lime-300" : "text-zinc-100"}`}>
@@ -68,10 +78,18 @@ export function WeekStrip() {
           );
         })}
       </ol>
-      <p className="mt-1.5 flex justify-center gap-4 text-[11px] text-zinc-500">
+      <p className="mt-1.5 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] text-zinc-500">
         <span>
           <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-lime-400 align-middle" />
           Trained
+        </span>
+        <span>
+          <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-400 align-middle" />
+          Missed
+        </span>
+        <span>
+          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full border border-dashed border-lime-400 align-middle" />
+          Made up
         </span>
         <span>
           <span className="mr-1 inline-block h-1 w-3 rounded-full bg-lime-400 align-middle" />

@@ -22,6 +22,8 @@ import { MoreHub, ProgressHub } from "@/components/HubViews";
 import { SleepHelper } from "@/components/SleepHelper";
 import { loadSleep, type SleepSettings } from "@/lib/sleep";
 import { Accent, Brand, TITLE } from "@/components/ui";
+import { MissedCard } from "@/components/MissedCard";
+import { dayName, type DayItem, type MakeupFor } from "@/lib/missed";
 
 type View =
   | { state: "upload" }
@@ -55,6 +57,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   // A session tapped before there's a gym photo: it starts as soon as the photo is taken.
   const [pending, setPending] = useState<{ session: SessionKey; withAbs: boolean } | null>(null);
+  // Set while making up a missed day; the workout or cardio is then recorded against that day.
+  const [makeup, setMakeup] = useState<MakeupFor | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // The saved week and today's date only exist in the browser; the page is prerendered.
   const [week, setWeek] = useState<WeekPlan>(DEFAULT_WEEK);
@@ -116,12 +120,14 @@ export default function Home() {
 
   function scan() {
     setPending(null);
+    setMakeup(null);
     if (view.state !== "upload") show({ state: "upload" });
     openCamera();
   }
 
   // Start a session: right away with a gym photo, or open the camera and start once it's taken.
-  function start(session: SessionKey, withAbs = false) {
+  function start(session: SessionKey, withAbs = false, makeupFor: MakeupFor | null = null) {
+    setMakeup(makeupFor);
     if (photo) return void run(session, withAbs, photo);
     setPending({ session, withAbs });
     openCamera();
@@ -179,7 +185,19 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }
 
+  function openCardio(makeupFor: MakeupFor | null = null) {
+    setMakeup(makeupFor);
+    go("cardio");
+  }
+
+  function makeUp(item: DayItem) {
+    const label = { date: item.date, label: `${dayName(item.date)} · ${item.label}` };
+    if (item.kind === "cardio") openCardio(label);
+    else start(item.session ?? "push", false, label);
+  }
+
   function reset() {
+    setMakeup(null);
     setPhoto(null);
     setPreview(null);
     setError(null);
@@ -223,7 +241,9 @@ export default function Home() {
 
           <WeekStrip />
 
-          <TodayCard week={week} hasPhoto={!!photo} onStart={start} onCardio={() => go("cardio")} onEditWeek={() => go("week")} />
+          <TodayCard week={week} hasPhoto={!!photo} onStart={start} onCardio={() => openCardio()} onEditWeek={() => go("week")} />
+
+          <MissedCard onMakeUp={makeUp} />
 
           <div className="mt-4 grid grid-cols-3 gap-2">
             <Tile
@@ -257,7 +277,7 @@ export default function Home() {
             })}
             <button
               type="button"
-              onClick={() => go("cardio")}
+              onClick={() => openCardio()}
               className="h-11 shrink-0 rounded-full border border-sky-400/50 bg-zinc-900 px-5 text-sm font-semibold text-sky-300 transition hover:border-sky-400 active:scale-95"
             >
               Cardio
@@ -307,11 +327,11 @@ export default function Home() {
           onSupps={() => go("supps")}
           onWeek={() => go("week")}
           onSleep={() => go("sleep")}
-          onCardio={() => go("cardio")}
+          onCardio={() => openCardio()}
         />
       )}
 
-      {view.state === "cardio" && <CardioSession onBack={back} onShowWins={showWins} />}
+      {view.state === "cardio" && <CardioSession onBack={back} onShowWins={showWins} makeup={makeup ?? undefined} />}
 
       {view.state === "body" && <BodyTracker onBack={back} />}
 
@@ -340,6 +360,7 @@ export default function Home() {
           onReset={reset}
           onEquipmentChange={(eq) => changeEquipment(view.session, view.withAbs, eq)}
           onShowWins={showWins}
+          makeup={makeup ?? undefined}
         />
       )}
 

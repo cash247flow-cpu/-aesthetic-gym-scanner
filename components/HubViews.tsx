@@ -8,6 +8,7 @@ import { musclesFor } from "@/lib/muscles";
 import { formatWeight, loadHistory } from "@/lib/wins";
 import { loadUnit } from "@/components/SetLogger";
 import { loadEntries } from "@/lib/bodyLog";
+import { weekCounts, weekStatus } from "@/lib/missed";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
 
@@ -36,6 +37,7 @@ function HubRow({ icon, label, sub, onClick }: Row) {
 export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: () => void }) {
   const [week, setWeek] = useState<{ exercises: string[]; workouts: number; untracked: number } | null>(null);
   const [lastWeight, setLastWeight] = useState<string | null>(null);
+  const [plan, setPlan] = useState<{ done: number; madeUp: number; missed: number } | null>(null);
 
   useEffect(() => {
     const t = todayStr();
@@ -46,6 +48,7 @@ export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: ()
       workouts: thisWeek.length,
       untracked: thisWeek.filter((h) => !h.exercises).length,
     });
+    setPlan(weekCounts(weekStatus()));
     const last = [...loadEntries()].sort((a, b) => a.date.localeCompare(b.date)).pop();
     setLastWeight(last ? `Last weigh-in ${formatWeight(last.weightLb, loadUnit())} · ${last.date}` : null);
   }, []);
@@ -61,6 +64,14 @@ export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: ()
         {week === null ? " " : week.workouts === 0 ? "No workouts logged this week yet." : `${week.workouts} workout${week.workouts === 1 ? "" : "s"} this week.`}
       </p>
 
+      {plan && plan.done + plan.madeUp + plan.missed > 0 && (
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <Stat value={plan.done} label="Done" tone="text-lime-300" />
+          <Stat value={plan.madeUp} label="Made up" tone="text-emerald-300" />
+          <Stat value={plan.missed} label="Missed" tone="text-amber-300" />
+        </div>
+      )}
+
       <div className="mt-4">
         <MuscleMap primary={muscles.primary} secondary={muscles.secondary} caption="Muscles trained this week" />
         {!!week?.untracked && (
@@ -73,6 +84,15 @@ export function ProgressHub({ onWins, onBody }: { onWins: () => void; onBody: ()
         <HubRow icon="📈" label="Body tracker" sub={lastWeight ?? "Weight goal, graph, scale photos and scan reports"} onClick={onBody} />
       </div>
     </section>
+  );
+}
+
+function Stat({ value, label, tone }: { value: number; label: string; tone: string }) {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900 py-2.5">
+      <p className={`text-2xl font-bold tabular-nums ${tone}`}>{value}</p>
+      <p className="text-xs text-zinc-400">{label} this week</p>
+    </div>
   );
 }
 
