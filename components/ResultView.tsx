@@ -22,6 +22,8 @@ import { PreWorkoutReminder } from "@/components/PreWorkoutReminder";
 import { ExerciseGuide, hasGuide } from "@/components/ExerciseGuide";
 import { finishWorkout, type Summary } from "@/lib/wins";
 import type { MakeupFor } from "@/lib/missed";
+import { WorkoutTimer } from "@/components/WorkoutTimer";
+import { elapsedMs, loadActive, pauseTimer, saveActive, startTimer, type ActiveWorkout } from "@/lib/activeWorkout";
 import { AccentLast, TITLE } from "@/components/ui";
 
 export function formatRest(restSeconds: string): string {
@@ -91,8 +93,19 @@ export function ResultView({
   const [summary, setSummary] = useState<Summary | null>(null);
   const anySetDone = Object.values(progress).some((p) => p.done > 0);
 
+  // Whole-workout timer, saved with the workout so it survives leaving and coming back.
+  const [workout, setWorkout] = useState<ActiveWorkout | null>(loadActive);
+  const updateWorkout = (next: ActiveWorkout | null) => {
+    setWorkout(next);
+    saveActive(next);
+  };
+  const timerStart = () => workout && updateWorkout(startTimer(workout));
+  const timerPause = () => workout && updateWorkout(pauseTimer(workout));
+  const durationMin = () => (workout?.started ? Math.max(1, Math.round(elapsedMs(workout) / 60000)) : undefined);
+
   const record = () =>
     finishWorkout({
+      durationMin: durationMin(),
       session: plan.sessionLabel,
       label: plan.sessionLabel,
       exercises: exercises.map((e) => e.name),
@@ -104,6 +117,12 @@ export function ResultView({
   function finish() {
     setRest(null);
     setSummary(record());
+    updateWorkout(null); // ended: nothing left to resume
+  }
+
+  function endWorkout() {
+    if (!anySetDone && !window.confirm("End this workout? No sets are logged yet.")) return;
+    finish();
   }
 
   // Leaving (or closing the app) without tapping Finish still records the sets you logged,
@@ -163,6 +182,7 @@ export function ResultView({
   }
 
   function onSetDone(slideIndex: number, ex: PlannedExercise, allDone: boolean) {
+    if (workout && !workout.started) timerStart(); // first set starts the workout clock
     startRest(ex);
     if (allDone) advanceFrom(slideIndex);
   }
@@ -252,6 +272,8 @@ export function ResultView({
       </header>
 
       <PreWorkoutReminder />
+
+      {workout && <WorkoutTimer active={workout} onStart={timerStart} onPause={timerPause} onEnd={endWorkout} />}
 
       {standard ? (
         <p className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-sm text-zinc-300">

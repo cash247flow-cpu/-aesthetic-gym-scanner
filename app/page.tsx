@@ -25,6 +25,8 @@ import { Accent, Brand, TITLE } from "@/components/ui";
 import { MissedCard } from "@/components/MissedCard";
 import { migrateRenamedExercises } from "@/lib/renames";
 import { buildPlan } from "@/lib/plan";
+import { loadActive, saveActive, sameWorkout, type ActiveWorkout } from "@/lib/activeWorkout";
+import { ResumeCard } from "@/components/ResumeCard";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { dayName, type DayItem, type MakeupFor } from "@/lib/missed";
 
@@ -62,7 +64,7 @@ export default function Home() {
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // A session tapped before there's a gym photo: it starts as soon as the photo is taken.
-  const [pending, setPending] = useState<{ session: SessionKey; withAbs: boolean } | null>(null);
+  const [pending, setPending] = useState<{ session: SessionKey; withAbs: boolean; makeup: MakeupFor | null } | null>(null);
   // Set while making up a missed day; the workout or cardio is then recorded against that day.
   const [makeup, setMakeup] = useState<MakeupFor | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -146,11 +148,28 @@ export default function Home() {
     setMakeup(makeupFor);
     if (!scanMode) {
       setError(null);
-      return show({ state: "result", plan: buildPlan(session, [...CANONICAL_EQUIPMENT], { withAbs }), session, withAbs, standard: true });
+      return openWorkout(session, withAbs, buildPlan(session, [...CANONICAL_EQUIPMENT], { withAbs }), true, makeupFor);
     }
-    if (photo) return void run(session, withAbs, photo);
-    setPending({ session, withAbs });
+    if (photo) return void run(session, withAbs, photo, makeupFor);
+    setPending({ session, withAbs, makeup: makeupFor });
     openCamera();
+  }
+
+  // Show a workout, keeping the timer of the same workout if it was paused earlier today.
+  function openWorkout(session: SessionKey, withAbs: boolean, plan: PlanResult, standard: boolean, makeupFor: MakeupFor | null) {
+    const prev = loadActive();
+    saveActive(
+      sameWorkout(prev, session, withAbs, makeupFor)
+        ? { ...prev!, plan, standard }
+        : { date: todayStr(), session, withAbs, standard, plan, ...(makeupFor ? { makeup: makeupFor } : {}), elapsedMs: 0, runningSince: null, started: false },
+    );
+    show({ state: "result", plan, session, withAbs, standard });
+  }
+
+  // Reopen the workout in progress (paused or still running) exactly as it was.
+  function resumeWorkout(a: ActiveWorkout) {
+    setMakeup(a.makeup ?? null);
+    show({ state: "result", plan: a.plan, session: a.session, withAbs: a.withAbs, standard: a.standard });
   }
 
   useEffect(() => {
@@ -167,11 +186,11 @@ export default function Home() {
     setPreview(URL.createObjectURL(file));
     if (pending) {
       setPending(null);
-      void run(pending.session, pending.withAbs, file);
+      void run(pending.session, pending.withAbs, file, pending.makeup);
     }
   }
 
-  async function run(session: SessionKey, withAbs: boolean, file: File) {
+  async function run(session: SessionKey, withAbs: boolean, file: File, makeupFor: MakeupFor | null = null) {
     setError(null);
     setView({ state: "loading" });
     try {
@@ -182,7 +201,7 @@ export default function Home() {
       if (!idRes.ok) throw new Error(idData.error || "Couldn't read the photo.");
 
       const plan = await fetchPlan(session, idData.equipment, withAbs);
-      show({ state: "result", plan, session, withAbs });
+      openWorkout(session, withAbs, plan, false, makeupFor);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
       setView({ state: "upload" });
@@ -192,6 +211,8 @@ export default function Home() {
   // Rebuild the plan after the user adds/removes equipment chips. No new photo or Gemini call.
   async function changeEquipment(session: SessionKey, withAbs: boolean, equipment: string[]) {
     const plan = await fetchPlan(session, equipment, withAbs);
+    const a = loadActive();
+    if (a) saveActive({ ...a, plan });
     setView({ state: "result", plan, session, withAbs });
   }
 
@@ -262,6 +283,8 @@ export default function Home() {
           <WeekStrip />
 
           <TodayCard week={week} hasPhoto={!scanMode || !!photo} onStart={start} onCardio={() => openCardio()} onEditWeek={() => go("week")} />
+
+          <ResumeCard onResume={resumeWorkout} />
 
           <MissedCard onMakeUp={makeUp} />
 

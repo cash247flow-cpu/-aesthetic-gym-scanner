@@ -25,6 +25,7 @@ export type HistoryEntry = {
   cardioMin: number;
   exercises?: string[]; // ones with logged sets (for the weekly muscle map); older entries lack it
   makeupFor?: string; // date of the missed day this workout made up
+  durationMin?: number; // workout timer total (pauses excluded)
 };
 export type Totals = { volumeLb: number; workouts: number; prs: number; cardioMin: number };
 export type BadgeGroup = "lift" | "workouts" | "prs" | "cardio" | "habits";
@@ -41,6 +42,7 @@ export type Summary = {
   newBadges: Badge[];
   totals: Totals;
   empty: boolean;
+  durationMin?: number;
 };
 
 export const PR_LABEL: Record<PRKind, string> = {
@@ -166,8 +168,9 @@ export function finishWorkout(opts: {
   unit: Unit;
   includeCardio: boolean;
   makeupFor?: string;
+  durationMin?: number;
 }): Summary {
-  const { session, label, exercises, unit, includeCardio, makeupFor } = opts;
+  const { session, label, exercises, unit, includeCardio, makeupFor, durationMin } = opts;
   const t = today();
   const toLb = unit === "kg" ? LB_PER_KG : 1;
 
@@ -225,6 +228,7 @@ export function finishWorkout(opts: {
     cardioMin,
     exercises: doneNames,
     ...(makeupFor ? { makeupFor } : {}),
+    ...(durationMin ? { durationMin } : {}),
   };
   const nextHistory = empty ? history : [...others, entry].slice(-500);
   const totals = totalsOf(nextHistory);
@@ -248,6 +252,7 @@ export function finishWorkout(opts: {
     newBadges,
     totals,
     empty,
+    ...(durationMin ? { durationMin } : {}),
   };
 }
 

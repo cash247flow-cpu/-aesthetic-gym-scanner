@@ -75,6 +75,11 @@ export function Celebrate({
               </>
             )}
           </p>
+          {!summary.empty && summary.durationMin ? (
+            <p className="mt-1 text-sm text-zinc-400">
+              ⏱ Workout time <span className="font-semibold text-zinc-200">{summary.durationMin} min</span>
+            </p>
+          ) : null}
           {change !== null && (
             <p className={`mt-1 text-sm font-semibold ${change >= 0 ? "text-lime-300" : "text-zinc-400"}`}>
               {change >= 0 ? "▲" : "▼"} {Math.abs(change)}% vs your last {summary.label}
