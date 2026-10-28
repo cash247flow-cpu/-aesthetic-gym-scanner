@@ -6,7 +6,25 @@
 import type { Row, Unit } from "@/components/SetLogger";
 
 const KEY = "ags:overload";
-export const STEP: Record<Unit, number> = { lb: 5, kg: 2.5 };
+// Weight jumps: big multi-joint lifts (and heavy shrugs/calves) take 5 lb; isolation work takes
+// 2.5 lb, since +5 lb on a lateral raise or curl is a much bigger relative jump.
+const STEP: Record<"compound" | "isolation", Record<Unit, number>> = {
+  compound: { lb: 5, kg: 2.5 },
+  isolation: { lb: 2.5, kg: 1.25 },
+};
+const COMPOUND = new Set([
+  // presses
+  "Incline Dumbbell Press", "Incline Smith Machine Press", "Flat Dumbbell Press", "Dumbbell Overhead Press", "Machine Chest Press", "Dips",
+  // pulls
+  "Wide-Grip Lat Pulldown", "Neutral-Grip Pulldown", "Half-Kneeling One-Arm Cable Pulldown", "Unilateral Pulldown", "Pull-Up",
+  "Chest-Supported T-Bar Row", "Chest-Supported Dumbbell Row (Helms Row)", "Meadows Row", "Single-Arm Dumbbell Row",
+  "Wide-Grip Cable Row", "Seated Cable Row",
+  // legs
+  "Hack Squat", "Leg Press", "Barbell Squat", "Goblet Squat", "Romanian Deadlift", "Dumbbell RDL", "Dumbbell Split Squat",
+  // heavy single-joint lifts that load like compounds
+  "Shrugs", "Barbell Shrugs", "Smith Machine Shrug", "Standing Calf Raise", "Standing Barbell Calf Raise", "Standing Dumbbell Calf Raise",
+]);
+export const stepFor = (exercise: string, unit: Unit) => STEP[COMPOUND.has(exercise) ? "compound" : "isolation"][unit];
 
 export function loadOverload(): boolean {
   try {
@@ -27,7 +45,7 @@ export function saveOverload(on: boolean) {
 export type Plan = { targets: { weight: string; reps: string }[]; note: string } | null;
 
 const num = (s: string) => Number(s.replace(",", "."));
-const fmt = (n: number) => String(Math.round(n * 10) / 10);
+const fmt = (n: number) => String(Math.round(n * 100) / 100);
 
 /** "8–12" → [8, 12], "10" → [10, 10], "failure" → null */
 function range(reps: string): [number, number] | null {
@@ -36,7 +54,8 @@ function range(reps: string): [number, number] | null {
 }
 
 /** Targets for `count` sets from last session's sets, or null when there's nothing to go on. */
-export function overloadPlan(prev: Row[], reps: string, unit: Unit, count: number): Plan {
+export function overloadPlan(prev: Row[], reps: string, unit: Unit, count: number, exercise = ""): Plan {
+  const step = stepFor(exercise, unit);
   const last = prev.filter((r) => Number.isFinite(num(r.reps)) && num(r.reps) > 0);
   if (!last.length || count < 1) return null;
   const pick = (i: number) => last[Math.min(i, last.length - 1)];
@@ -55,9 +74,9 @@ export function overloadPlan(prev: Row[], reps: string, unit: Unit, count: numbe
     return {
       targets: Array.from({ length: count }, (_, i) => {
         const w = num(pick(i).weight);
-        return { weight: w > 0 ? fmt(w + STEP[unit]) : pick(i).weight, reps: String(lo) };
+        return { weight: w > 0 ? fmt(w + step) : pick(i).weight, reps: String(lo) };
       }),
-      note: `Add weight: +${STEP[unit]} ${unit} — you hit ${hi} reps on every set last time. Start at ${lo} reps.`,
+      note: `Add weight: +${step} ${unit} — you hit ${hi} reps on every set last time. Start at ${lo} reps.`,
     };
   }
 

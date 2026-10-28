@@ -76,7 +76,7 @@ export function SetLogger({
     const prev = (isToday ? rec?.prevSets : rec?.sets)?.filter(hasData) ?? [];
     const count = targetSetCount(sets);
     // Progressive overload: today's targets from last session, prefilled but editable.
-    const plan = loadOverload() ? overloadPlan(prev, reps, unit, isToday && rec?.sets.length ? rec.sets.length : count) : null;
+    const plan = loadOverload() ? overloadPlan(prev, reps, unit, isToday && rec?.sets.length ? rec.sets.length : count, exercise) : null;
     const rows =
       isToday && rec?.sets.length
         ? rec.sets
