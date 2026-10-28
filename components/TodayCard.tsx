@@ -76,10 +76,21 @@ export function TodayCard({
         </button>
       )}
 
+      {rest && plan.forearms && (
+        <button
+          type="button"
+          onClick={() => onStart("forearms", false)}
+          className="mt-2 h-11 w-full rounded-full border border-amber-300/60 text-sm font-semibold text-amber-200 transition hover:bg-amber-300/10 active:scale-[0.98]"
+        >
+          {hasPhoto ? "Start Forearms" : "📷 Scan the gym for forearms"}
+        </button>
+      )}
+
       <div className="mt-2 flex items-center justify-between px-2 text-xs text-zinc-500">
         <span>
           Tomorrow: {tomorrow.choice === "rest" ? "Rest" : tomorrow.name}
           {tomorrow.choice !== "legs" && tomorrow.abs ? " + Abs" : ""}
+          {tomorrow.forearms ? " + Forearms" : ""}
         </span>
         <button type="button" onClick={onEditWeek} className="font-semibold text-zinc-400 hover:text-zinc-100">
           Edit week

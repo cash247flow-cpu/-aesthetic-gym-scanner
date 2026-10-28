@@ -11,7 +11,7 @@ import { SESSIONS } from "@/lib/programs";
 import { loadWeek, type DayPlan } from "@/lib/schedule";
 import { loadHistory, type HistoryEntry } from "@/lib/wins";
 
-export type ItemKind = "lift" | "abs" | "cardio";
+export type ItemKind = "lift" | "abs" | "forearms" | "cardio";
 export type ItemStatus = "done" | "madeUp" | "missed" | "skipped" | "upcoming";
 export type DayItem = { key: string; date: string; kind: ItemKind; label: string; session?: SessionKey; status: ItemStatus };
 export type MakeupFor = { date: string; label: string }; // label like "Mon · Chest"
@@ -68,13 +68,21 @@ function itemsFor(date: string, snap: Snapshot): Omit<DayItem, "status">[] {
   const items: Omit<DayItem, "status">[] = [];
   if (snap.choice !== "rest") items.push({ key: `${date}:lift`, date, kind: "lift", label: snap.name, session: snap.choice });
   if (snap.abs && snap.choice !== "legs") items.push({ key: `${date}:abs`, date, kind: "abs", label: "Abs", session: "abs" });
+  if (snap.forearms && snap.choice === "rest")
+    items.push({ key: `${date}:forearms`, date, kind: "forearms", label: "Forearms", session: "forearms" });
   if (snap.cardio) items.push({ key: `${date}:cardio`, date, kind: "cardio", label: snap.cardio });
   return items;
 }
 
 const absOnly = (h: HistoryEntry) => !!h.exercises?.length && h.exercises.every((n) => AB_NAMES.has(n));
+const FOREARM_NAMES = new Set(
+  SESSIONS.pull.exercises
+    .filter((e) => e.aestheticKey === "Forearms")
+    .flatMap((e) => [e.name, ...(e.substitutes ?? []).map((x) => x.name)]),
+);
+const hasForearms = (h: HistoryEntry) => (h.exercises ?? []).some((n) => FOREARM_NAMES.has(n));
 const counts = (kind: ItemKind, h: HistoryEntry) =>
-  kind === "lift" ? h.sets > 0 && !absOnly(h) : kind === "abs" ? hasAbs(h) : h.cardioMin > 0;
+  kind === "lift" ? h.sets > 0 && !absOnly(h) : kind === "abs" ? hasAbs(h) : kind === "forearms" ? hasForearms(h) : h.cardioMin > 0;
 
 /** This week, Sunday–Saturday, with each day's planned items and how they went. */
 export function weekStatus(today = todayStr()): DayStatus[] {

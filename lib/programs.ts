@@ -37,6 +37,7 @@ export const AESTHETIC_RANK: Record<string, { rank: number; reason: string }> = 
   "Preacher Curl":            { rank: 9,  reason: "Brachialis pushes the biceps up." },
   "Single-Arm Dumbbell Row":  { rank: 10, reason: "Upper lats support full back development." },
   "Overhead Press":           { rank: 11, reason: "Shoulder width frames the whole upper body." },
+  "Forearms":                 { rank: 12, reason: "Forearms show every time you roll up a sleeve." },
 };
 
 // ─── Legs / abs aesthetic map ──────────────────────────────────────────
@@ -173,6 +174,20 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         substitutes: [
           { name: "Reverse Cable Crossover", cue: "Cables at shoulder height, crossed — left hand holds the right cable. Sweep out wide at 45°, leading with the elbows; let them cross back for a full stretch.", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
           { name: "Rear Delt Raise (head on bench)", cue: "Forehead on the bench, sweep out wide and lead with the elbows.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
+        ] },
+      // Forearms, last on Pull day (also a stand-alone rest-day session).
+      { name: "Wrist Curl", sets: "2", reps: "12–20", restSeconds: "60–90",
+        cue: "Forearms flat on the bench, wrists just past the edge, palms up. Let the dumbbells roll down to your fingertips for a full stretch, then curl the wrists up.",
+        equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Forearms", aestheticMap: "upper",
+        substitutes: [
+          { name: "Cable Wrist Curl", cue: "Low pulley, palms up, forearms on your thighs. Full stretch at the bottom, curl the wrist up and squeeze.", equipmentNeeded: ["cable machine"], aestheticKey: "Forearms", aestheticMap: "upper" },
+        ] },
+      { name: "Reverse Curl", sets: "2", reps: "12–20", restSeconds: "60–90",
+        cue: "EZ bar, palms down, elbows pinned to your sides. Curl up without the wrists bending back — the top of the forearm does the work.",
+        equipmentNeeded: ["ez bar"], aestheticKey: "Forearms", aestheticMap: "upper",
+        substitutes: [
+          { name: "Reverse Cable Curl", cue: "Straight bar on a low pulley, palms down, elbows pinned. Curl up slowly, control the way down.", equipmentNeeded: ["cable machine"], aestheticKey: "Forearms", aestheticMap: "upper" },
+          { name: "Dumbbell Reverse Curl", cue: "Palms down, elbows pinned to your sides. Curl up without swinging; keep the wrists straight.", equipmentNeeded: ["dumbbells"], aestheticKey: "Forearms", aestheticMap: "upper" },
         ] },
     ],
   },

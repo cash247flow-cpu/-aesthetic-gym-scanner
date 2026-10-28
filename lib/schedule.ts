@@ -3,7 +3,7 @@ import type { SessionKey } from "@/lib/plan";
 // What each day of the week is for. "rest" opens Cardio Day.
 export type DayChoice = SessionKey | "rest";
 // abs: "+Abs" on a non-Legs day (Legs days always include abs).
-export type DayPlan = { choice: DayChoice; name: string; abs?: boolean };
+export type DayPlan = { choice: DayChoice; name: string; abs?: boolean; forearms?: boolean };
 export type WeekPlan = DayPlan[]; // index 0 = Sunday, matching Date.getDay()
 
 const KEY = "ags:schedule";
@@ -58,11 +58,14 @@ export function withChoice(week: WeekPlan, day: number, choice: DayChoice): Week
   const original = DEFAULT_WEEK[day];
   const name = choice === original.choice ? original.name : CHOICES.find((c) => c.key === choice)!.name;
   // A day switched to Legs gets abs built in, so drop its separate "+Abs" flag.
-  return week.map((d, i) => (i === day ? { choice, name, abs: choice === "legs" ? undefined : d.abs } : d));
+  // Forearms are a rest-day add-on (Pull already ends with them).
+  return week.map((d, i) =>
+    i === day ? { choice, name, abs: choice === "legs" ? undefined : d.abs, forearms: choice === "rest" ? d.forearms : undefined } : d,
+  );
 }
 
 export const isDefaultWeek = (week: WeekPlan) =>
-  week.every((d, i) => d.choice === DEFAULT_WEEK[i].choice && d.name === DEFAULT_WEEK[i].name && !d.abs);
+  week.every((d, i) => d.choice === DEFAULT_WEEK[i].choice && d.name === DEFAULT_WEEK[i].name && !d.abs && !d.forearms);
 
 // ─── Abs: up to 3 days a week, never two days in a row ─────────────────
 export const MAX_AB_DAYS = 3;
@@ -77,6 +80,10 @@ export function canAddAbs(week: WeekPlan, day: number): { ok: true } | { ok: fal
   const clash = neighbours(day).find((n) => hasAbs(week[n]));
   if (clash !== undefined) return { ok: false, reason: `Abs on ${DAY_NAMES[clash]} — keep a day between` };
   return { ok: true };
+}
+
+export function withForearms(week: WeekPlan, day: number, on: boolean): WeekPlan {
+  return week.map((d, i) => (i === day ? { ...d, forearms: on || undefined } : d));
 }
 
 export function withAbs(week: WeekPlan, day: number, on: boolean): WeekPlan {

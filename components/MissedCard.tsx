@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { dayName, missedThisWeek, skipMissed, weekStatus, type DayItem } from "@/lib/missed";
 
-const KIND: Record<DayItem["kind"], string> = { lift: "Workout", abs: "Abs", cardio: "Cardio" };
+const KIND: Record<DayItem["kind"], string> = { lift: "Workout", abs: "Abs", forearms: "Forearms", cardio: "Cardio" };
 
 /**
  * Missed workouts, abs and cardio from earlier this week (Sunday–Saturday), each with

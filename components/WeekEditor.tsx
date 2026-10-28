@@ -10,6 +10,7 @@ import {
   canAddAbs,
   isDefaultWeek,
   withAbs,
+  withForearms,
   withChoice,
   type WeekPlan,
 } from "@/lib/schedule";
@@ -113,6 +114,18 @@ export function WeekEditor({
                     {!absAllowed.ok && <span className="truncate text-[11px] text-zinc-500">{absAllowed.reason}</span>}
                   </>
                 )}
+                {plan.choice === "rest" && (
+                  <button
+                    type="button"
+                    onClick={() => onChange(withForearms(week, day, !plan.forearms))}
+                    aria-pressed={!!plan.forearms}
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold transition active:scale-95 ${
+                      plan.forearms ? "bg-amber-300 text-zinc-950" : "border border-amber-300/50 text-amber-200"
+                    }`}
+                  >
+                    {plan.forearms ? "✓ Forearms" : "+ Forearms"}
+                  </button>
+                )}
               </div>
             </li>
           );
@@ -120,7 +133,7 @@ export function WeekEditor({
       </ol>
 
       <p className="mt-3 text-xs text-zinc-500">
-        Pump = chest from Push + rear delts and biceps from Pull.
+        Pump = chest from Push + rear delts and biceps from Pull. Pull ends with forearms; “+ Forearms” adds them to a rest day.
       </p>
 
       {!isDefaultWeek(week) && (

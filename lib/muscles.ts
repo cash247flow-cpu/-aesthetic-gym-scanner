@@ -23,6 +23,9 @@ const BY_HAND: Record<string, Targets> = {
   "Standing Cable Crunch (Facing Away)": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
   "Kneeling Cable Crunch (Facing Away)": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
   "Garhammer Raise": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Reverse Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
+  "Reverse Cable Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
+  "Dumbbell Reverse Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
   "Meadows Row": { primaryMuscles: ["lats", "middle back"], secondaryMuscles: ["biceps", "shoulders"] },
 };
 

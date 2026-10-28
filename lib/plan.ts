@@ -32,6 +32,15 @@ const COMBOS = {
       ["legs", "Garhammer Raise"],
     ] as const,
   },
+  // Stand-alone forearm session for rest days: the two forearm exercises from Pull.
+  forearms: {
+    label: "Forearms",
+    note: "Rest-day forearm work — same exercises as the end of Pull.",
+    picks: [
+      ["pull", "Wrist Curl"],
+      ["pull", "Reverse Curl"],
+    ] as const,
+  },
 };
 
 // The ab exercises appended when a day has "+Abs" (Legs already ends with them).
