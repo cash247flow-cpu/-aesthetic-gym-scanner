@@ -77,7 +77,7 @@ export function CardioStats({ machine }: { machine: string }) {
     "mt-1 h-10 w-full rounded-lg bg-zinc-800 px-3 text-base tabular-nums text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-sky-400";
 
   return (
-    <section aria-label="Steps and floors" className="mt-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
+    <section aria-label="Steps and floors" className="relative mt-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
           {showFloors ? "Steps & floors" : "Steps"}

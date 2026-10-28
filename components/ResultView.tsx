@@ -148,6 +148,21 @@ export function ResultView({
     track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
   }, []);
 
+  // The track is as tall as the card you're on (not the tallest card), so short cards don't
+  // leave an empty gap above "Finish workout". Follows the card as sets are added or it grows.
+  useEffect(() => {
+    const track = trackRef.current;
+    const slide = track?.children[Math.min(active, track.children.length - 1)] as HTMLElement | undefined;
+    if (!track || !slide) return;
+    const fit = () => {
+      track.style.height = `${slide.offsetHeight}px`;
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(slide);
+    return () => ro.disconnect();
+  }, [active, count]);
+
   function onTrackScroll() {
     const track = trackRef.current;
     if (track && track.clientWidth > 0) setActive(Math.round(track.scrollLeft / track.clientWidth));
@@ -385,14 +400,14 @@ export function ResultView({
         ref={trackRef}
         onScroll={onTrackScroll}
         aria-roledescription="carousel"
-        className="-mx-1 mt-3 flex snap-x snap-mandatory items-start overflow-x-auto overscroll-x-contain [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-1 mt-3 flex snap-x snap-mandatory items-start overflow-x-auto overflow-y-hidden overscroll-x-contain [overflow-anchor:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {slides.map((sl, i) => (
           <div
             key={sl.key}
             aria-roledescription="slide"
             aria-label={`${i + 1} of ${count}`}
-            className="w-full shrink-0 snap-center snap-always px-1"
+            className="relative w-full shrink-0 snap-center snap-always px-1"
           >
             {sl.kind === "cardio" && cardio ? (
               <CardioCard
