@@ -74,6 +74,43 @@ export const MEALS: Record<MealPhase, Meal[]> = {
   phase2: [BREAKFAST, LUNCH, DINNER_PHASE2],
 };
 
+// ─── Personal macro targets ─────────────────────────────────────────────
+// The plan's numbers are only defaults: each person sets their own per phase.
+const TARGETS_KEY = "ags:meals:targets";
+export type Targets = Record<MealPhase, Macros>;
+export const DEFAULT_TARGETS: Targets = { current: PHASES.current.macros, phase2: PHASES.phase2.macros };
+
+const validMacros = (m: unknown): m is Macros =>
+  !!m &&
+  typeof m === "object" &&
+  (["carbs", "protein", "fat"] as const).every((k) => {
+    const v = (m as Record<string, unknown>)[k];
+    return typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1000;
+  });
+
+export function loadTargets(): Targets {
+  try {
+    const saved = JSON.parse(localStorage.getItem(TARGETS_KEY) ?? "{}") as Partial<Record<MealPhase, unknown>>;
+    return {
+      current: validMacros(saved.current) ? saved.current : DEFAULT_TARGETS.current,
+      phase2: validMacros(saved.phase2) ? saved.phase2 : DEFAULT_TARGETS.phase2,
+    };
+  } catch {
+    return DEFAULT_TARGETS;
+  }
+}
+
+export function saveTargets(targets: Targets | null) {
+  try {
+    if (targets) localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
+    else localStorage.removeItem(TARGETS_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export const sameMacros = (a: Macros, b: Macros) => a.carbs === b.carbs && a.protein === b.protein && a.fat === b.fat;
+
 // ─── Per-day "eaten" ticks and the chosen phase ────────────────────────
 const EATEN_KEY = "ags:meals";
 const PHASE_KEY = "ags:meals:phase";

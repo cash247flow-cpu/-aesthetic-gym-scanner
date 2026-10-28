@@ -2,13 +2,18 @@
 
 import { useRef, useState } from "react";
 import {
+  DEFAULT_TARGETS,
   MEALS,
   PHASES,
   kcalOf,
   loadEaten,
   loadPhase,
+  loadTargets,
+  sameMacros,
   saveEaten,
   savePhase,
+  saveTargets,
+  type Targets,
   type FoodKind,
   type MealId,
   type MealPhase,
@@ -35,13 +40,21 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const today = todayStr();
   const todayEaten = eaten[today] ?? {};
-  const macros = PHASES[phase].macros;
+  const [targets, setTargets] = useState<Targets>(loadTargets);
+  const macros = targets[phase];
   const meals = MEALS[phase];
   const eatenCount = meals.filter((m) => todayEaten[m.id]).length;
 
   function choosePhase(p: MealPhase) {
     setPhase(p);
     savePhase(p);
+  }
+
+  function changeTargets(next: Macros | null) {
+    const all = { ...targets, [phase]: next ?? DEFAULT_TARGETS[phase] };
+    setTargets(all);
+    const isDefault = (Object.keys(all) as MealPhase[]).every((p) => sameMacros(all[p], DEFAULT_TARGETS[p]));
+    saveTargets(isDefault ? null : all);
   }
 
   function toggleMeal(id: MealId) {
@@ -78,12 +91,17 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
               phase === p ? "bg-zinc-100 text-zinc-900" : "text-zinc-400 hover:text-zinc-100"
             }`}
           >
-            {PHASES[p].label} · {PHASES[p].macros.carbs} g net carbs
+            {PHASES[p].label} · {targets[p].carbs} g net carbs
           </button>
         ))}
       </div>
 
-      <MacroTargets macros={macros} />
+      <MacroTargets
+        macros={macros}
+        phaseLabel={PHASES[phase].label}
+        isDefault={sameMacros(macros, DEFAULT_TARGETS[phase])}
+        onChange={changeTargets}
+      />
 
       <ol className="mt-4 grid grid-cols-1 gap-3">
         {meals.map((meal) => {
@@ -151,25 +169,104 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
   );
 }
 
-function MacroTargets({ macros }: { macros: Macros }) {
-  const items = [
-    { label: "Protein", value: macros.protein, className: "text-rose-200" },
-    { label: "Net carbs", value: macros.carbs, className: "text-amber-200" },
-    { label: "Fat", value: macros.fat, className: "text-lime-200" },
-  ];
-  return (
-    <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-      {items.map((m) => (
-        <div key={m.label} className="rounded-xl border border-zinc-800 bg-zinc-900 py-2.5">
-          <p className={`text-lg font-bold tabular-nums ${m.className}`}>{m.value} g</p>
-          <p className="text-[10px] uppercase tracking-wider text-zinc-500">{m.label}</p>
+const MACRO_FIELDS: { key: keyof Macros; label: string; className: string }[] = [
+  { key: "protein", label: "Protein", className: "text-rose-200" },
+  { key: "carbs", label: "Net carbs", className: "text-amber-200" },
+  { key: "fat", label: "Fat", className: "text-lime-200" },
+];
+
+/** Daily targets for the chosen phase, with an editor so each person sets their own. */
+function MacroTargets({
+  macros,
+  phaseLabel,
+  isDefault,
+  onChange,
+}: {
+  macros: Macros;
+  phaseLabel: string;
+  isDefault: boolean;
+  onChange: (next: Macros | null) => void;
+}) {
+  const [draft, setDraft] = useState<Record<keyof Macros, string> | null>(null);
+
+  if (draft) {
+    const parsed = Object.fromEntries(MACRO_FIELDS.map((f) => [f.key, Number(draft[f.key])])) as Macros;
+    const valid = MACRO_FIELDS.every((f) => draft[f.key].trim() !== "" && parsed[f.key] <= 1000);
+    return (
+      <form
+        className="mt-3 rounded-2xl border border-lime-400/40 bg-zinc-900 p-3.5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!valid) return;
+          onChange(parsed);
+          setDraft(null);
+        }}
+      >
+        <p className="text-sm font-semibold">Your daily targets · {phaseLabel}</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {MACRO_FIELDS.map((f) => (
+            <label key={f.key} className="block">
+              <span className={`text-[11px] font-semibold uppercase tracking-wider ${f.className}`}>{f.label} (g)</span>
+              <input
+                inputMode="numeric"
+                aria-label={`${f.label} grams`}
+                value={draft[f.key]}
+                onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                className="mt-1 h-11 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums text-zinc-100 focus:outline-none focus:ring-2 focus:ring-lime-400"
+              />
+            </label>
+          ))}
         </div>
-      ))}
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 py-2.5">
-        <p className="text-lg font-bold tabular-nums">≈{kcalOf(macros).toLocaleString()}</p>
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500">kcal</p>
+        <p className="mt-2 text-xs text-zinc-400">
+          ≈ <span className="font-semibold text-zinc-200">{valid ? kcalOf(parsed).toLocaleString() : "—"} kcal</span>, worked out
+          from your macros (protein and carbs 4 kcal/g, fat 9 kcal/g). Carbs are net carbs, like Cronometer.
+        </p>
+        <div className="mt-3 flex gap-2">
+          <button type="submit" disabled={!valid} className="h-10 flex-1 rounded-lg bg-lime-400 text-sm font-semibold text-zinc-950 disabled:opacity-40">
+            Save targets
+          </button>
+          <button type="button" onClick={() => setDraft(null)} className="h-10 rounded-lg px-3 text-sm text-zinc-400 hover:text-zinc-100">
+            Cancel
+          </button>
+        </div>
+        {!isDefault && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange(null);
+              setDraft(null);
+            }}
+            className="mt-2 text-xs text-zinc-500 hover:text-zinc-300"
+          >
+            Reset to the plan&apos;s defaults
+          </button>
+        )}
+      </form>
+    );
+  }
+
+  return (
+    <>
+      <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+        {MACRO_FIELDS.map((f) => (
+          <div key={f.key} className="rounded-xl border border-zinc-800 bg-zinc-900 py-2.5">
+            <p className={`text-lg font-bold tabular-nums ${f.className}`}>{macros[f.key]} g</p>
+            <p className="text-[10px] uppercase tracking-wider text-zinc-500">{f.label}</p>
+          </div>
+        ))}
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 py-2.5">
+          <p className="text-lg font-bold tabular-nums">≈{kcalOf(macros).toLocaleString()}</p>
+          <p className="text-[10px] uppercase tracking-wider text-zinc-500">kcal</p>
+        </div>
       </div>
-    </div>
+      <button
+        type="button"
+        onClick={() => setDraft({ protein: String(macros.protein), carbs: String(macros.carbs), fat: String(macros.fat) })}
+        className="mt-1.5 px-1 text-xs font-semibold text-lime-300/90 hover:text-lime-200"
+      >
+        ✎ Edit my targets{isDefault ? " (using the plan's defaults)" : ""}
+      </button>
+    </>
   );
 }
 
