@@ -2,6 +2,7 @@ import { loadRecord, type Row, type Unit } from "@/components/SetLogger";
 import { loadLog as loadCardioLog } from "@/components/CardioCard";
 import { bestPerfectStreak, loadHabitLogs } from "@/lib/habits";
 import { statsTotal } from "@/lib/cardioStats";
+import { saveWorkoutRecord, workoutId, type ExerciseSets } from "@/lib/achievements/workoutRecords";
 
 // Weights are typed in whatever unit the toggle shows; everything stored here is in lb.
 const LB_PER_KG = 2.20462;
@@ -183,6 +184,7 @@ export function finishWorkout(opts: {
   let sets = 0;
   let exercisesDone = 0;
   const doneNames: string[] = [];
+  const setRecords: ExerciseSets[] = [];
   const prs: PR[] = [];
   const prUpdates: [string, PrRecord][] = [];
 
@@ -193,6 +195,12 @@ export function finishWorkout(opts: {
     if (!done.length) continue;
     exercisesDone++;
     doneNames.push(exercise);
+    setRecords.push({
+      name: exercise,
+      sets: done
+        .map((r) => ({ weightLb: Math.round(num(r.weight) * toLb * 100) / 100, reps: num(r.reps) }))
+        .filter((s) => s.reps > 0),
+    });
     sets += done.length;
     volumeLb += done.reduce((v, r) => v + num(r.weight) * toLb * num(r.reps), 0);
 
@@ -241,6 +249,16 @@ export function finishWorkout(opts: {
   };
   const nextHistory = empty ? history : [...others, entry].slice(-500);
   const totals = totalsOf(nextHistory);
+
+  // Every logged set, for the achievement engine (same id = same workout, replaced not doubled).
+  saveWorkoutRecord({
+    id: workoutId(t, session, makeupFor),
+    date: t,
+    session,
+    ...(makeupFor ? { makeupFor } : {}),
+    exercises: setRecords.filter((e) => e.sets.length),
+    savedAt: Date.now(),
+  });
 
   if (!empty) {
     write(HISTORY_KEY, nextHistory);

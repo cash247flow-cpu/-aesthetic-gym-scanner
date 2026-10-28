@@ -5,6 +5,7 @@ import { loadUnit } from "@/components/SetLogger";
 import { WinBadge } from "@/components/WinBadge";
 import { formatWeight, loadWins, type BadgeGroup } from "@/lib/wins";
 import { Accent, TITLE } from "@/components/ui";
+import { TrophyCollection } from "@/components/TrophyCollection";
 
 const GROUP_TITLE: Record<BadgeGroup, string> = {
   lift: "Weight lifted",
@@ -40,6 +41,8 @@ export function WinsView({ onBack }: { onBack: () => void }) {
         <Tile value={String(totals.prs)} label="PRs set" accent="text-amber-300" />
         <Tile value={`${totals.cardioMin} min`} label="Cardio" accent="text-sky-300" />
       </div>
+
+      <TrophyCollection />
 
       {(Object.keys(GROUP_TITLE) as BadgeGroup[]).map((group) => (
         <section key={group} className="mt-6">

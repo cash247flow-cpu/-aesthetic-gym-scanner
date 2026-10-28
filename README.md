@@ -56,3 +56,29 @@ National Institutes of Health, Office of Dietary Supplements. Dietary Supplement
 3. On the phone, open the `https://….vercel.app` link in Chrome or Samsung Internet, enter the passcode, then menu (⋮) → **Add to Home screen / Install app**.
 
 With `APP_PASSCODE` set, every page and API route needs the passcode cookie (`middleware.ts`), so nobody who finds the link can use your Gemini key. Changing the passcode signs every device out. Your logs are stored per browser, so the phone starts with fresh data.
+
+## Achievements and certificates
+
+Progress → Your Wins → **My Trophy Collection** shows awards in three series:
+Conqueror (personal records and lifting volume), Transformation (body-weight and body-fat
+progress) and Discipline (workouts completed and perfect habit streaks).
+
+- **Rules** live in `lib/achievements/config.ts`, including the PR rules, the
+  Silver/Gold/Platinum thresholds and the declarations. Detection (`lib/achievements/detect.ts`)
+  is recomputed from saved data every time. Award IDs are stable, the same workout never
+  awards twice, and editing or deleting data updates or withdraws the awards that depended on it.
+- **PRs** use the per-set records saved when a workout is finished (`ags:workouts`). Only
+  workouts finished after this feature was added count.
+- **Certificates** (`lib/achievements/certificate.ts`) are drawn on a canvas at 1080×1920,
+  1080×1350 or 1080×1080. The preview is the exact image that gets saved or shared. Sharing
+  uses the phone's share sheet when it can and otherwise saves the image. Nothing is ever posted
+  automatically.
+- **Privacy:** awards stay on the phone. The user chooses which fields appear on each image, and
+  body measurements are off unless chosen for that certificate. There are no public award pages,
+  because the app has no server for them.
+- **Referral QR (optional):** set `NEXT_PUBLIC_REFERRAL_URL` to an `https://` link in Vercel
+  (Settings → Environment Variables) and redeploy. The QR option then appears on certificates.
+  Without the variable, the option is hidden.
+- **Artwork:** the emblem in `public/achievements/` is cropped from the AESTHETIQ certificate
+  artwork. The Cinzel font is in `public/fonts/` under the SIL Open Font License.
+- **Tests:** `npm test` runs the rule tests in `tests/`, which use example data only.

@@ -21,6 +21,7 @@ import { shrinkImage } from "@/lib/image";
 import { fromLb } from "@/lib/wins";
 import type { ScaleReading } from "@/lib/scaleReading";
 import { AccentLast, TITLE } from "@/components/ui";
+import { NewAwards, useNewAwards } from "@/components/NewAwards";
 
 const LB_PER_KG = 2.20462;
 const today = () => new Date().toLocaleDateString("en-CA");
@@ -75,6 +76,8 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
   const formRef = useRef<HTMLDivElement>(null);
 
   const latest = entries[entries.length - 1];
+
+  const { awards, check: checkAwards, dismiss } = useNewAwards();
 
   function changeUnit(u: Unit) {
     setUnit(u);
@@ -180,6 +183,7 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
     setEntries(next);
     saveEntries(next);
     closeDraft();
+    checkAwards();
   }
 
   async function removeEntry(e: BodyEntry) {
@@ -187,6 +191,7 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
     const next = entries.filter((x) => x.id !== e.id);
     setEntries(next);
     saveEntries(next);
+    checkAwards();
     if (e.fileId) await deleteFile(e.fileId);
   }
 
@@ -206,6 +211,7 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
   function updateGoal(g: BodyGoal | null) {
     setGoal(g);
     saveGoal(g);
+    checkAwards();
   }
 
   return (
@@ -231,6 +237,8 @@ export function BodyTracker({ onBack }: { onBack: () => void }) {
           ? `Latest ${fmt(latest.weightLb, unit)}${latest.bodyFatPct != null ? ` · ${latest.bodyFatPct}% fat` : ""} · ${shortDate(latest.date)}`
           : "Log your weight to track your cut or bulk."}
       </p>
+
+      <NewAwards awards={awards} onDismiss={dismiss} />
 
       <GoalCard goal={goal} entries={entries} unit={unit} onChange={updateGoal} />
 

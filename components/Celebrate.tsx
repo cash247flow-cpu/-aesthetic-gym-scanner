@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { NewAwards } from "@/components/NewAwards";
+import { syncAchievements, type StoredAchievement } from "@/lib/achievements/store";
 import type { Unit } from "@/components/SetLogger";
 import { WinBadge } from "@/components/WinBadge";
 import { PR_LABEL, formatWeight, fromLb, type PR, type Summary } from "@/lib/wins";
@@ -23,6 +25,14 @@ export function Celebrate({
   onClose: () => void;
   onSeeAll?: () => void;
 }) {
+  // Awards earned by this workout (trophies are recomputed from the saved sets).
+  const [awards, setAwards] = useState<StoredAchievement[]>([]);
+  useEffect(() => {
+    // Recorded in the last few seconds = earned by this workout (safe if the effect runs twice).
+    const since = Date.now() - 10_000;
+    setAwards(syncAchievements().all.filter((a) => !a.seen && a.createdAt >= since));
+  }, []);
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     if (summary.prs.length || summary.newBadges.length) navigator.vibrate?.([80, 60, 80, 60, 200]);
@@ -137,6 +147,8 @@ export function Celebrate({
             </ul>
           </section>
         )}
+
+        <NewAwards awards={awards} />
 
         {summary.newBadges.length > 0 && (
           <section className="mt-5">

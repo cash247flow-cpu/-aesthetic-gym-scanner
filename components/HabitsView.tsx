@@ -17,6 +17,7 @@ import {
 import { SleepHelper } from "@/components/SleepHelper";
 import { formatClockTime, loadSleep, sleepTimes } from "@/lib/sleep";
 import { AccentLast, TITLE } from "@/components/ui";
+import { NewAwards, useNewAwards } from "@/components/NewAwards";
 
 // Logging is allowed for the past week (Sleep Lock is easiest to tick the next morning).
 const BACKFILL_DAYS = 6;
@@ -34,6 +35,7 @@ export function HabitsView({ onBack }: { onBack: () => void }) {
   const [logs, setLogs] = useState(loadHabitLogs);
   const [sleep, setSleep] = useState(loadSleep);
   const [editingSleep, setEditingSleep] = useState(false);
+  const { awards, check: checkAwards, dismiss } = useNewAwards();
   const log = logs[date] ?? {};
   const done = doneCount(log);
   const perfect = streak(logs, "all", today);
@@ -59,6 +61,7 @@ export function HabitsView({ onBack }: { onBack: () => void }) {
     const next = { ...logs, [date]: { ...log, ...patch } };
     setLogs(next);
     saveHabitLogs(next);
+    checkAwards();
   }
 
   return (
@@ -68,6 +71,8 @@ export function HabitsView({ onBack }: { onBack: () => void }) {
         {perfect > 0 ? `🔥 ${perfect}-day perfect streak` : "Do all five for a perfect day"}
         {best > perfect ? ` · best ${best}` : ""}
       </p>
+
+      <NewAwards awards={awards} onDismiss={dismiss} />
 
       <div className="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-zinc-800 bg-zinc-900 p-2">
         <NavButton dir="prev" disabled={date <= addDays(today, -BACKFILL_DAYS)} onClick={() => setDate(addDays(date, -1))} />

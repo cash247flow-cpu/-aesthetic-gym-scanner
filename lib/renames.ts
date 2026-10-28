@@ -37,6 +37,13 @@ function migrate(DONE_KEY: string, RENAMES: Record<string, string>) {
         JSON.stringify(history.map((h) => (h.exercises ? { ...h, exercises: h.exercises.map(rename) } : h))),
       );
     }
+    const workouts = JSON.parse(localStorage.getItem("ags:workouts") ?? "null") as { exercises?: { name: string }[] }[] | null;
+    if (Array.isArray(workouts)) {
+      localStorage.setItem(
+        "ags:workouts",
+        JSON.stringify(workouts.map((w) => ({ ...w, exercises: (w.exercises ?? []).map((e) => ({ ...e, name: rename(e.name) })) }))),
+      );
+    }
     const swaps = JSON.parse(localStorage.getItem("ags:swaps") ?? "null") as Record<string, string> | null;
     if (swaps && typeof swaps === "object") {
       localStorage.setItem("ags:swaps", JSON.stringify(Object.fromEntries(Object.entries(swaps).map(([k, v]) => [rename(k), rename(v)]))));
