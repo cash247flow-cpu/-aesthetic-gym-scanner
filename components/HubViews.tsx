@@ -96,14 +96,42 @@ function Stat({ value, label, tone }: { value: number; label: string; tone: stri
   );
 }
 
+/** Scan mode on/off: photo-based workouts, or the standard S-tier program. */
+function ScanToggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3">
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">📷 Scan gym equipment</span>
+        <span className="block text-xs text-zinc-400">
+          {on ? "Workouts use only the equipment in your gym photo." : "Off: your standard S-tier program — no photo needed."}
+        </span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Scan gym equipment"
+        onClick={() => onChange(!on)}
+        className={`relative h-8 w-14 shrink-0 rounded-full transition ${on ? "bg-lime-400" : "bg-zinc-700"}`}
+      >
+        <span className={`absolute top-1 h-6 w-6 rounded-full bg-zinc-950 shadow transition-all ${on ? "left-7" : "left-1"}`} />
+      </button>
+    </div>
+  );
+}
+
 /** More tab: everything that isn't on its own tab. */
 export function MoreHub({
+  scanMode,
+  onScanMode,
   onHabits,
   onSupps,
   onWeek,
   onSleep,
   onCardio,
 }: {
+  scanMode: boolean;
+  onScanMode: (on: boolean) => void;
   onHabits: () => void;
   onSupps: () => void;
   onWeek: () => void;
@@ -116,6 +144,7 @@ export function MoreHub({
         <AccentLast text="More" />
       </h1>
       <div className="mt-4 grid grid-cols-1 gap-2">
+        <ScanToggle on={scanMode} onChange={onScanMode} />
         <HubRow icon="✅" label="Daily habits" sub={HABITS.map((h) => h.title).join(" · ")} onClick={onHabits} />
         <HubRow icon="💊" label="Supplements" sub="Daily checklist and label check" onClick={onSupps} />
         <HubRow icon="🗓️" label="Your week" sub="Which session on which day, and ab days" onClick={onWeek} />

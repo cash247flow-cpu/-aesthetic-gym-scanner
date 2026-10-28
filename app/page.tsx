@@ -24,6 +24,8 @@ import { loadSleep, type SleepSettings } from "@/lib/sleep";
 import { Accent, Brand, TITLE } from "@/components/ui";
 import { MissedCard } from "@/components/MissedCard";
 import { migrateRenamedExercises } from "@/lib/renames";
+import { buildPlan } from "@/lib/plan";
+import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { dayName, type DayItem, type MakeupFor } from "@/lib/missed";
 
 type View =
@@ -39,7 +41,7 @@ type View =
   | { state: "progress" }
   | { state: "more" }
   | { state: "wins"; back: View }
-  | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean };
+  | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean; standard?: boolean };
 
 const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
   { key: "push", label: "Push", hint: "Chest · Shoulders · Triceps" },
@@ -54,6 +56,9 @@ export default function Home() {
   // Where a screen opened from the Progress or More tab goes back to.
   const [returnTo, setReturnTo] = useState<View>({ state: "upload" });
   const [photo, setPhoto] = useState<File | null>(null);
+  // Scan mode: workouts use only the equipment in a gym photo. Off = the standard S-tier program,
+  // no photo needed (and it works without signal, since the plan is built on the phone).
+  const [scanMode, setScanMode] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // A session tapped before there's a gym photo: it starts as soon as the photo is taken.
@@ -67,6 +72,7 @@ export default function Home() {
   const [sleep, setSleep] = useState<SleepSettings | null>(null);
   useEffect(() => {
     migrateRenamedExercises();
+    setScanMode(loadScanMode());
     setWeek(loadWeek());
     setTodayIdx(new Date().getDay());
   }, []);
@@ -120,16 +126,28 @@ export default function Home() {
     inputRef.current?.click();
   }
 
+  function changeScanMode(on: boolean) {
+    setScanMode(on);
+    saveScanMode(on);
+  }
+
+  // The Scan button turns scan mode on and opens the camera.
   function scan() {
     setPending(null);
     setMakeup(null);
+    changeScanMode(true);
     if (view.state !== "upload") show({ state: "upload" });
     openCamera();
   }
 
-  // Start a session: right away with a gym photo, or open the camera and start once it's taken.
+  // Start a session: the standard program, or (scan mode) right away with a gym photo, or open
+  // the camera and start once it's taken.
   function start(session: SessionKey, withAbs = false, makeupFor: MakeupFor | null = null) {
     setMakeup(makeupFor);
+    if (!scanMode) {
+      setError(null);
+      return show({ state: "result", plan: buildPlan(session, [...CANONICAL_EQUIPMENT], { withAbs }), session, withAbs, standard: true });
+    }
     if (photo) return void run(session, withAbs, photo);
     setPending({ session, withAbs });
     openCamera();
@@ -243,7 +261,7 @@ export default function Home() {
 
           <WeekStrip />
 
-          <TodayCard week={week} hasPhoto={!!photo} onStart={start} onCardio={() => openCardio()} onEditWeek={() => go("week")} />
+          <TodayCard week={week} hasPhoto={!scanMode || !!photo} onStart={start} onCardio={() => openCardio()} onEditWeek={() => go("week")} />
 
           <MissedCard onMakeUp={makeUp} />
 
@@ -286,7 +304,9 @@ export default function Home() {
             </button>
           </div>
 
-          {preview ? (
+          {!scanMode ? (
+            <p className="mt-3 px-1 text-xs text-zinc-500">Standard S-tier program · turn on gym scanning in More.</p>
+          ) : preview ? (
             <div className="relative mt-4 overflow-hidden rounded-2xl border border-zinc-800">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={preview} alt="Selected gym photo" className="h-40 w-full object-cover" />
@@ -325,6 +345,8 @@ export default function Home() {
 
       {view.state === "more" && (
         <MoreHub
+          scanMode={scanMode}
+          onScanMode={changeScanMode}
           onHabits={() => go("habits")}
           onSupps={() => go("supps")}
           onWeek={() => go("week")}
@@ -363,6 +385,7 @@ export default function Home() {
           onEquipmentChange={(eq) => changeEquipment(view.session, view.withAbs, eq)}
           onShowWins={showWins}
           makeup={makeup ?? undefined}
+          standard={view.standard}
         />
       )}
 
@@ -388,6 +411,22 @@ function Tile({ icon, label, value, extra, onClick }: { icon: string; label: str
       </span>
     </button>
   );
+}
+
+const SCAN_KEY = "ags:scanmode";
+function loadScanMode() {
+  try {
+    return localStorage.getItem(SCAN_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+function saveScanMode(on: boolean) {
+  try {
+    localStorage.setItem(SCAN_KEY, on ? "on" : "off");
+  } catch {
+    /* ignore */
+  }
 }
 
 async function fetchPlan(session: SessionKey, equipment: string[], withAbs = false): Promise<PlanResult> {

@@ -48,12 +48,14 @@ export function ResultView({
   onEquipmentChange,
   onShowWins,
   makeup,
+  standard = false,
 }: {
   plan: PlanResult;
   onReset: () => void;
   onEquipmentChange: (equipment: string[]) => Promise<void>;
   onShowWins: () => void;
   makeup?: MakeupFor; // set when this workout makes up a missed day
+  standard?: boolean; // standard program (no gym photo): hide the scanned-equipment chips
 }) {
   const isLegs = plan.sessionLabel === "Legs & Abs";
   // Swap button choices, remembered between workouts (programmed exercise → chosen alternative).
@@ -251,7 +253,14 @@ export function ResultView({
 
       <PreWorkoutReminder />
 
-      <EquipmentEditor equipment={plan.equipment} onChange={onEquipmentChange} />
+      {standard ? (
+        <p className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-sm text-zinc-300">
+          Standard program — your S-tier exercises. Machine taken or missing? Tap <span className="font-semibold">⇄ Swap</span> on
+          that exercise.
+        </p>
+      ) : (
+        <EquipmentEditor equipment={plan.equipment} onChange={onEquipmentChange} />
+      )}
 
       {plan.missingNote && (
         <div role="status" className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3.5 py-3 text-sm text-amber-200">
@@ -404,7 +413,7 @@ export function ResultView({
         onClick={onReset}
         className="mt-4 h-12 w-full rounded-xl bg-lime-400 text-base font-semibold text-zinc-950 transition hover:bg-lime-300 active:scale-[0.98]"
       >
-        Scan another gym
+        {standard ? "Back to home" : "Scan another gym"}
       </button>
 
       {rest && <RestTimer key={rest.id} request={rest} onClose={() => setRest(null)} />}
