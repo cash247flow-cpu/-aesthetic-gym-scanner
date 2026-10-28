@@ -7,6 +7,7 @@ const FACE_AWAY_CRUNCH: ExerciseVideo[] = [{ id: "0ShG8aVIvms" }];
 
 export const VIDEOS: Record<string, ExerciseVideo[]> = {
   "Garhammer Raise": [{ id: "PjFeAHXSoY0", start: 325 }],
+  "Assisted Lat Pulldown Crunch": FACE_AWAY_CRUNCH,
   "Lat Pulldown Cable Crunch (Face-Away)": FACE_AWAY_CRUNCH,
   "Standing Cable Crunch (Facing Away)": FACE_AWAY_CRUNCH,
   "Kneeling Cable Crunch (Facing Away)": FACE_AWAY_CRUNCH,
