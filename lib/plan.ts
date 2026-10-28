@@ -27,8 +27,8 @@ const COMBOS = {
     label: "Abs",
     note: "Up to 3× a week, with a day off between.",
     picks: [
-      ["legs", "Face-Away Lat Pulldown Crunch"],
-      ["legs", "Reverse Crunch"],
+      ["legs", "Assisted Lat Pulldown Crunch"],
+      ["legs", "Reverse Crunch (with Ab Mat)"],
       ["legs", "Garhammer Raise"],
     ] as const,
   },

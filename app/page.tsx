@@ -23,6 +23,7 @@ import { SleepHelper } from "@/components/SleepHelper";
 import { loadSleep, type SleepSettings } from "@/lib/sleep";
 import { Accent, Brand, TITLE } from "@/components/ui";
 import { MissedCard } from "@/components/MissedCard";
+import { migrateRenamedExercises } from "@/lib/renames";
 import { dayName, type DayItem, type MakeupFor } from "@/lib/missed";
 
 type View =
@@ -65,6 +66,7 @@ export default function Home() {
   const [todayIdx, setTodayIdx] = useState<number | null>(null);
   const [sleep, setSleep] = useState<SleepSettings | null>(null);
   useEffect(() => {
+    migrateRenamedExercises();
     setWeek(loadWeek());
     setTodayIdx(new Date().getDay());
   }, []);

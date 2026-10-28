@@ -16,8 +16,10 @@ const BY_HAND: Record<string, Targets> = {
   "Smith Machine Shrug": { primaryMuscles: ["traps"], secondaryMuscles: [] },
   "Cable Hip Abduction": { primaryMuscles: ["abductors"], secondaryMuscles: ["glutes"] },
   "Side-Lying Hip Abduction": { primaryMuscles: ["abductors"], secondaryMuscles: ["glutes"] },
-  "Face-Away Lat Pulldown Crunch": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
-  "Face-Away Cable Crunch (kneeling or standing)": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Assisted Lat Pulldown Crunch": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Lat Pulldown Cable Crunch (Face-Away)": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Standing Cable Crunch (Facing Away)": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Kneeling Cable Crunch (Facing Away)": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
   "Garhammer Raise": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
 };
 

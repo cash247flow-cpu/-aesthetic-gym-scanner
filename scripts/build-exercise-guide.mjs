@@ -69,17 +69,9 @@ const MATCHES = {
     note: "Same movement as a Nordic curl — keep your hips straight so the hamstrings do the work.",
   },
   // Abs
-  "Reverse Crunch": {
+  "Reverse Crunch (with Ab Mat)": {
     db: "Reverse Crunch",
     note: "Photos show the plain floor version — put an ab mat or rolled towel under your lower back and start with knees at 90°.",
-  },
-  "Ab-Mat Crunch": {
-    db: "Crunches",
-    note: "Photos show a standard floor crunch — add an ab mat or rolled towel under your lower back for the stretch.",
-  },
-  "Captain's Chair Leg Raise": {
-    db: "Knee/Hip Raise On Parallel Bars",
-    note: "Curl your pelvis up at the top rather than just lifting the knees.",
   },
 };
 

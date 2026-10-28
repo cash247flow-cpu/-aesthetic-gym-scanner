@@ -1020,7 +1020,7 @@
     ],
     "note": "Same movement as a Nordic curl — keep your hips straight so the hamstrings do the work."
   },
-  "Reverse Crunch": {
+  "Reverse Crunch (with Ab Mat)": {
     "source": "Reverse Crunch",
     "equipment": "body only",
     "level": "beginner",
@@ -1040,48 +1040,5 @@
       "/exercises/Reverse_Crunch/1.jpg"
     ],
     "note": "Photos show the plain floor version — put an ab mat or rolled towel under your lower back and start with knees at 90°."
-  },
-  "Ab-Mat Crunch": {
-    "source": "Crunches",
-    "equipment": "body only",
-    "level": "beginner",
-    "primaryMuscles": [
-      "abdominals"
-    ],
-    "secondaryMuscles": [],
-    "instructions": [
-      "Lie flat on your back with your feet flat on the ground, or resting on a bench with your knees bent at a 90 degree angle. If you are resting your feet on a bench, place them three to four inches apart and point your toes inward so they touch.",
-      "Now place your hands lightly on either side of your head keeping your elbows in. Tip: Don't lock your fingers behind your head.",
-      "While pushing the small of your back down in the floor to better isolate your abdominal muscles, begin to roll your shoulders off the floor.",
-      "Continue to push down as hard as you can with your lower back as you contract your abdominals and exhale. Your shoulders should come up off the floor only about four inches, and your lower back should remain on the floor. At the top of the movement, contract your abdominals hard and keep the contraction for a second. Tip: Focus on slow, controlled movement - don't cheat yourself by using momentum.",
-      "After the one second contraction, begin to come down slowly again to the starting position as you inhale.",
-      "Repeat for the recommended amount of repetitions."
-    ],
-    "images": [
-      "/exercises/Crunches/0.jpg",
-      "/exercises/Crunches/1.jpg"
-    ],
-    "note": "Photos show a standard floor crunch — add an ab mat or rolled towel under your lower back for the stretch."
-  },
-  "Captain's Chair Leg Raise": {
-    "source": "Knee/Hip Raise On Parallel Bars",
-    "equipment": "other",
-    "level": "beginner",
-    "primaryMuscles": [
-      "abdominals"
-    ],
-    "secondaryMuscles": [],
-    "instructions": [
-      "Position your body on the vertical leg raise bench so that your forearms are resting on the pads next to the torso and holding on to the handles. Your arms will be bent at a 90 degree angle.",
-      "The torso should be straight with the lower back pressed against the pad of the machine and the legs extended pointing towards the floor. This will be your starting position.",
-      "Now as you breathe out, lift your legs up as you keep them extended. Continue this movement until your legs are roughly parallel to the floor and then hold the contraction for a second. Tip: Do not use any momentum or swinging as you perform this exercise.",
-      "Slowly go back to the starting position as you breathe in.",
-      "Repeat for the recommended amount of repetitions."
-    ],
-    "images": [
-      "/exercises/Knee_Hip_Raise_On_Parallel_Bars/0.jpg",
-      "/exercises/Knee_Hip_Raise_On_Parallel_Bars/1.jpg"
-    ],
-    "note": "Curl your pelvis up at the top rather than just lifting the knees."
   }
 }
