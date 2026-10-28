@@ -6,7 +6,7 @@ import { loadSwaps, saveSwaps, type SavedSwaps } from "@/lib/swaps";
 import { MuscleMap } from "@/components/MuscleMap";
 import { musclesFor } from "@/lib/muscles";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
-import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest } from "@/components/RestTimer";
+import { RestTimer, defaultRestSeconds, unlockAudio, type RestRequest, type RestState } from "@/components/RestTimer";
 import { SetLogger, loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
 import {
   CardioCard,
@@ -66,6 +66,7 @@ export function ResultView({
   // Abs marker goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = exercises.findIndex((e) => e.abs === true);
   const [rest, setRest] = useState<RestRequest | null>(null);
+  const [restState, setRestState] = useState<RestState | null>(null);
   const [unit, setUnit] = useState<Unit>(loadUnit);
   const [cardio, setCardio] = useState<CardioPlan | null>(loadCardioPlan);
   const [choosingCardio, setChoosingCardio] = useState(false);
@@ -273,7 +274,7 @@ export function ResultView({
 
       <PreWorkoutReminder />
 
-      {workout && <WorkoutTimer active={workout} onStart={timerStart} onPause={timerPause} onEnd={endWorkout} />}
+      {workout && <WorkoutTimer active={workout} onStart={timerStart} onPause={timerPause} onEnd={endWorkout} rest={restState} />}
 
       {standard ? (
         <p className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900 px-3.5 py-2.5 text-sm text-zinc-300">
@@ -438,7 +439,7 @@ export function ResultView({
         {standard ? "Back to home" : "Scan another gym"}
       </button>
 
-      {rest && <RestTimer key={rest.id} request={rest} onClose={() => setRest(null)} />}
+      {rest && <RestTimer key={rest.id} request={rest} onClose={() => setRest(null)} onState={setRestState} />}
       {summary && (
         <Celebrate summary={summary} unit={unit} onClose={() => setSummary(null)} onSeeAll={onShowWins} />
       )}

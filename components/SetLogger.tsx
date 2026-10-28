@@ -132,9 +132,9 @@ export function SetLogger({
           {plan.note} Targets are filled in — edit any box.
         </p>
       )}
-      <div className="grid grid-cols-[1.75rem_1fr_4.25rem_3.5rem_2.5rem] items-center gap-x-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+      <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_4.25rem_3.5rem_2.5rem] items-center gap-x-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
         <span>Set</span>
-        <span>Previous</span>
+        <span className="truncate">Previous</span>
         <span className="text-center">{unit}</span>
         <span className="text-center">Reps</span>
         <span className="text-center">✓</span>
@@ -146,7 +146,7 @@ export function SetLogger({
           return (
             <li
               key={i}
-              className={`grid grid-cols-[1.75rem_1fr_4.25rem_3.5rem_2.5rem] items-center gap-x-2 rounded-lg px-1 py-1 transition ${
+              className={`grid grid-cols-[1.75rem_minmax(0,1fr)_4.25rem_3.5rem_2.5rem] items-center gap-x-2 rounded-lg px-1 py-1 transition ${
                 row.done ? "bg-lime-400/10" : ""
               }`}
             >

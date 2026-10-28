@@ -70,7 +70,18 @@ export function useWakeLock(active: boolean) {
   }, [active]);
 }
 
-export function RestTimer({ request, onClose }: { request: RestRequest; onClose: () => void }) {
+export type RestState = { label: string; left: number; running: boolean; done: boolean };
+
+export function RestTimer({
+  request,
+  onClose,
+  onState,
+}: {
+  request: RestRequest;
+  onClose: () => void;
+  /** Mirrors the countdown (e.g. into the workout timer bar); null once closed. */
+  onState?: (state: RestState | null) => void;
+}) {
   const [total, setTotal] = useState(request.seconds);
   // Timestamps, not tick counting, so the clock stays right if the phone throttles the tab.
   const [endAt, setEndAt] = useState<number | null>(() => Date.now() + request.seconds * 1000);
@@ -89,6 +100,12 @@ export function RestTimer({ request, onClose }: { request: RestRequest; onClose:
   }, [running]);
 
   useWakeLock(running && !done);
+
+  const shownLeft = Math.ceil(left);
+  useEffect(() => {
+    onState?.({ label: request.label, left: shownLeft, running, done });
+  }, [onState, request.label, shownLeft, running, done]);
+  useEffect(() => () => onState?.(null), [onState]);
 
   useEffect(() => {
     if (!done || firedRef.current) return;

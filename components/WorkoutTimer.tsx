@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { elapsedMs, formatDuration, type ActiveWorkout } from "@/lib/activeWorkout";
+import { formatClock, type RestState } from "@/components/RestTimer";
 
 /** Whole-workout timer: Start, then Pause/Resume, and End (finishes the workout). */
 export function WorkoutTimer({
@@ -9,8 +10,10 @@ export function WorkoutTimer({
   onStart,
   onPause,
   onEnd,
+  rest,
 }: {
   active: ActiveWorkout;
+  rest?: RestState | null; // the rest countdown, mirrored so it's visible at the top too
   onStart: () => void;
   onPause: () => void;
   onEnd: () => void;
@@ -30,8 +33,8 @@ export function WorkoutTimer({
     <div
       role="timer"
       aria-label={`Workout timer ${formatDuration(elapsedMs(active, now))} ${state}`}
-      className={`mt-4 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 ${
-        state === "running" ? "border-lime-400/50 bg-lime-400/5" : state === "paused" ? "border-amber-400/50 bg-amber-400/5" : "border-zinc-800 bg-zinc-900"
+      className={`sticky top-2 z-30 mt-4 flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 shadow-lg shadow-black/60 backdrop-blur ${
+        state === "running" ? "border-lime-400/50 bg-zinc-950/90" : state === "paused" ? "border-amber-400/50 bg-zinc-950/90" : "border-zinc-800 bg-zinc-900/95"
       }`}
     >
       <span className="min-w-0 flex-1">
@@ -41,6 +44,11 @@ export function WorkoutTimer({
         <span className={`block text-2xl font-bold tabular-nums ${state === "paused" ? "text-amber-200" : ""}`}>
           {formatDuration(elapsedMs(active, now))}
         </span>
+        {rest && (
+          <span className={`block text-xs font-semibold tabular-nums ${rest.done ? "text-lime-300" : "text-sky-300"}`}>
+            {rest.done ? "Rest over — next set!" : `Rest ${formatClock(rest.left)}${rest.running ? "" : " (paused)"}`}
+          </span>
+        )}
       </span>
       {state === "ready" && (
         <button type="button" onClick={onStart} className={`${pill} bg-gradient-to-r from-lime-400 to-emerald-300 text-zinc-950`}>
