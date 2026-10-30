@@ -22,6 +22,7 @@ import { fromLb } from "@/lib/wins";
 import type { ScaleReading } from "@/lib/scaleReading";
 import { AccentLast, TITLE } from "@/components/ui";
 import { NewAwards, useNewAwards } from "@/components/NewAwards";
+import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
 
 const LB_PER_KG = 2.20462;
 const today = () => new Date().toLocaleDateString("en-CA");
@@ -112,10 +113,20 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
     };
     openDraft(base);
 
+    // Nothing leaves the phone unless the user says so; otherwise they type the numbers in.
+    if (!(await requestAiConsent(source === "report" ? "report" : "scale"))) {
+      setDraft((d) =>
+        d && d.file === file
+          ? { ...d, reading: false, note: { text: "Not sent to the AI reader. Type the numbers in — the file stays on this phone.", tone: "ok" } }
+          : d,
+      );
+      return;
+    }
+
     try {
       const form = new FormData();
       form.append("image", file, isPdf ? "report.pdf" : "scale.jpg");
-      const res = await fetch("/api/read-scale", { method: "POST", body: form });
+      const res = await fetch("/api/read-scale", { method: "POST", body: form, headers: AI_CONSENT_HEADERS });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Couldn't read it.");
       const r = data as ScaleReading;
@@ -347,7 +358,8 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
       )}
 
       <p className="mt-4 text-xs text-zinc-500">
-        Saved on this device only. Body-scan numbers are for reference — not a medical diagnosis.
+        Entries, scale photos and reports are saved on this phone. A photo or report you choose to read with AI is sent to Google Gemini
+        to read the numbers — you&apos;re asked first each time. Body-scan numbers are for reference — not a medical diagnosis.
       </p>
 
       <button

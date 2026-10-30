@@ -107,7 +107,7 @@ export function VisualEvolution({ onBack, onBody }: { onBack: () => void; onBody
       <h1 className={`${TITLE} mt-2`}>
         <AccentLast text="Visual evolution" />
       </h1>
-      <p className="mt-1 text-sm text-zinc-400">Private progress photos — stored only on this phone, never uploaded.</p>
+      <p className="mt-1 text-sm text-zinc-400">Private progress photos — stored only on this phone and never sent to the AI reader or any server.</p>
 
       {/* Capture */}
       <section aria-label="Add progress photos" className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-3.5">

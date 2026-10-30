@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE, AUTH_MAX_AGE, authToken, passcodeRequired, sameString } from "@/lib/passcode";
+import { AUTH_COOKIE, AUTH_MAX_AGE, NOT_CONFIGURED, authMode, authToken, sameString } from "@/lib/passcode";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +7,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // POST { passcode } → sets the sign-in cookie.
 export async function POST(req: Request) {
-  if (!passcodeRequired()) return NextResponse.json({ ok: true });
+  const mode = authMode();
+  if (mode === "misconfigured") return NextResponse.json({ error: NOT_CONFIGURED }, { status: 503 });
+  if (mode === "open-dev") return NextResponse.json({ ok: true });
   const body = (await req.json().catch(() => ({}))) as { passcode?: unknown };
   const given = typeof body.passcode === "string" ? body.passcode : "";
 

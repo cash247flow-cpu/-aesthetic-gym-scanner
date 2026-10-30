@@ -207,7 +207,8 @@ export function ArtifactShare({
 
         <section className="mt-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-3.5 text-xs text-zinc-400">
           <p>
-            <span className="font-semibold text-zinc-200">🔒 Private by default.</span> Your records and photos stay on this phone.
+            <span className="font-semibold text-zinc-200">🔒 Private by default.</span> Your records and progress photos are saved on this phone. Only
+            photos you choose to read with AI (scale, report, cardio or gym photos) are sent to Google Gemini — and only after you confirm.
           </p>
           <p className="mt-1">
             <span className="font-semibold text-zinc-200">⬇ Saved or shared image.</span> A picture you create and send yourself — nothing is

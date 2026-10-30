@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { newRequestId, safeLog } from "@/lib/aiSafety";
 import { getLabel } from "@/lib/dsld";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     if (!label) return NextResponse.json({ error: "Label not found." }, { status: 404 });
     return NextResponse.json(label);
   } catch (err) {
-    console.error("[supp-label] label failed:", err);
+    safeLog("error", { tag: "supp-label", requestId: newRequestId(), category: "upstream_error", status: (err as { status?: number }).status });
     return NextResponse.json({ error: "Couldn't reach the NIH label database. Try again in a moment." }, { status: 502 });
   }
 }

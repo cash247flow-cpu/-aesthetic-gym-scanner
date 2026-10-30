@@ -18,12 +18,13 @@ import { DEFAULT_WEEK, loadWeek, saveWeek, type WeekPlan } from "@/lib/schedule"
 import { shrinkImage } from "@/lib/image";
 import { WeekStrip } from "@/components/WeekStrip";
 import { TabBar, type Tab } from "@/components/TabBar";
-import { ActivityView, MoreHub, ProgressHub } from "@/components/HubViews";
+import { ActivityView, DataView, MoreHub, ProgressHub } from "@/components/HubViews";
 import { SleepHelper } from "@/components/SleepHelper";
 import { loadSleep, type SleepSettings } from "@/lib/sleep";
 import { Accent, Brand, TITLE } from "@/components/ui";
 import { MissedCard } from "@/components/MissedCard";
 import { ReviewReadyCard } from "@/components/ReviewReadyCard";
+import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
 import { WeeklyReview } from "@/components/WeeklyReview";
 import { VisualEvolution } from "@/components/VisualEvolution";
 import { migrateRenamedExercises } from "@/lib/renames";
@@ -48,6 +49,7 @@ type View =
   | { state: "review" }
   | { state: "photos" }
   | { state: "activity" }
+  | { state: "data" }
   | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean; standard?: boolean };
 
@@ -117,7 +119,7 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }
 
-  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep" | "review" | "photos" | "activity", from?: View) {
+  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep" | "review" | "photos" | "activity" | "data", from?: View) {
     const hub = from ?? (view.state === "progress" || view.state === "more" ? view : ({ state: "upload" } as View));
     setReturnTo((stack) => [...stack.slice(-5), hub]);
     if (state === "sleep") setSleep(loadSleep());
@@ -202,11 +204,15 @@ export default function Home() {
 
   async function run(session: SessionKey, withAbs: boolean, file: File, makeupFor: MakeupFor | null = null) {
     setError(null);
+    if (!(await requestAiConsent("gym"))) {
+      setError("Photo not sent. To train without a gym photo, turn off gym scanning in More — your standard program needs no photo.");
+      return;
+    }
     setView({ state: "loading" });
     try {
       const form = new FormData();
       form.append("image", await shrinkImage(file), "gym.jpg");
-      const idRes = await fetch("/api/identify", { method: "POST", body: form });
+      const idRes = await fetch("/api/identify", { method: "POST", body: form, headers: AI_CONSENT_HEADERS });
       const idData = await idRes.json();
       if (!idRes.ok) throw new Error(idData.error || "Couldn't read the photo.");
 
@@ -264,7 +270,7 @@ export default function Home() {
         ? "meals"
         : ["progress", "wins", "body", "review", "photos"].includes(view.state)
           ? "progress"
-          : ["more", "habits", "supps", "week", "sleep", "activity"].includes(view.state)
+          : ["more", "habits", "supps", "week", "sleep", "activity", "data"].includes(view.state)
             ? "more"
             : null;
   // Workouts, cardio and loading get the whole screen.
@@ -393,6 +399,8 @@ export default function Home() {
 
       {view.state === "activity" && <ActivityView onBack={back} />}
 
+      {view.state === "data" && <DataView onBack={back} />}
+
       {view.state === "more" && (
         <MoreHub
           scanMode={scanMode}
@@ -403,6 +411,7 @@ export default function Home() {
           onSleep={() => go("sleep")}
           onCardio={() => openCardio()}
           onActivity={() => go("activity")}
+          onData={() => go("data")}
         />
       )}
 

@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import localFont from "next/font/local";
 import "./globals.css";
 import { RegisterSW } from "@/components/RegisterSW";
+import { AiConsentHost } from "@/components/AiConsent";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -34,12 +36,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Reading the request makes every page render per request, so Next.js can put the CSP nonce
+  // from middleware on its scripts (see lib/csp.ts).
+  await headers();
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${accent.variable} font-sans antialiased`}>
         {children}
         <RegisterSW />
+        <AiConsentHost />
       </body>
     </html>
   );

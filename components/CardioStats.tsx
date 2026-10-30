@@ -1,5 +1,6 @@
 "use client";
 
+import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
 import { useEffect, useRef, useState } from "react";
 import { loadCardioStats, saveCardioStats, type CardioReading, type StatsSource } from "@/lib/cardioStats";
 import { todayStr } from "@/lib/habits";
@@ -45,11 +46,15 @@ export function CardioStats({ machine }: { machine: string }) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    if (!(await requestAiConsent("cardio"))) {
+      setReading({ busy: false, note: "Photo not sent. Type your steps and floors in instead." });
+      return;
+    }
     setReading({ busy: true });
     try {
       const form = new FormData();
       form.append("image", await shrinkImage(file), "cardio.jpg");
-      const res = await fetch("/api/read-cardio", { method: "POST", body: form });
+      const res = await fetch("/api/read-cardio", { method: "POST", body: form, headers: AI_CONSENT_HEADERS });
       const data = (await res.json()) as CardioReading & { error?: string };
       if (!res.ok) throw new Error(data.error || "Couldn't read the photo.");
       if (data.steps === null && data.floors === null) {

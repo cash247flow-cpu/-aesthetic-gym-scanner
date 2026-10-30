@@ -52,10 +52,10 @@ National Institutes of Health, Office of Dietary Supplements. Dietary Supplement
 ## Use it on your phone
 
 1. Deploy on [Vercel](https://vercel.com): **Add New → Project**, import this GitHub repo, keep the defaults.
-2. In the project's **Settings → Environment Variables** add `GEMINI_API_KEY` (your key) and `APP_PASSCODE` (a long passcode only you know), then redeploy.
+2. In the project's **Settings → Environment Variables** add `GEMINI_API_KEY` (your key) and `APP_PASSCODE` (a long passcode only you know — 16+ random characters) for **every environment you use (Production and Preview)**, then redeploy.
 3. On the phone, open the `https://….vercel.app` link in Chrome or Samsung Internet, enter the passcode, then menu (⋮) → **Add to Home screen / Install app**.
 
-With `APP_PASSCODE` set, every page and API route needs the passcode cookie (`middleware.ts`), so nobody who finds the link can use your Gemini key. Changing the passcode signs every device out. Your logs are stored per browser, so the phone starts with fresh data.
+Every page and API route needs the passcode cookie (`middleware.ts`), so nobody who finds the link can use your Gemini key. The gate **fails closed**: if `APP_PASSCODE` is missing or blank, every page and API answers 503 — on Vercel (Production and Preview) and for `npm start`. Only `npm run dev` on your own machine runs without it. A single shared passcode is a stopgap for one owner's private app; it isn't suitable for multiple users (no per-user accounts, revocation or roles). Changing the passcode signs every device out. Your logs are stored per browser, so the phone starts with fresh data.
 
 ## Achievements and certificates
 
@@ -124,3 +124,20 @@ ready" card.
   The coach is rules-only.
 - **Privacy:** pages carry `noindex`, `robots.txt` disallows everything, and the app stays behind
   the passcode.
+
+## Security (Stage 1 hardening)
+
+- **Sign-in:** a shared passcode cookie on every page and API, failing closed (see above).
+- **Photo reading with AI:** a scale photo, report, cardio screen or gym photo is sent to Google Gemini only after the user taps **Send to Gemini** in a confirmation dialog, every time. The server refuses uploads without that confirmation (`x-ai-consent`).
+  - Uploads are limited to one file of at most 4 MB.
+  - The format is checked from the file's bytes: JPEG, PNG, WebP, HEIC/HEIF, and PDF for reports. PDFs with scripts or attachments are refused.
+  - Images are passed straight to Gemini and never stored on the server.
+- **Logs:** one JSON line per AI request with a request ID, category, status and sizes (`lib/aiSafety.ts`). Model output, image bytes and user values are never logged.
+- **Headers:**
+  - A per-request nonce Content-Security-Policy (`lib/csp.ts`, set in `middleware.ts`).
+  - Also `X-Content-Type-Options`, `X-Frame-Options: DENY` with `frame-ancestors 'none'`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, and HSTS in production (`next.config.mjs`).
+- **On-phone data:**
+  - The app asks the browser for persistent storage (it may refuse). This only lowers the chance of automatic cleanup.
+  - Clearing site data, uninstalling, or losing the phone still erases everything.
+  - **There is no backup or restore yet** (More → Data on this phone).
+- **Tests:** `tests/security-auth.test.ts` and `tests/security-ai.test.ts`.
