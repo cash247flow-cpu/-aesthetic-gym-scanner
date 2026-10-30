@@ -14,6 +14,8 @@ import { statsTotal, weekStartOf } from "@/lib/cardioStats";
 import { EVENT_LABEL, loadEvents, type EventName } from "@/lib/events";
 import { referralUrl } from "@/lib/achievements/sharePrefs";
 import { requestPersistentStorage, storageStatus, type StorageStatus } from "@/lib/storageInfo";
+import { BackupPanel, lastBackupText } from "@/components/BackupPanel";
+import { loadLastBackup } from "@/lib/backupStore";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
 
@@ -161,7 +163,11 @@ export function MoreHub({
   onData: () => void;
 }) {
   const [overload, setOverload] = useState(true);
-  useEffect(() => setOverload(loadOverload()), []);
+  const [backupSub, setBackupSub] = useState<string | null>(null);
+  useEffect(() => {
+    setOverload(loadOverload());
+    setBackupSub(lastBackupText(loadLastBackup()));
+  }, []);
 
   return (
     <section className="mt-2">
@@ -193,7 +199,7 @@ export function MoreHub({
         <HubRow icon="🗓️" label="Your week" sub="Which session on which day, and ab days" onClick={onWeek} />
         <HubRow icon="😴" label="Sleep times" sub="Wake time and tonight's Sleep Lock timeline" onClick={onSleep} />
         <HubRow icon="🏃" label="Cardio Day" sub="Treadmill or StairMaster, no photo needed" onClick={onCardio} />
-        <HubRow icon="💾" label="Data on this phone" sub="Where your records live, storage status, and backups" onClick={onData} />
+        <HubRow icon="💾" label="Data on this phone" sub={backupSub ?? "Backups, storage status and where your records live"} onClick={onData} />
         <HubRow icon="📈" label="Sharing activity" sub="Reviews, saved images and shares — counted on this phone only" onClick={onActivity} />
       </div>
     </section>
@@ -275,13 +281,7 @@ export function DataView({ onBack }: { onBack: () => void }) {
             Even when protected, data is still lost if you clear site data or browsing data, uninstall the app, or lose or reset the phone.
           </p>
         </div>
-        <div className="rounded-2xl border border-amber-300/40 bg-amber-300/5 p-3.5">
-          <p className="font-semibold text-amber-100">No backup yet</p>
-          <p className="mt-1 text-zinc-300">
-            AESTHETIQ can&apos;t back up or restore your data yet. To keep important progress photos, open them in Visual evolution and use
-            &ldquo;Save copy&rdquo;. Export and restore are planned.
-          </p>
-        </div>
+        <BackupPanel />
       </div>
     </section>
   );

@@ -392,6 +392,7 @@ export default function Home() {
           onBack={back}
           onPhotos={() => go("photos", { state: "review" })}
           onTargets={() => go("meals", { state: "review" })}
+          onBackup={() => go("data", { state: "review" })}
         />
       )}
 

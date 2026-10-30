@@ -141,3 +141,19 @@ ready" card.
   - Clearing site data, uninstalling, or losing the phone still erases everything.
   - **There is no backup or restore yet** (More → Data on this phone).
 - **Tests:** `tests/security-auth.test.ts` and `tests/security-ai.test.ts`.
+
+## Backups (Stage 2)
+
+More → **Data on this phone** → **Create an encrypted backup** saves one `.aqbk` file containing every `ags:*` record and every stored file (progress photos, scale photos, reports).
+
+- **Encryption (`lib/backup.ts`):** on the phone, with a passphrase the user chooses (12+ characters, separate from the app passcode).
+  - Key derivation: PBKDF2-SHA-256, 600,000 iterations, random 16-byte salt.
+  - Cipher: AES-256-GCM, random IV, with the file header bound as additional data.
+  - WebCrypto only; no server ever receives the file, and nothing is readable without the passphrase. A forgotten passphrase can't be recovered.
+- **Restore** (`lib/backupStore.ts`, `components/BackupPanel.tsx`):
+  - Decrypts, validates strictly (format and version, `ags:` keys only, size limits, allow-listed file types, a SHA-256 check per file) and shows a preview with counts. Nothing is written before the user confirms.
+  - If the phone already holds the user's data, a **safety backup** of it must be saved first.
+  - Two modes: **Replace everything**, or **Add only what's missing** (keeps existing values).
+- **Reminders:** a "last backup" line in More and in Data on this phone, and a reminder card in the Weekly Review once the last backup is over 7 days old.
+- **Tests:** `tests/backup.test.ts` (format, tampering, validation, restore plans).
+- **Limit:** the whole backup is built in memory. Very large photo libraries (hundreds of photos) may be slow or run out of memory on older phones.

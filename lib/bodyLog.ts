@@ -107,3 +107,17 @@ export async function deleteFile(id: string) {
     /* ignore */
   }
 }
+
+/** Every stored file id (photos, scale photos, reports) — used by backup and restore. */
+export async function listFileIds(): Promise<string[]> {
+  try {
+    return (await withStore<IDBValidKey[]>("readonly", (s) => s.getAllKeys())).map(String);
+  } catch {
+    return [];
+  }
+}
+
+/** Restore a file under its original id, so records that point at it stay valid. */
+export async function putFileWithId(id: string, blob: Blob): Promise<void> {
+  await withStore("readwrite", (s) => s.put(blob, id));
+}

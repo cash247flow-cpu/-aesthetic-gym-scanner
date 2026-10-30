@@ -5,6 +5,8 @@ import { AccentLast, TITLE } from "@/components/ui";
 import { loadUnit } from "@/components/SetLogger";
 import { fmtWaist } from "@/components/PhotoCompare";
 import { WeeklyWinsShare } from "@/components/WeeklyWinsShare";
+import { lastBackupText } from "@/components/BackupPanel";
+import { daysSince, loadLastBackup, type LastBackup } from "@/lib/backupStore";
 import { fmtDate, fmtWeight } from "@/lib/achievements/format";
 import { TIERS } from "@/lib/achievements/config";
 import { DAY_NAMES } from "@/lib/schedule";
@@ -35,7 +37,17 @@ function shift(d: string, n: number) {
 }
 
 /** Weekly Progress Review — what happened, what changed, what to do next. */
-export function WeeklyReview({ onBack, onPhotos, onTargets }: { onBack: () => void; onPhotos: () => void; onTargets: () => void }) {
+export function WeeklyReview({
+  onBack,
+  onPhotos,
+  onTargets,
+  onBackup,
+}: {
+  onBack: () => void;
+  onPhotos: () => void;
+  onTargets: () => void;
+  onBackup: () => void;
+}) {
   const [startDay, setStartDay] = useState(0);
   const [period, setPeriod] = useState<Period | null>(null);
   const [reviews, setReviews] = useState<Record<string, ReviewRecord>>({});
@@ -334,6 +346,8 @@ export function WeeklyReview({ onBack, onPhotos, onTargets }: { onBack: () => vo
         )}
       </section>
 
+      <BackupReminder onBackup={onBackup} />
+
       {lastFocus && record && (
         <Card title="Last week's focus">
           <p>{lastFocus.text}</p>
@@ -429,5 +443,30 @@ function Chip({ ok, children }: { ok: boolean; children: ReactNode }) {
     <span className={`rounded-full border px-2 py-0.5 ${ok ? "border-lime-400/40 text-lime-200" : "border-zinc-700 text-zinc-500"}`}>
       {ok ? "✓" : "—"} {children}
     </span>
+  );
+}
+
+/** Weekly nudge: your data lives only on this phone until it's backed up. */
+function BackupReminder({ onBackup }: { onBackup: () => void }) {
+  const [last, setLast] = useState<LastBackup | null | undefined>(undefined);
+  useEffect(() => setLast(loadLastBackup()), []);
+  if (last === undefined) return null;
+  const overdue = !last || daysSince(last.at) > 7;
+  return (
+    <section
+      aria-label="Backup"
+      className={`mt-4 flex items-center gap-3 rounded-2xl border p-3.5 text-sm ${overdue ? "border-amber-300/40 bg-amber-300/5" : "border-zinc-800 bg-zinc-900"}`}
+    >
+      <span aria-hidden className="text-xl">
+        💾
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{overdue ? "Time for a backup" : "Backed up"}</span>
+        <span className="block text-xs text-zinc-400">{lastBackupText(last)}</span>
+      </span>
+      <button type="button" onClick={onBackup} className={`h-9 shrink-0 rounded-full px-3 text-xs font-semibold ${overdue ? "bg-amber-300 text-zinc-950" : "border border-zinc-600"}`}>
+        {overdue ? "Back up now" : "Backups"}
+      </button>
+    </section>
   );
 }
