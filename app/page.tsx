@@ -297,6 +297,9 @@ export default function Home() {
           <h1 className={TITLE}>
             Build Your Ideal <Accent>Physique</Accent>
           </h1>
+          <blockquote aria-label="Quote" className="mt-2 border-l-2 border-lime-400/60 pl-3 font-accent text-base italic leading-snug text-zinc-300">
+            “A river cuts through rock, not because of its power, but because of its persistence.”
+          </blockquote>
 
           <WeekStrip />
 

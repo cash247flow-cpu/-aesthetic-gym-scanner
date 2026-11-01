@@ -362,3 +362,13 @@ test("meals: ingredients read from a screenshot only after consent, as a draft t
   await expect(dinner).toContainText("150 g test chicken");
   await expect(dinner).toContainText("your version");
 });
+
+test("home shows the persistence quote", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await page.screenshot({ path: test.info().outputPath("home-quote.png") });
+  await expect(page.locator('blockquote[aria-label="Quote"]')).toHaveText(
+    "“A river cuts through rock, not because of its power, but because of its persistence.”",
+  );
+});
