@@ -1,6 +1,6 @@
 // Signed-in devices (fake Upstash): list, sign out one device, sign out all other devices.
 import { test, expect, signInWithPasscode, seedExampleData, watchPage, watchCsp } from "./support/test";
-import type { Browser, Page } from "@playwright/test";
+import type { Browser, Locator, Page } from "@playwright/test";
 
 test.use({ signedIn: false });
 
@@ -14,6 +14,15 @@ async function device(browser: Browser, userAgent: string, problems: string[]) {
   watchPage(p, problems);
   p.on("dialog", (d) => d.accept());
   return p;
+}
+
+/**
+ * Tap like a person would: bring the control to the middle of the screen first. Playwright's own
+ * scrolling can leave it at the bottom edge, under the fixed tab bar (seen on CI's fonts).
+ */
+async function tap(l: Locator) {
+  await l.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await l.click();
 }
 
 async function openDevices(p: Page) {
@@ -37,7 +46,7 @@ test("sign out a lost device, then all other devices", async ({ browser, problem
   await expect(list).toContainText("Android · Samsung Internet");
   await expect(list.locator('li:has-text("THIS PHONE")')).toContainText("Mac · Safari");
 
-  await list.locator("li", { hasText: "Android" }).locator('button:has-text("Sign out")').click();
+  await tap(list.locator("li", { hasText: "Android" }).locator('button:has-text("Sign out")'));
   await expect(list.locator("[role=status]")).toContainText("Signed out 1 device");
   await expect(list.locator("li")).toHaveCount(1);
 
@@ -49,9 +58,9 @@ test("sign out a lost device, then all other devices", async ({ browser, problem
 
   await signInWithPasscode(phone);
   await openDevices(phone);
-  await phone.locator('button:has-text("Lost a phone")').click();
+  await tap(phone.locator('button:has-text("Lost a phone")'));
   await expect(phone.locator('section[aria-label="This phone"] ol li').first()).toContainText("Sign out");
-  await phone.locator('button:has-text("Sign out all other devices")').click();
+  await tap(phone.locator('button:has-text("Sign out all other devices")'));
   await expect(phone.locator('[aria-label="Signed-in devices"] [role=status]')).toBeVisible();
 
   await laptop.reload();

@@ -125,7 +125,7 @@ export function CardioStats({ machine }: { machine: string }) {
         )}
       </div>
 
-      <div role="group" aria-label="Counted by" className="mt-2 flex items-center gap-1.5 text-xs">
+      <div role="group" aria-label="Counted by" className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
         <span className="shrink-0 text-zinc-500">Counted by:</span>
         {SOURCES.map(([id, label]) => (
           <button
