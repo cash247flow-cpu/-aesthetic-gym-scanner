@@ -221,17 +221,21 @@ Third-party actions are pinned to exact commits. `.github/dependabot.yml` opens 
 Behaviour you'll notice:
 
 - **Units:** sets remember the unit they were typed in. Switching lb/kg converts them.
-- **Records:** sets with no reps, or numbers that look like a typo, are flagged and never count toward records.
+- **Records:**
+  - sets with no reps, or numbers caught by the typo screen (a heuristic, not a safety limit), are kept as typed, explained, and don't count;
+  - big jumps count but are flagged;
+  - old logs with no recorded unit are asked about, never guessed.
 - **Body tracker:**
-  - refuses out-of-range entries;
+  - questions unusual entries (typo screen); kept ones are labelled and left out of trends;
   - marks numbers read by the AI reader.
 - **Weekly review:**
   - lists what the data can't tell;
-  - ticking "pain" holds workout targets at last time's numbers for up to 2 weeks.
+  - ticking "pain" holds workout targets at last time's numbers until you choose to resume them (that choice isn't medical clearance).
 - **Daily habits:** a "Recovery day" pauses streaks.
 - **Meals:** macro-target changes are logged with Undo.
 - **Restore:** never writes this phone's app lock or "last backup" stamp from a file.
 - **Shared images:** certificates and cards say the data is self-recorded and not independently verified.
+- **Access:** More → Data on this phone explains the shared passcode vs per-browser data (see `docs/PACSS.md` §8).
 
 `tests/pacss.test.ts` covers these boundaries.
 

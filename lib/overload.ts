@@ -42,7 +42,7 @@ export function saveOverload(on: boolean) {
   }
 }
 
-export type Plan = { targets: { weight: string; reps: string }[]; note: string } | null;
+export type Plan = { targets: { weight: string; reps: string }[]; note: string; held?: boolean } | null;
 
 const num = (s: string) => Number(s.replace(",", "."));
 const fmt = (n: number) => String(Math.round(n * 100) / 100);
@@ -55,8 +55,8 @@ function range(reps: string): [number, number] | null {
 
 /**
  * Targets for `count` sets from last session's sets, or null when there's nothing to go on.
- * `hold`: a recent weekly check-in reported pain or a possible injury, so nothing goes up —
- * targets repeat last session's numbers (still editable) until the check-in no longer says so.
+ * `hold`: the user reported pain or a possible injury and hasn't chosen to resume progression
+ * (lib/review/pain.ts), so nothing goes up — targets repeat last session's numbers (still editable).
  */
 export function overloadPlan(prev: Row[], reps: string, unit: Unit, count: number, exercise = "", opts: { hold?: boolean } = {}): Plan {
   const step = stepFor(exercise, unit);
@@ -67,7 +67,8 @@ export function overloadPlan(prev: Row[], reps: string, unit: Unit, count: numbe
   if (opts.hold) {
     return {
       targets: Array.from({ length: count }, (_, i) => ({ weight: pick(i).weight, reps: pick(i).reps })),
-      note: "Holding at last time's numbers — your weekly check-in reported pain. Get it checked before adding load; lower anything that hurts.",
+      note: "Holding at last time's numbers — you reported pain. Lower anything that hurts.",
+      held: true,
     };
   }
   const r = range(reps);

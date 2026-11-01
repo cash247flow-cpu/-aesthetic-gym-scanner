@@ -142,9 +142,31 @@ export function Celebrate({
                       );
                     })}
                   </dl>
+                  {prs.some((pr) => pr.check) && (
+                    <p className="mt-1.5 text-xs text-amber-300">Big jump from your previous best — double-check the logged sets. The record still counts.</p>
+                  )}
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {summary.excluded?.length > 0 && (
+          <section aria-label="Sets not counted" className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-3.5 text-xs text-zinc-300">
+            <p className="font-semibold text-zinc-100">Saved, but not counted toward records or volume</p>
+            <ul className="mt-1 grid list-disc gap-0.5 pl-4">
+              {summary.excluded.map((x) => (
+                <li key={x.exercise + x.reason}>
+                  {x.exercise}: {x.sets} set{x.sets === 1 ? "" : "s"} —{" "}
+                  {x.reason === "no-reps"
+                    ? "no reps logged."
+                    : x.reason === "typo-screen"
+                      ? "numbers look like a typo (typo screen, not a safety limit)."
+                      : "saved before units were recorded; say lb or kg on the exercise to count them."}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 text-zinc-500">Your sets are kept exactly as typed.</p>
           </section>
         )}
 

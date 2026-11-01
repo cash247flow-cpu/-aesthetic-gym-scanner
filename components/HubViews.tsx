@@ -277,6 +277,20 @@ export function DataView({ onBack }: { onBack: () => void }) {
             <li>The hosting provider (Vercel) handles every request and keeps its own access logs.</li>
           </ul>
         </div>
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3.5" aria-label="Who can see this data">
+          <p className="font-semibold">Who can see this data</p>
+          <ul className="mt-1.5 grid list-disc gap-1 pl-5 text-zinc-300">
+            <li>
+              The app passcode is one shared passcode, not a personal account. Signing in only lets a browser use the app; it doesn&apos;t give
+              access to anyone else&apos;s data, because your records aren&apos;t on the server.
+            </li>
+            <li>Someone signed in on another phone sees only that phone&apos;s data — but they can see the signed-in devices list and sign any device out.</li>
+            <li>
+              Anyone who can open this browser on this phone sees everything here. Use your phone&apos;s screen lock, a separate phone user or browser
+              profile, or the app lock (a privacy screen for photos and body data, not encryption).
+            </li>
+          </ul>
+        </div>
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3.5" aria-label="Storage status">
           <p className="font-semibold">Storage status</p>
           <p className="mt-1 text-zinc-300">

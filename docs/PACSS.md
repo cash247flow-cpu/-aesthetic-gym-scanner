@@ -28,14 +28,14 @@ It is an engineering record. **It is not a legal opinion, a certification or a c
 
 | # | Control | Evidence found | Risk | Fix (this branch) | Verification |
 |---|---|---|---|---|---|
-| A1 | Units on logged sets | Set logs stored raw text with no unit. Switching lb↔kg reinterpreted numbers already typed. | A lift typed in lb and finished in kg was recorded 2.2× heavier, creating false PRs and inflating volume. | Logs record `unit`/`prevUnit`. Switching units converts what's typed. Finishing a workout converts from the unit each set was typed in. Old logs without a unit keep the old behaviour. | `pacss.test.ts`: "finish workout: sets typed in kg…" |
+| A1 | Units on logged sets | Set logs stored raw text with no unit. Switching lb↔kg reinterpreted numbers already typed. | A lift typed in lb and finished in kg was recorded 2.2× heavier, creating false PRs and inflating volume. | Logs record `unit`/`prevUnit`. Switching units converts what's typed. Finishing a workout converts from the unit each set was typed in. **Old logs without a unit** are never read in the selected unit (`lib/logUnits.ts`). They're matched against the finished workout saved in lb at the time (an exact lb or exact kg→lb match). Otherwise they're *ambiguous*: shown with "?", never copied into today's boxes, no targets, and no records or volume. The user is asked "lb or kg?"; the answer keeps a snapshot of the original numbers and can be undone. | `pacss.test.ts`: "finish workout…", "legacy units…" (3); `e2e/pacss.spec.ts`: "old set logs…" |
 | A2 | Quick PRs | `bestOf` counted a set's weight even with no reps. | Typing a weight and ticking the set gave a false "Heaviest weight" PR. | Only sets with reps logged and plausible numbers count. | Same test (Leg Press 900 with no reps) |
-| A3 | Implausible values | No sanity limits on logged sets or typed body entries; AI readings were already range-checked. | Typos such as 3000 for 300 created platinum PRs, became the new baseline and inflated volume milestones. | `lib/units.ts`: sets need 1–300 reps and 0–1,100 lb (about the heaviest lift ever recorded) to count. They stay in the log as typed and are flagged in the logger. Body entries use the AI reader's ranges and are refused before anything is stored. Imported food-log values outside 0–20,000 kcal or 0–2,000 g become unknown. | "PRs: sets without reps or with implausible numbers…", "units…", "imports: malformed food log…" |
+| A3 | Implausible values | No sanity limits on logged sets or typed body entries; AI readings were already range-checked. | Typos such as 3000 for 300 created platinum PRs, became the new baseline and inflated volume milestones. | **Typo-screening heuristics, not physiological or safety limits** (`lib/units.ts`). A set counts with 1–300 reps and 0–1,100 lb; the 1,100 lb figure was chosen to sit above the heaviest lifts on record so a real set is very unlikely to trip it. Sets outside are kept exactly as typed and explained in the logger and the workout summary ("Saved, but not counted…"). **Large jumps** against comparable history (same exercise and record type: ×1.5 weight, ×2 volume, or +10 reps and ×2 reps) are *counted* but flagged "double-check" in the summary and trophy list. Body entries outside the AI reader's ranges get a warning; **Save anyway** keeps them as typed, labelled, and out of trends and awards. Imported food-log values outside 0–20,000 kcal or 0–2,000 g become unknown. | "PRs: sets without reps…", "typo screen vs big jumps…", "body: a value kept…", "imports…"; `e2e`: "body tracker…" |
 | A4 | Provenance of AI readings | The draft said "Read by Gemini — check the numbers", but the saved entry didn't keep that. | AI interpretations become indistinguishable from typed facts. | `BodyEntry.aiRead`; the history shows "AI-read, checked by you". | Manual check (screens) |
 | A5 | Recommendations show their limits | The coach listed observations but not gaps. | Uncertain evidence reads as certain. | `dataLimits()` lists too few weigh-ins, a stale latest weigh-in (over 14 days), same-day weigh-ins more than 5% apart, no goal, no plan on record and no food log. Shown as "What the data can't tell". | "missing data…", "data limits…" |
 | A6 | Certificates imply verification | They said "Recorded in: Logged workouts" but nothing about verification. | A shared certificate reads like independent proof. | Every certificate prints "From your own training log · not independently verified". Shared cards say "Self-recorded". The "Recorded in" rows say "(self-recorded)". | Rendered and inspected |
 | S1 | Streak pressure | The 5 daily habits include air squats and walks; one missed day breaks the streak and the "Days Unbroken" award. | Pressure to train through illness or injury. | "Recovery day" toggle in Daily habits. It pauses streaks: the day doesn't count or break them, and it's excluded from the weekly habit rate. Certificates state how many recovery days were paused. | "safety: recovery days pause streaks…" |
-| S2 | Safety outside the review | Pain in the weekly check-in only changed the coach's text; the workout screen still suggested more weight. | Load keeps going up after the user reported pain. | `lib/review/pain.ts`: ticking pain (saved at once) holds overload targets at last time's numbers for up to 14 days, or until unticked or a later check-in. The logger and the review explain why. | "safety: a recent pain report holds overload targets…" |
+| S2 | Safety outside the review | Pain in the weekly check-in only changed the coach's text; the workout screen still suggested more weight. | Load keeps going up after the user reported pain. | `lib/review/pain.ts`: ticking pain records a report at once and holds overload targets at last time's numbers. **Nothing clears it automatically**: not time, not unticking, not a later check-in without pain. Only **Resume progression suggestions → Resume suggestions** clears it, and that screen says it *isn't medical clearance*. Reports and resumes are kept as a dated history. | "safety: the pain hold never expires…", "unticking… doesn't resume"; `e2e`: "pain holds workout targets…" |
 | S3 | Reversible plan changes | Macro target edits overwrote the previous values with no history. | A change can't be explained or reverted. | `lib/planChanges.ts`: each saved change records before, after, when and origin ("you" or "after a weekly-review suggestion"). "Undo this change" is offered but refused if the targets were edited since. Numbers only. | "undo…", "approval…" |
 | X1 | Untrusted backup files | Restore wrote every `ags:` record in the file. | A crafted file could set the app-lock PIN, or fake a recent backup date and skip the extra confirmation Delete everything asks for when there's no recent backup. | `DEVICE_ONLY_RECORDS` (`ags:lock`, `ags:backup:last`) are never written or removed by a restore. | "imports: a malformed backup is refused…" |
 | P1 | Privacy statement accuracy | "Where your data lives" left out the NIH label lookups, YouTube embeds, the server's sign-in records and the hosting provider. | The statement didn't match behaviour. | Copy updated (More → Data on this phone). | Manual check |
@@ -115,6 +115,8 @@ Routine logging (sets, habits, meals, weigh-ins) stays one tap with no confirmat
 
 ## 7. Control matrix
 
+(See §8 for access boundaries.)
+
 Legend:
 - **Impl** — implemented in code.
 - **Test** — covered by an automated test.
@@ -136,7 +138,7 @@ Legend:
 | C | Data map, retention, legal-review list | This document | — | Impl (documentation) |
 | S | Coach proposes only; the user approves or dismisses | `lib/review/coach.ts`, `store.ts` | `pacss.test.ts`, `tests/review.test.ts` | Impl, Test |
 | S | Plan changes logged and undoable | `lib/planChanges.ts`, `components/MealPlanView.tsx` | `pacss.test.ts` | Impl, Test |
-| S | Pain report holds overload outside the review | `lib/review/pain.ts`, `lib/overload.ts` | `pacss.test.ts` | Impl, Test |
+| S | Pain report holds overload until the user explicitly resumes (not clearance) | `lib/review/pain.ts`, `components/PainHold.tsx`, `lib/overload.ts` | `pacss.test.ts`, `e2e/pacss.spec.ts` | Impl, Test |
 | S | Recovery days pause streaks | `lib/habits.ts`, `detect.ts`, `metrics.ts`, `HabitsView.tsx` | `pacss.test.ts` | Impl, Test |
 | S | No supplement dose suggestions | `lib/dsld.ts`, `SupplementsView.tsx` | Existing review | Impl |
 | Sec | Server auth, signed sessions, rate limit, AI caps, per-device sign-out | `middleware.ts`, `lib/session.ts`, `lib/guard.ts` | `tests/security-auth.test.ts`, `guard.test.ts`, `e2e/auth.spec.ts`, `devices.spec.ts` | Impl, Test |
@@ -146,4 +148,33 @@ Legend:
 | Sec | App lock is a privacy screen, not access control or encryption | `lib/appLock.ts` (stated in the UI) | `e2e/applock.spec.ts` | Impl, Test |
 | — | Per-user accounts and server-side authorisation per user | — | — | Future (needs a product decision) |
 | — | Encryption at rest on the phone | — | — | Future (browser storage isn't encrypted by the app) |
-| — | Unit recorded for logs made before this change | — | — | Not recoverable; old logs are read in the current unit |
+| A | Old logs with no unit: matched against finished workouts, or asked about; never reinterpreted | `lib/logUnits.ts`, `components/SetLogger.tsx`, `lib/wins.ts` | `pacss.test.ts`, `e2e/pacss.spec.ts` | Impl, Test |
+| A | Typo-screen exclusions explained; big jumps flagged, not rejected | `lib/units.ts`, `components/Celebrate.tsx`, `TrophyCollection.tsx` | `pacss.test.ts` | Impl, Test |
+| Sec | Access boundaries stated in the app (§8) | `components/HubViews.tsx` | `e2e/pacss.spec.ts` | Impl, Test |
+| — | Saved records (`ags:pr`, `ags:workouts`) were converted to lb at finish time using the toggle then. A pre-change mid-workout switch may have mis-converted them, and that can't be detected. | — | — | Known limitation |
+
+## 8. Access boundaries (as implemented)
+
+**Two separate things are called "signing in":**
+
+1. **Vercel Authentication** (in front of every deployment). Only people with access to the Vercel team/project get through. This is configured in Vercel, not in this code.
+2. **The app passcode** (`APP_PASSCODE`). It is **one shared passcode**, not a personal account. The server checks it (`app/api/login`), rate-limits wrong guesses, and issues a signed, expiring session cookie for that browser. `middleware.ts` refuses every page and API request without a valid cookie. The server knows sessions and devices, never *people*.
+
+**Can different users access each other's records?**
+
+- **On different phones or browsers: no.** Workouts, body data, photos, habits, reviews and plans are stored only in each browser (localStorage and IndexedDB). There is no API that reads or writes them, so a signed-in session has nothing on the server to read.
+- **Separation is enforced by the browser's same-origin storage** (each browser profile has its own copy). It is **not** enforced by any per-user check in this app, because there are no users.
+- **What every signed-in session shares on the server:**
+  - the **Signed-in devices** list: device type and sign-in and last-used dates, for all sessions;
+  - the right to **sign any of them out**, since all sessions are equal;
+  - the **daily total** of AI photo reads, which every session counts toward.
+
+  A listed session ID can't be turned into a working cookie: that needs `SESSION_SECRET`.
+- **On a shared device or browser profile: yes, fully.** Anyone who can open the app in that browser sees and can change everything in it. The only in-app control is the optional **app lock**, a privacy screen over Visual evolution, Body tracker and Data on this phone. It is **not encryption or access control**; with developer tools the data is readable.
+
+  Real separation on one device needs:
+  - separate OS user accounts or browser profiles;
+  - the phone's own screen lock.
+- **Backups:** an `.aqbk` file plus its passphrase gives that data to whoever holds both.
+
+**Not built:** per-person accounts, per-user server-side authorisation, or server-side storage of records. Any of these needs a product decision (see §5.3). The app now says the above under **More → Data on this phone → Who can see this data**.

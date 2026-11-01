@@ -8,6 +8,7 @@ import {
   deleteFile,
   getFile,
   loadEntries,
+  trendEntries,
   loadGoal,
   newId,
   putFile,
@@ -54,6 +55,8 @@ type Draft = {
   reading: boolean;
   /** Numbers were filled in by the AI reader (the user reviews them before saving). */
   aiFilled?: boolean;
+  /** The user saw the out-of-range warning for exactly these values and chose to keep them. */
+  rangeAck?: string;
   note?: { text: string; tone: "ok" | "warn" };
 };
 
@@ -81,7 +84,9 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
   const reportInput = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
-  const latest = entries[entries.length - 1];
+  // Charts, the goal card and "latest" leave out values kept despite the typo screen.
+  const trend = trendEntries(entries);
+  const latest = trend[trend.length - 1];
 
   const { awards, check: checkAwards, dismiss } = useNewAwards();
 
@@ -190,12 +195,20 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
       fileType: draft.file?.type,
       ...(draft.aiFilled ? { aiRead: true } : {}),
     };
-    // Typos like 1850 for 185.0 are refused here (before anything is stored) rather than skewing trends and awards.
+    // Typo screen (not a health range): a value like 1850 for 185.0 gets a warning first. If the
+    // user keeps it, it's saved exactly as typed, labelled, and left out of trends and awards.
     const bad = implausibleBody(candidate);
-    if (bad.length) {
-      setDraft({ ...draft, note: { text: `${bad.map((k) => BODY_LABEL[k]).join(", ")} ${bad.length === 1 ? "looks" : "look"} out of range — check for a typo or the unit (${unit}).`, tone: "warn" } });
+    const sig = JSON.stringify(bad.map((k) => [k, candidate[k]]));
+    if (bad.length && draft.rangeAck !== sig) {
+      const what = `${bad.map((k) => BODY_LABEL[k]).join(", ")} ${bad.length === 1 ? "looks" : "look"} unusual`;
+      setDraft({
+        ...draft,
+        rangeAck: sig,
+        note: { text: `${what} — possibly a typo or the wrong unit (${unit}). Fix it, or tap Save again to keep it as typed; it will be marked and left out of trends and awards.`, tone: "warn" },
+      });
       return;
     }
+    if (bad.length) candidate.outOfRange = bad;
     let fileId: string | undefined;
     if (draft.file) {
       try {
@@ -266,7 +279,7 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
 
       <NewAwards awards={awards} onDismiss={dismiss} />
 
-      <GoalCard goal={goal} entries={entries} unit={unit} onChange={updateGoal} />
+      <GoalCard goal={goal} entries={trend} unit={unit} onChange={updateGoal} />
 
       <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
         <div role="group" aria-label="Chart metric" className="grid grid-cols-3 gap-1 rounded-xl bg-zinc-800 p-1">
@@ -285,7 +298,7 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
           ))}
         </div>
         <div className="mt-3">
-          <BodyChart entries={entries} metric={metric} unit={unit} goalLb={goal?.type !== "maintain" ? goal?.targetLb : undefined} />
+          <BodyChart entries={trend} metric={metric} unit={unit} goalLb={goal?.type !== "maintain" ? goal?.targetLb : undefined} />
         </div>
       </div>
 
@@ -340,6 +353,7 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
                   <p className="truncate text-xs text-zinc-500">
                     {shortDate(e.date)}
                     {e.aiRead && " · AI-read, checked by you"}
+                    {e.outOfRange && " · unusual value, kept as typed — not in trends or awards"}
                     {e.bodyFatPct != null && ` · ${e.bodyFatPct}% fat`}
                     {e.muscleLb != null && ` · ${fmt(e.muscleLb, unit)} muscle`}
                     {e.waistIn != null && ` · waist ${unit === "kg" ? `${Math.round(e.waistIn * 2.54 * 10) / 10} cm` : `${e.waistIn} in`}`}

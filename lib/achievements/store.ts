@@ -5,7 +5,7 @@
 import { detectAll, lockedMilestones, type Achievement, type EngineInput, type Locked } from "@/lib/achievements/detect";
 import { loadWorkouts } from "@/lib/achievements/workoutRecords";
 import { HABITS, isDone, loadHabitLogs } from "@/lib/habits";
-import { loadEntries, loadGoal } from "@/lib/bodyLog";
+import { loadEntries, trendEntries, loadGoal } from "@/lib/bodyLog";
 import { loadHistory } from "@/lib/wins";
 
 export type StoredAchievement = Achievement & { userRef: string; createdAt: number; seen: boolean };
@@ -53,7 +53,7 @@ export function engineInput(): EngineInput {
     workouts: loadWorkouts(),
     history: loadHistory(),
     perfectDays,
-    body: loadEntries().map((e) => ({ id: e.id, date: e.date, weightLb: e.weightLb, bodyFatPct: e.bodyFatPct })),
+    body: trendEntries(loadEntries()).map((e) => ({ id: e.id, date: e.date, weightLb: e.weightLb, bodyFatPct: e.bodyFatPct })),
     goal: loadGoal(),
   };
 }

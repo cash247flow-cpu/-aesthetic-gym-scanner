@@ -3,7 +3,9 @@ import { loadLog as loadCardioLog } from "@/components/CardioCard";
 import { bestPerfectStreak, loadHabitLogs } from "@/lib/habits";
 import { statsTotal } from "@/lib/cardioStats";
 import { saveWorkoutRecord, workoutId, type ExerciseSets } from "@/lib/achievements/workoutRecords";
-import { LB_PER_KG, countableSet } from "@/lib/units";
+import { LB_PER_KG, bigJump, countableSet, setExclusion } from "@/lib/units";
+import { resolveLog } from "@/lib/logUnits";
+import { loadWorkouts } from "@/lib/achievements/workoutRecords";
 
 // Weights are typed in whatever unit the toggle showed at the time (the set log records it);
 // everything stored here is in lb.
@@ -17,7 +19,10 @@ export type PRKind = keyof Best;
 // Keeping both makes finishing the same workout twice on one day idempotent.
 type PrRecord = { date: string; before: Best | null; best: Best; bestDate: Partial<Record<PRKind, string>> };
 
-export type PR = { exercise: string; kind: PRKind; value: number; previous: number };
+/** `check`: far beyond comparable history (lib/units.ts bigJump) — counted, but worth double-checking. */
+export type PR = { exercise: string; kind: PRKind; value: number; previous: number; check?: true };
+/** Logged sets that didn't count toward records, and why (shown in the summary). */
+export type Excluded = { exercise: string; reason: "unit-unknown" | "no-reps" | "typo-screen"; sets: number };
 export type HistoryEntry = {
   date: string;
   session: string;
@@ -43,6 +48,7 @@ export type Summary = {
   exercises: number;
   cardioMin: number;
   prs: PR[];
+  excluded: Excluded[];
   prevVolumeLb: number | null;
   newBadges: Badge[];
   totals: Totals;
@@ -189,37 +195,53 @@ export function finishWorkout(opts: {
   const doneNames: string[] = [];
   const setRecords: ExerciseSets[] = [];
   const prs: PR[] = [];
+  const excluded: Excluded[] = [];
   const prUpdates: [string, PrRecord][] = [];
+  const workoutsSoFar = loadWorkouts();
 
   for (const exercise of exercises) {
     const rec = loadRecord(exercise);
     if (rec?.date !== t) continue;
-    // Convert with the unit the sets were typed in (older logs: the current unit).
-    const typedIn: Unit = rec.unit ?? unit;
-    const toLb = typedIn === "kg" ? LB_PER_KG : 1;
     const done = rec.sets.filter((r) => r.done && (r.weight.trim() !== "" || r.reps.trim() !== ""));
     if (!done.length) continue;
     exercisesDone++;
     doneNames.push(exercise);
+    sets += done.length;
+    // Convert with the unit the sets were typed in. A legacy log is matched against the finished
+    // workout or the user's answer; if it's still unknown, nothing is converted or counted.
+    const units = resolveLog(rec, exercise, workoutsSoFar);
+    if (units.sets.source === "ambiguous") {
+      setRecords.push({ name: exercise, sets: [], unitUnknown: true, raw: done.map((r) => ({ weight: r.weight, reps: num(r.reps) })) });
+      excluded.push({ exercise, reason: "unit-unknown", sets: done.length });
+      continue;
+    }
+    const typedIn: Unit = units.sets.unit ?? unit; // "no-weights": the unit doesn't matter
+    const toLb = typedIn === "kg" ? LB_PER_KG : 1;
+    for (const reason of ["no-reps", "typo-screen"] as const) {
+      const n = done.filter((r) => setExclusion(num(r.weight) * toLb, num(r.reps)) === reason).length;
+      if (n) excluded.push({ exercise, reason, sets: n });
+    }
     setRecords.push({
       name: exercise,
       sets: done
         .map((r) => ({ weightLb: Math.round(num(r.weight) * toLb * 100) / 100, reps: num(r.reps) }))
         .filter((s) => s.reps > 0), // kept as logged; the achievement engine skips implausible sets
     });
-    sets += done.length;
     volumeLb += done.reduce((v, r) => (countableSet(num(r.weight) * toLb, num(r.reps)) ? v + num(r.weight) * toLb * num(r.reps) : v), 0);
 
     const todayBest = bestOf(done, typedIn);
     if (!todayBest) continue;
     const stored = read<PrRecord>(prKey(exercise));
     // Before PR tracking existed, the set log's previous session is the best baseline we have.
-    const before = stored ? (stored.date === t ? stored.before : stored.best) : bestOf(rec.prevSets, rec.prevUnit ?? typedIn);
+    // A previous session whose unit is unknown is no baseline at all (so no record is claimed).
+    const prevKnown = units.prevSets.source !== "ambiguous";
+    const before = stored ? (stored.date === t ? stored.before : stored.best) : prevKnown ? bestOf(rec.prevSets, units.prevSets.unit ?? typedIn) : null;
     const bestDate = { ...(stored?.bestDate ?? {}) };
     if (before) {
       for (const kind of Object.keys(PR_LABEL) as PRKind[]) {
         if (todayBest[kind] > 0 && todayBest[kind] > before[kind]) {
-          prs.push({ exercise, kind, value: todayBest[kind], previous: before[kind] });
+          const check = bigJump(kind === "weight" ? "weight" : kind === "setVolume" ? "volume" : "reps", todayBest[kind], before[kind]);
+          prs.push({ exercise, kind, value: todayBest[kind], previous: before[kind], ...(check ? { check: true as const } : {}) });
           bestDate[kind] = t;
         }
       }
@@ -262,7 +284,7 @@ export function finishWorkout(opts: {
     date: t,
     session,
     ...(makeupFor ? { makeupFor } : {}),
-    exercises: setRecords.filter((e) => e.sets.length),
+    exercises: setRecords.filter((e) => e.sets.length || e.raw?.length),
     savedAt: Date.now(),
   });
 
@@ -281,6 +303,7 @@ export function finishWorkout(opts: {
     exercises: exercisesDone,
     cardioMin,
     prs,
+    excluded,
     prevVolumeLb: prev?.volumeLb ?? null,
     newBadges,
     totals,

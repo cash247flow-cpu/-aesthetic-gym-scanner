@@ -14,6 +14,7 @@ import { todayStr } from "@/lib/habits";
 import { track } from "@/lib/events";
 import { STATUS_LABEL, type CheckIn, type CoachResult } from "@/lib/review/coach";
 import { setPainReport } from "@/lib/review/pain";
+import { PainHoldControl } from "@/components/PainHold";
 import type { WeekMetrics } from "@/lib/review/metrics";
 import { lastCompleted, periodFor, periodLabel, previousPeriod, type Period } from "@/lib/review/period";
 import {
@@ -287,8 +288,11 @@ export function WeeklyReview({
             Pain or a possible injury this week
           </label>
           {checkIn.pain && (
-            <p className="mt-1 pl-7 text-xs text-amber-200">While this is ticked, workout targets stop adding weight or reps (for up to 2 weeks). This app can&apos;t assess pain.</p>
+            <p className="mt-1 pl-7 text-xs text-amber-200">
+              Workout targets stop adding weight or reps until you choose to resume them — unticking this doesn&apos;t. This app can&apos;t assess pain.
+            </p>
           )}
+          <PainHoldControl />
         </Card>
       ) : null}
 

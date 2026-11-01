@@ -17,7 +17,7 @@ import {
   type Tier,
 } from "@/lib/achievements/config";
 import type { WorkoutRecord } from "@/lib/achievements/workoutRecords";
-import { countableSet } from "@/lib/units";
+import { bigJump, countableSet } from "@/lib/units";
 
 export type Perf = {
   weightLb?: number;
@@ -54,6 +54,8 @@ export type Achievement = {
   tier: Tier;
   ruleVersion: number;
   sourceId: string; // workout id, history entry or log date it came from
+  /** Far beyond comparable history (lib/units.ts bigJump): still awarded, flagged "double-check". */
+  check?: true;
 };
 
 // Inputs, kept structural so tests can pass plain data.
@@ -192,7 +194,18 @@ export function detectPRs(workouts: WorkoutRecord[]): Achievement[] {
         }
       }
 
-      if (award) out.push({ ...base, ...award, declaration: DECLARATION[award.type] });
+      if (award) {
+        const c = award.current, p = award.previous;
+        const jump =
+          award.type === "weight-pr"
+            ? bigJump("weight", c.weightLb!, p!.weightLb!)
+            : award.type === "volume-pr"
+              ? bigJump("volume", c.volumeLb!, p!.volumeLb!)
+              : award.type === "rep-pr" || award.type === "bodyweight-pr"
+                ? bigJump("reps", c.reps!, p!.reps!)
+                : false;
+        out.push({ ...base, ...award, declaration: DECLARATION[award.type], ...(jump ? { check: true as const } : {}) });
+      }
 
       // Fold this workout into the exercise's history.
       const next: ExerciseState = st ?? { bestWeight: null, repsAtWeight: new Map(), maxVolume: 0, bwMaxReps: null };

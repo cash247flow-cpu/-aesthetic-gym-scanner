@@ -1,11 +1,13 @@
 // Units and plausibility checks shared by logging, records and the body tracker.
 //
 // Accuracy rules (PACSS "A"):
-//  - A number is only meaningful with its unit. Set logs remember the unit they were typed in
-//    (older logs without one are read in the current unit, as before).
-//  - Values outside the ranges below are treated as probable typos: they stay in the log exactly
-//    as typed, but never count toward records, certificates or trends. These are input sanity
-//    limits (beyond any recorded human performance), not physiological advice.
+//  - A number is only meaningful with its unit. Set logs remember the unit they were typed in;
+//    older logs without one are resolved or asked about (lib/logUnits.ts), never assumed.
+//  - TYPO SCREENING, NOT SAFETY LIMITS: the thresholds below are heuristics for catching
+//    keyboard slips (an extra zero, a missing decimal point). They say nothing about what is
+//    safe, healthy or physiologically possible for anyone, and must never be used as training
+//    advice. A value outside them stays in the log exactly as typed and is shown with an
+//    explanation; it just doesn't count toward records, certificates, volume or trends.
 
 export type Unit = "lb" | "kg";
 export const LB_PER_KG = 2.20462;
@@ -27,16 +29,37 @@ export function convertRows<R extends { weight: string }>(rows: R[], from: Unit,
 }
 
 // ─── Plausibility ───────────────────────────────────────────────────────
-/** Heaviest load a logged set may carry to count (≈500 kg, about the heaviest lift ever recorded). */
+/** Typo screen: heaviest load a logged set may carry and still count (≈500 kg; chosen to sit above
+ * the heaviest lifts on record, so a real set is very unlikely to trip it). Not a safety limit. */
 export const MAX_SET_LB = 1100;
-/** Most reps a logged set may have to count. */
+/** Typo screen: most reps a logged set may have and still count. Not a safety or fitness limit. */
 export const MAX_SET_REPS = 300;
+
+/** Why a logged set doesn't count (shown to the user), or null if it counts. */
+export function setExclusion(weightLb: number, reps: number): "no-reps" | "typo-screen" | null {
+  if (!Number.isFinite(reps) || reps <= 0) return "no-reps";
+  return countableSet(weightLb, reps) ? null : "typo-screen";
+}
+
+/**
+ * "Double-check" heuristic for records that jump far past comparable history (same exercise,
+ * same record type). The record still counts and stays exactly as logged — it is only flagged.
+ * Typo screening, not a statement about what's achievable.
+ */
+export const JUMP_CHECK = { weightRatio: 1.5, volumeRatio: 2, extraReps: 10, repsRatio: 2 } as const;
+export function bigJump(kind: "weight" | "volume" | "reps", value: number, previous: number): boolean {
+  if (!(previous > 0)) return false;
+  if (kind === "weight") return value >= previous * JUMP_CHECK.weightRatio;
+  if (kind === "volume") return value >= previous * JUMP_CHECK.volumeRatio;
+  return value - previous >= JUMP_CHECK.extraReps && value >= previous * JUMP_CHECK.repsRatio;
+}
 
 /** Whether a logged set can count toward records: reps logged, numbers in range. */
 export const countableSet = (weightLb: number, reps: number) =>
   Number.isFinite(weightLb) && Number.isFinite(reps) && reps > 0 && reps <= MAX_SET_REPS && weightLb >= 0 && weightLb <= MAX_SET_LB;
 
-/** Body measurements accepted when typed in or read from a photo (stored units: lb, %, in). */
+/** Body measurements accepted when typed in or read from a photo (stored units: lb, %, in).
+ * Typo screening for a form field, not health ranges or targets. */
 export const BODY_RANGES = {
   weightLb: [50, 700],
   bodyFatPct: [2, 70],

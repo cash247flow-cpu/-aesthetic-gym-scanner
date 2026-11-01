@@ -4,14 +4,25 @@ import { useEffect, useState } from "react";
 import { loadOverload, overloadPlan } from "@/lib/overload";
 import { convertRows, countableSet, toLb, type Unit } from "@/lib/units";
 import { recentPainReport } from "@/lib/review/pain";
+import { PainHoldControl } from "@/components/PainHold";
+import { resolveLog } from "@/lib/logUnits";
+import { loadWorkouts } from "@/lib/achievements/workoutRecords";
 
 export type { Unit };
 export type Row = { weight: string; reps: string; done: boolean };
 // One record per exercise: today's sets plus the last earlier session's sets ("Previous").
 // `unit` / `prevUnit` say what unit the numbers were typed in. Logs saved before units were
-// recorded have neither and are read in the current unit (the old behaviour).
-export type LogRecord = { date: string; sets: Row[]; prevSets: Row[]; unit?: Unit; prevUnit?: Unit };
-
+// recorded have neither: their unit is matched against the finished workout or asked for
+// (lib/logUnits.ts) — never assumed from the current toggle.
+export type LogRecord = {
+  date: string;
+  sets: Row[];
+  prevSets: Row[];
+  unit?: Unit;
+  prevUnit?: Unit;
+  /** The user's answer for a legacy log, with the numbers exactly as they were — so it can be undone. */
+  unitAnswer?: { unit: Unit; at: number; original: { sets: Row[]; prevSets: Row[]; date: string } };
+};
 const MAX_SETS = 10;
 const emptyRow = (): Row => ({ weight: "", reps: "", done: false });
 const hasData = (r: Row) => r.weight.trim() !== "" || r.reps.trim() !== "";
@@ -77,40 +88,94 @@ export function SetLogger({
   const [initial] = useState(() => {
     const rec = loadRecord(exercise);
     const isToday = rec?.date === today();
-    // Everything on screen is shown in the current unit, converted from the unit it was typed in.
-    const prevFrom = (isToday ? rec?.prevUnit : rec?.unit) ?? unit;
-    const prev = convertRows((isToday ? rec?.prevSets : rec?.sets)?.filter(hasData) ?? [], prevFrom, unit);
-    const count = targetSetCount(sets);
-    // Progressive overload: today's targets from last session, prefilled but editable. Held at
-    // last time's numbers while a recent weekly check-in reports pain.
-    const plan = loadOverload()
-      ? overloadPlan(prev, reps, unit, isToday && rec?.sets.length ? rec.sets.length : count, exercise, { hold: recentPainReport() })
-      : null;
-    const rows =
-      isToday && rec?.sets.length
-        ? convertRows(rec.sets, rec.unit ?? unit, unit)
-        : plan
-          ? plan.targets.map((t) => ({ weight: t.weight, reps: t.reps, done: false }))
-          : Array.from({ length: count }, emptyRow);
-    return { prev, rows, plan };
+    // Units for a legacy log come from the finished workout or the user — never from the toggle.
+    const res = rec ? resolveLog(rec, exercise, loadWorkouts()) : null;
+    const prevRes = (isToday ? res?.prevSets : res?.sets) ?? { unit: null, source: "no-weights" as const };
+    const todayRes = isToday ? res!.sets : { unit: null, source: "no-weights" as const };
+    const prevRaw = (isToday ? rec?.prevSets : rec?.sets)?.filter(hasData) ?? [];
+    // Everything known is shown in the current unit; ambiguous numbers are shown as typed.
+    const prevUnit: Unit | null = prevRes.source === "ambiguous" ? null : (prevRes.unit ?? unit);
+    const rowsUnit: Unit | null = todayRes.source === "ambiguous" ? null : (todayRes.unit ?? unit);
+    const prev = prevUnit ? convertRows(prevRaw, prevUnit, unit) : prevRaw;
+    const todayRows = isToday && rec?.sets.length ? (rowsUnit ? convertRows(rec.sets, rowsUnit, unit) : rec.sets) : null;
+    return { rec, prev, prevUnit: prevUnit && unit, rowsUnit: rowsUnit && unit, todayRows };
   });
+  const count = targetSetCount(sets);
+  // Progressive overload: today's targets from last session, prefilled but editable. Held at
+  // last time's numbers while a reported pain is unresolved (until the user resumes them).
+  // No targets from a previous session whose unit is unknown.
+  const makePlan = (prevRows: Row[], prevKnown: boolean, n: number) =>
+    loadOverload() && prevKnown ? overloadPlan(prevRows, reps, unit, n, exercise, { hold: recentPainReport() }) : null;
+  const [plan, setPlan] = useState(() => makePlan(initial.prev, initial.prevUnit !== null, initial.todayRows?.length || count));
   const [prev, setPrev] = useState<Row[]>(initial.prev);
-  const plan = initial.plan;
+  const [prevUnit, setPrevUnit] = useState<Unit | null>(initial.prevUnit);
+  const [rows, setRows] = useState<Row[]>(
+    () => initial.todayRows ?? (plan ? plan.targets.map((t) => ({ weight: t.weight, reps: t.reps, done: false })) : Array.from({ length: count }, emptyRow)),
+  );
+  const [rowsUnit, setRowsUnit] = useState<Unit | null>(initial.rowsUnit);
+  const [answer, setAnswer] = useState<LogRecord["unitAnswer"]>(initial.rec?.date === today() ? initial.rec?.unitAnswer : undefined);
   const isTarget = (i: number, field: "weight" | "reps", value: string) =>
     !!plan?.targets[i] && plan.targets[i][field] === value && value !== "";
-  const [rows, setRows] = useState<Row[]>(initial.rows);
-  const [rowsUnit, setRowsUnit] = useState<Unit>(unit);
+  const ambiguous = prevUnit === null || rowsUnit === null;
 
   // Switching lb/kg mid-workout converts what's typed, so the same lift is never recorded 2.2× off.
+  // Numbers whose unit is unknown are left exactly as they are.
   useEffect(() => {
-    if (unit === rowsUnit) return;
-    const nextRows = convertRows(rows, rowsUnit, unit);
-    const nextPrev = convertRows(prev, rowsUnit, unit);
-    setRowsUnit(unit);
+    if ((rowsUnit ?? unit) === unit && (prevUnit ?? unit) === unit) return;
+    const nextRows = rowsUnit ? convertRows(rows, rowsUnit, unit) : rows;
+    const nextPrev = prevUnit ? convertRows(prev, prevUnit, unit) : prev;
+    const nextRowsUnit = rowsUnit && unit;
+    const nextPrevUnit = prevUnit && unit;
+    setRowsUnit(nextRowsUnit);
+    setPrevUnit(nextPrevUnit);
     setPrev(nextPrev);
     setRows(nextRows);
-    if (rows.some(hasData)) saveRecord(exercise, { date: today(), sets: nextRows, prevSets: nextPrev, unit, prevUnit: unit });
-  }, [unit, rowsUnit, rows, prev, exercise]);
+    if (rows.some(hasData)) save(nextRows, nextPrev, nextRowsUnit, nextPrevUnit, answer);
+  }, [unit, rowsUnit, prevUnit, rows, prev, exercise, answer]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function save(sets: Row[], prevSets: Row[], u: Unit | null, pu: Unit | null, ans: LogRecord["unitAnswer"]) {
+    saveRecord(exercise, {
+      date: today(),
+      sets,
+      prevSets,
+      ...(u ? { unit: u } : {}),
+      ...(pu ? { prevUnit: pu } : {}),
+      ...(ans ? { unitAnswer: ans } : {}),
+    });
+  }
+
+  /** The user says which unit the legacy numbers were typed in. Originals are kept for Undo. */
+  function confirmUnit(u: Unit) {
+    const original = { sets: initial.rec?.date === today() ? rows : [], prevSets: prev, date: initial.rec?.date ?? today() };
+    const ans = { unit: u, at: Date.now(), original };
+    const nextPrev = prevUnit === null ? convertRows(prev, u, unit) : prev;
+    const nextRows = rowsUnit === null ? convertRows(rows, u, unit) : rows;
+    setAnswer(ans);
+    setPrevUnit(unit);
+    setRowsUnit(unit);
+    setPrev(nextPrev);
+    const freshPlan = !rows.some(hasData) ? makePlan(nextPrev, true, rows.length || count) : plan;
+    setPlan(freshPlan);
+    const finalRows = !rows.some(hasData) && freshPlan ? freshPlan.targets.map((t) => ({ weight: t.weight, reps: t.reps, done: false })) : nextRows;
+    setRows(finalRows);
+    save(finalRows, nextPrev, unit, unit, ans);
+  }
+
+  /** Undo the answer: the numbers go back exactly as they were, with the unit unknown again. */
+  function undoUnit() {
+    if (!answer) return;
+    const { original } = answer;
+    const backPrev = original.prevSets;
+    // Today's own typing (already in a known unit) is left alone; only the legacy numbers revert.
+    const backRows = original.sets.length ? original.sets : rows;
+    setAnswer(undefined);
+    setPrev(backPrev);
+    setPrevUnit(null);
+    if (original.sets.length) setRowsUnit(null);
+    if (!rows.some(hasData)) setPlan(null);
+    setRows(backRows);
+    save(backRows, backPrev, original.sets.length ? null : rowsUnit, null, undefined);
+  }
 
   const doneCount = rows.filter((r) => r.done).length;
   useEffect(() => {
@@ -121,7 +186,7 @@ export function SetLogger({
 
   function commit(next: Row[]) {
     setRows(next);
-    saveRecord(exercise, { date: today(), sets: next, prevSets: prev, unit: rowsUnit, prevUnit: rowsUnit });
+    save(next, prev, rowsUnit, prevUnit, answer);
   }
 
   function update(i: number, patch: Partial<Row>) {
@@ -129,15 +194,16 @@ export function SetLogger({
   }
 
   function fillFromPrevious(i: number) {
-    const p = prev[i];
+    const p = prevUnit === null ? undefined : prev[i]; // never copy numbers whose unit is unknown
     if (p) update(i, { weight: p.weight, reps: p.reps });
   }
 
   function toggleDone(i: number) {
     const row = rows[i];
     if (row.done) return update(i, { done: false });
-    // Like Strong/Hevy: an empty field takes last session's value when you tick the set.
-    const p = prev[i];
+    // Like Strong/Hevy: an empty field takes last session's value when you tick the set
+    // (only when that value's unit is known).
+    const p = prevUnit === null ? undefined : prev[i];
     const next = rows.map((r, j) =>
       j === i ? { done: true, weight: r.weight || p?.weight || "", reps: r.reps || p?.reps || "" } : r,
     );
@@ -153,6 +219,30 @@ export function SetLogger({
           {plan.note} Targets are filled in — edit any box.
         </p>
       )}
+      {plan?.held && <PainHoldControl compact />}
+      {ambiguous && (
+        <div role="group" aria-label="Unit of earlier sets" className="mb-2 rounded-lg border border-amber-300/40 bg-amber-300/10 px-2.5 py-2 text-xs text-amber-100">
+          <p>
+            {rowsUnit === null ? "Today's sets here" : "Your previous sets here"} were saved before the app recorded units, and the app can&apos;t
+            tell whether they were lb or kg. Until you say, they&apos;re shown as typed (with a ?), and they don&apos;t count toward records or targets.
+          </p>
+          <div className="mt-1.5 flex gap-2">
+            {(["lb", "kg"] as const).map((u) => (
+              <button key={u} type="button" onClick={() => confirmUnit(u)} className="h-8 rounded-full border border-amber-300/60 px-3 font-semibold">
+                They were {u}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {answer && (
+        <p className="mb-2 px-1 text-[11px] text-zinc-400">
+          Earlier sets confirmed as {answer.unit} by you.{" "}
+          <button type="button" onClick={undoUnit} className="font-semibold text-zinc-200 underline underline-offset-2">
+            Undo
+          </button>
+        </p>
+      )}
       <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_4.25rem_3.5rem_2.5rem] items-center gap-x-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
         <span>Set</span>
         <span className="truncate">Previous</span>
@@ -166,7 +256,7 @@ export function SetLogger({
           const p = prev[i];
           const w = Number(row.weight.replace(",", ".") || "0");
           const r = Number(row.reps || "0");
-          const suspect = row.done && hasData(row) && (!r || !countableSet(toLb(w, rowsUnit), r));
+          const suspect = row.done && hasData(row) && (!r || (rowsUnit !== null && !countableSet(toLb(w, rowsUnit), r)));
           return (
             <li
               key={i}
@@ -178,23 +268,25 @@ export function SetLogger({
               <button
                 type="button"
                 onClick={() => fillFromPrevious(i)}
-                disabled={!p}
-                aria-label={p ? `Use previous: ${p.weight} ${unit} for ${p.reps} reps` : "No previous set"}
+                disabled={!p || prevUnit === null}
+                aria-label={p ? (prevUnit === null ? `Previous: ${p.weight} (unit unknown) for ${p.reps} reps` : `Use previous: ${p.weight} ${unit} for ${p.reps} reps`) : "No previous set"}
                 className="truncate text-left text-sm tabular-nums text-zinc-500 enabled:hover:text-zinc-300"
               >
-                {p ? `${p.weight || "—"} × ${p.reps || "—"}` : "—"}
+                {p ? `${p.weight || "—"}${prevUnit === null && p.weight ? "?" : ""} × ${p.reps || "—"}` : "—"}
               </button>
               <input
+                disabled={rowsUnit === null}
                 inputMode="decimal"
                 aria-label={`Set ${i + 1} weight in ${unit}`}
                 value={row.weight}
-                placeholder={p?.weight || "0"}
+                placeholder={(prevUnit !== null && p?.weight) || "0"}
                 onChange={(e) => update(i, { weight: e.target.value.replace(/[^\d.,]/g, "") })}
                 className={`h-9 w-full rounded-lg bg-zinc-800 text-center text-base tabular-nums placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-lime-400 ${
                   !row.done && isTarget(i, "weight", row.weight) ? "text-lime-300" : "text-zinc-100"
                 }`}
               />
               <input
+                disabled={rowsUnit === null}
                 inputMode="numeric"
                 aria-label={`Set ${i + 1} reps`}
                 value={row.reps}
@@ -207,6 +299,7 @@ export function SetLogger({
               <button
                 type="button"
                 onClick={() => toggleDone(i)}
+                disabled={rowsUnit === null}
                 aria-label={row.done ? `Set ${i + 1} done — tap to undo` : `Mark set ${i + 1} done`}
                 aria-pressed={row.done}
                 className={`grid h-9 w-full place-items-center rounded-lg text-base font-bold transition active:scale-90 ${
@@ -217,7 +310,7 @@ export function SetLogger({
               </button>
               {suspect && (
                 <p role="note" className="col-span-5 px-1 pt-0.5 text-[11px] text-amber-300">
-                  {!r ? "No reps logged — this set won't count toward records." : "Check this set — the numbers look like a typo, so it won't count toward records."}
+                  {!r ? "No reps logged — this set won't count toward records." : "Check this set — the numbers look like a typo (a typo screen, not a safety limit). It's kept as typed but won't count toward records."}
                 </p>
               )}
             </li>

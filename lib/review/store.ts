@@ -3,7 +3,7 @@
 // even if a weigh-in or workout is corrected later. Plan changes are only ever proposals; the
 // user's approve/dismiss decisions are kept as a history.
 
-import { loadEntries, loadGoal } from "@/lib/bodyLog";
+import { loadEntries, trendEntries, loadGoal } from "@/lib/bodyLog";
 import { loadHabitLogs, todayStr } from "@/lib/habits";
 import { loadHistory } from "@/lib/wins";
 import { rangeStatus } from "@/lib/missed";
@@ -62,7 +62,7 @@ export function gatherInput(): ReviewInput {
   return {
     history: loadHistory(),
     achievements: syncAchievements().all,
-    body: loadEntries(),
+    body: trendEntries(loadEntries()),
     goal: loadGoal(),
     habitLogs: loadHabitLogs(),
     meals: loadEaten(),

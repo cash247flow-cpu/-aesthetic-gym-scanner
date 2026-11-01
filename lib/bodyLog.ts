@@ -15,6 +15,9 @@ export type BodyEntry = {
   source: BodySource;
   /** Numbers were read from the photo by the AI reader, then reviewed and saved by the user. */
   aiRead?: boolean;
+  /** Fields outside the typo screen that the user chose to keep (lib/units.ts BODY_RANGES). Such
+   * an entry stays in the log as typed but is left out of trends, the weekly review and awards. */
+  outOfRange?: string[];
   fileId?: string; // scale photo or report in IndexedDB
   fileType?: string;
 };
@@ -123,3 +126,6 @@ export async function listFileIds(): Promise<string[]> {
 export async function putFileWithId(id: string, blob: Blob): Promise<void> {
   await withStore("readwrite", (s) => s.put(blob, id));
 }
+
+/** Entries used for trends, the weekly review and awards (excludes values kept despite the typo screen). */
+export const trendEntries = (entries: BodyEntry[]) => entries.filter((e) => !e.outOfRange?.length);

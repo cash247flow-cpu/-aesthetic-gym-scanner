@@ -77,6 +77,9 @@ export function TrophyCollection() {
                 </p>
                 <p className="truncate font-semibold">{a.title}</p>
                 <p className="truncate text-xs text-zinc-300">{summaryLine(a, unit)}</p>
+                {a.check && (
+                  <p className="text-[11px] text-amber-300">Big jump from your previous best — double-check the logged set. It still counts.</p>
+                )}
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-zinc-500">
                   <span className={`rounded-full bg-gradient-to-r px-1.5 py-px text-[10px] font-bold uppercase ${TIER_STYLE[a.tier]}`}>
                     {a.tier}
