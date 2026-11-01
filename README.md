@@ -210,8 +210,43 @@ An optional lock, off by default, for **Visual evolution**, **Body tracker** and
 - **checks:** type-check, lint, unit tests, production build, and a check that nothing secret-looking reaches the browser bundle.
 - **dependencies:** `npm audit` blocks on high or critical advisories in shipped packages. Development tooling is only reported; critical advisories still block.
 - **secrets:** gitleaks 8.30.1 scans the full history. `.gitleaks.toml` allowlists only obviously synthetic test values.
+- **e2e:** builds the app and runs the browser tests in `e2e/` (see below).
 
 Third-party actions are pinned to exact commits. `.github/dependabot.yml` opens weekly update PRs for npm and Actions; nothing merges automatically.
+
+## End-to-end tests
+
+`e2e/` holds browser tests (Playwright, Chromium) that drive a production build like a phone would:
+
+- sign-in, sessions and security headers;
+- the login limit;
+- AI consent and the daily caps;
+- the exercise video;
+- weekly review and navigation;
+- progress photos;
+- backup round trip and tampered files;
+- delete everything with recovery;
+- app lock (including an emulated fingerprint);
+- per-device sign-out;
+- layout at 320–412 px.
+
+Each test fails on any uncaught page error or Content Security Policy violation.
+
+```bash
+npm run build
+npx playwright install chromium   # first time only
+npm run e2e
+```
+
+`playwright.config.ts` starts two local servers:
+
+- `next start` with test-only values for `APP_PASSCODE` and `SESSION_SECRET`, and no Gemini key;
+- a fake Upstash over HTTPS with a throwaway certificate made by `openssl` in `e2e/.cache/`.
+
+Everything is synthetic:
+
+- example data, generated stick-figure images in `e2e/fixtures/`, and mocked AI replies in the browser;
+- nothing contacts Gemini or Upstash, and no repository secrets are needed.
 
 ## Login limits, AI caps and per-device sign-out (Stage 2f)
 
