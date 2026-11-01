@@ -219,3 +219,23 @@ test("Habit #4 shows as Sunset Reset; existing ticks and streak carry over", asy
   const today = await page.evaluate(() => JSON.parse(localStorage.getItem("ags:habits")!)[new Date().toLocaleDateString("en-CA")]);
   expect(today).toEqual({ cortisol: true });
 });
+
+test("Reverse Crunch (with Ab Mat) can be swapped, and swapped back", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await page.locator('button[aria-label^="Abs:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  const swap = page.locator('button[aria-label="Swap Reverse Crunch (with Ab Mat)"]');
+  await swap.scrollIntoViewIfNeeded();
+  await swap.click();
+  for (const n of ["Hanging Knee Raise", "Captain's Chair Knee Raise", "Decline Reverse Crunch", "Dragon Flag"]) await expect(page.locator(`button:has-text("${n}")`)).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("reverse-crunch-swap.png"), fullPage: true });
+  await page.locator('button:has-text("Hanging Knee Raise")').first().click();
+  await expect(page.locator('button[aria-label="Swap Hanging Knee Raise"]')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("ags:swaps"))).toContain("Hanging Knee Raise");
+  // Swap back to the programmed exercise.
+  await page.locator('button[aria-label="Swap Hanging Knee Raise"]').click();
+  await page.locator('button:has-text("Reverse Crunch (with Ab Mat)")').last().click();
+  await expect(page.locator('button[aria-label="Swap Reverse Crunch (with Ab Mat)"]')).toBeVisible();
+});

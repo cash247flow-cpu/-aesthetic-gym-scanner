@@ -52,6 +52,9 @@ export const LEG_AESTHETIC: Record<string, { label: string; reason: string }> = 
   "Face-Away Crunch":    { label: "Abs · Upper", reason: "Facing away puts tension on the abs in the stretch; bracing your hips keeps them from doing the work." },
   "Reverse Crunch":      { label: "Abs · Lower", reason: "Curling the pelvis hits the lower abs without the hip flexors taking over; the mat adds the stretch." },
   "Garhammer Raise":     { label: "Abs · Lower", reason: "Best lower-ab emphasis of any exercise tested, with a deep stretch — add ankle weights to keep progressing." },
+  // Swaps for the reverse-crunch slot (same pelvis-curl pattern, different equipment).
+  "Lower-Ab Raise":      { label: "Abs · Lower", reason: "Curls the pelvis toward the ribs to work the lower abs. Keep it slow so momentum doesn't take over." },
+  "Dragon Flag":         { label: "Abs · Advanced", reason: "A demanding whole-core move with a big lower-ab load. Build up with slow lowering before full reps." },
 };
 
 // ─── Sessions ──────────────────────────────────────────────────────────
@@ -247,7 +250,14 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         ] },
       { name: "Reverse Crunch (with Ab Mat)", sets: "3", reps: "failure", restSeconds: "90–120",
         cue: "Ab mat or rolled towel under your lower back, knees at 90°. Push your tailbone up and curl your pelvis into a C — slow on the way down. Straighten your legs more to make it harder.",
-        equipmentNeeded: [], aestheticKey: "Reverse Crunch", aestheticMap: "legs", abs: true },
+        equipmentNeeded: [], aestheticKey: "Reverse Crunch", aestheticMap: "legs", abs: true,
+        // Swap options (the original needs no equipment, so it's always available to swap back).
+        substitutes: [
+          { name: "Hanging Knee Raise", cue: "Hang from the bar with knees bent. Curl your pelvis up toward your ribs — not just lifting the knees — then lower slowly without swinging.", equipmentNeeded: ["pull-up bar"], aestheticKey: "Lower-Ab Raise", aestheticMap: "legs", abs: true },
+          { name: "Captain's Chair Knee Raise", cue: "Back flat against the pad, forearms on the rests. Tilt your pelvis up to bring your knees toward your chest, then lower slowly.", equipmentNeeded: ["captains chair"], aestheticKey: "Lower-Ab Raise", aestheticMap: "legs", abs: true },
+          { name: "Decline Reverse Crunch", cue: "Head at the high end of a decline bench, holding the bench behind your head, knees bent. Curl your hips up off the pad, then lower slowly. Harder than on the floor.", equipmentNeeded: ["decline bench"], aestheticKey: "Lower-Ab Raise", aestheticMap: "legs", abs: true },
+          { name: "Dragon Flag", cue: "Advanced. Lie on a bench and grip it behind your head. Raise your body onto your upper back, keep a straight line from shoulders to feet, and lower as slowly as you can without your hips sagging. Start with lowering only (bent knees make it easier); stop if your lower back hurts.", equipmentNeeded: ["bench"], aestheticKey: "Dragon Flag", aestheticMap: "legs", abs: true },
+        ] },
       { name: "Garhammer Raise", sets: "3", reps: "failure", restSeconds: "90–120",
         cue: "Hips off the end of a bench, knees tucked. Lower your legs as far as you can without touching the floor, then raise by curling your pelvis — no swinging. Add load as you get stronger.",
         equipmentNeeded: ["bench"], aestheticKey: "Garhammer Raise", aestheticMap: "legs", abs: true },
