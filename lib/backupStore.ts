@@ -2,6 +2,7 @@
 // Records: every localStorage key starting "ags:". Files: every blob in IndexedDB "ags/files".
 
 import { deleteFile, getFile, listFileIds, putFileWithId } from "@/lib/bodyLog";
+import { LOCK_KEY } from "@/lib/appLock";
 import {
   BACKUP_FORMAT,
   BACKUP_VERSION,
@@ -21,7 +22,8 @@ export function currentRecords(): Record<string, string> {
   const out: Record<string, string> = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.startsWith("ags:") && k !== LAST_KEY) out[k] = localStorage.getItem(k) ?? "";
+    // The app lock (PIN hash, this phone's passkey) belongs to this device: never backed up or restored over.
+    if (k && k.startsWith("ags:") && k !== LAST_KEY && k !== LOCK_KEY) out[k] = localStorage.getItem(k) ?? "";
   }
   return out;
 }

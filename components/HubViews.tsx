@@ -17,6 +17,8 @@ import { requestPersistentStorage, storageStatus, type StorageStatus } from "@/l
 import { BackupPanel, lastBackupText } from "@/components/BackupPanel";
 import { ErasePanel } from "@/components/ErasePanel";
 import { SessionCard } from "@/components/SessionCard";
+import { LockSettings } from "@/components/AppLock";
+import { loadLock } from "@/lib/appLock";
 import { loadLastBackup } from "@/lib/backupStore";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
@@ -61,7 +63,8 @@ export function ProgressHub({ onWins, onBody, onReview, onPhotos }: { onWins: ()
     setPlan(weekCounts(weekStatus()));
     setCardioStats(statsTotal(weekStartOf(todayStr())));
     const last = [...loadEntries()].sort((a, b) => a.date.localeCompare(b.date)).pop();
-    setLastWeight(last ? `Last weigh-in ${formatWeight(last.weightLb, loadUnit())} · ${last.date}` : null);
+    // With the app lock on, don't show body numbers outside the locked screens.
+    setLastWeight(loadLock() ? "🔒 Locked · weight, graph, scale photos and reports" : last ? `Last weigh-in ${formatWeight(last.weightLb, loadUnit())} · ${last.date}` : null);
   }, []);
 
   const muscles = musclesFor(week?.exercises ?? []);
@@ -284,6 +287,7 @@ export function DataView({ onBack }: { onBack: () => void }) {
           </p>
         </div>
         <BackupPanel />
+        <LockSettings />
         <SessionCard />
         <ErasePanel />
       </div>

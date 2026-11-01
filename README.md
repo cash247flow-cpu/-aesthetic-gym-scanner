@@ -188,3 +188,17 @@ Signing in with the passcode starts a **signed session** (`lib/session.ts`): an 
 - **Lost phone:** change `SESSION_SECRET` in Vercel and redeploy. That signs out **every** device; there's no per-device list without a database. Also sign out of Vercel, and change `APP_PASSCODE` if it may be known.
 - **Configuration:** `SESSION_SECRET` (32+ random characters) is **required** wherever `APP_PASSCODE` is. Without it the app fails closed (503). Only local `npm run dev` uses a stand-in key.
 - **Tests:** `tests/session.test.ts` and `tests/security-auth.test.ts`.
+
+## App lock (Stage 2d)
+
+An optional lock, off by default, for **Visual evolution**, **Body tracker** and **Data on this phone**. The last is locked too so backups can't be used to get around it. Turn it on in More → Data on this phone → **App lock** (`lib/appLock.ts`, `components/AppLock.tsx`).
+
+- **Unlock methods:**
+  - The phone's own screen lock (fingerprint, face or phone PIN), through a passkey created on this phone (WebAuthn, user verification required).
+  - An app PIN of 6–12 digits, rejecting trivial ones, stored only as a salted PBKDF2-SHA-256 hash.
+- **Wrong PINs:** 4 free tries, then a 30-second wait that doubles each time, up to 1 hour. The wait survives a reload.
+- **Locks again:** when you leave the app (or after 5 minutes), or after 5 or 15 minutes without use. Reloading always starts locked; the unlocked state lives only in memory.
+- **Forgot the PIN:** entering the app passcode removes the lock.
+- **Scope:** the lock is per phone, so `ags:lock` is never in backups. While it's on, the Progress tab doesn't show the last weigh-in.
+- **Limits:** it's a privacy screen, not encryption. Data on the phone isn't encrypted by it. The Weekly Review still shows weekly body averages.
+- **Tests:** `tests/appLock.test.ts`.

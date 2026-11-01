@@ -27,6 +27,7 @@ import { ReviewReadyCard } from "@/components/ReviewReadyCard";
 import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
 import { WeeklyReview } from "@/components/WeeklyReview";
 import { VisualEvolution } from "@/components/VisualEvolution";
+import { LockGate } from "@/components/AppLock";
 import { migrateRenamedExercises } from "@/lib/renames";
 import { buildPlan } from "@/lib/plan";
 import { loadActive, saveActive, sameWorkout, type ActiveWorkout } from "@/lib/activeWorkout";
@@ -396,11 +397,19 @@ export default function Home() {
         />
       )}
 
-      {view.state === "photos" && <VisualEvolution onBack={back} onBody={() => go("body", { state: "photos" })} />}
+      {view.state === "photos" && (
+        <LockGate area="Visual evolution">
+          <VisualEvolution onBack={back} onBody={() => go("body", { state: "photos" })} />
+        </LockGate>
+      )}
 
       {view.state === "activity" && <ActivityView onBack={back} />}
 
-      {view.state === "data" && <DataView onBack={back} />}
+      {view.state === "data" && (
+        <LockGate area="Data on this phone">
+          <DataView onBack={back} />
+        </LockGate>
+      )}
 
       {view.state === "more" && (
         <MoreHub
@@ -418,7 +427,11 @@ export default function Home() {
 
       {view.state === "cardio" && <CardioSession onBack={back} onShowWins={showWins} makeup={makeup ?? undefined} />}
 
-      {view.state === "body" && <BodyTracker onBack={back} onPhotos={() => go("photos", { state: "body" })} />}
+      {view.state === "body" && (
+        <LockGate area="Body tracker">
+          <BodyTracker onBack={back} onPhotos={() => go("photos", { state: "body" })} />
+        </LockGate>
+      )}
 
       {view.state === "week" && <WeekEditor week={week} onChange={changeWeek} onBack={back} />}
 
