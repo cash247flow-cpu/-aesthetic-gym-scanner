@@ -1,0 +1,14 @@
+# Secret scanning rules: gitleaks' full default rule set, plus a narrow allowlist for values that
+# are obviously synthetic test data. Real secrets in any file (tests included) are still caught.
+title = "AESTHETIQ gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic values used only in tests and docs"
+regexes = [
+  '''synthetic-[A-Za-z0-9-]+''',
+  '''correct horse battery staple''',
+  '''your_key_here''',
+]
