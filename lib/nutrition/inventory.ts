@@ -1,13 +1,16 @@
 // Food the user has confirmed they have. Scan results are only a draft until the user confirms
 // them; nothing is ever marked used up, bought or eaten without the user saying so.
 
-import type { Per100 } from "./foods";
 import { KEYS, cleanText, newId, num, readJson, writeJson, type KV } from "./store";
 
 export const UNITS = ["g", "kg", "ml", "l", "oz", "lb", "item", "can", "pack", "bag", "bottle", "carton", "jar", "bunch", "dozen"] as const;
 export type Unit = (typeof UNITS)[number];
 
-export type Nutrition = Per100 & { source: "label"; per: "100g" }; // only from a label the user confirmed
+/**
+ * Values the user confirmed from a product label, per 100 g. `carbs` is TOTAL carbohydrate as printed;
+ * net carbs are derived once (lib/nutrition/foods.ts netCarbs). `fiber: null` = not on the label.
+ */
+export type Nutrition = { kcal: number; protein: number; carbs: number; fiber: number | null; fat: number; source: "label"; per: "100g"; carbsAre: "total" };
 
 export type InventoryItem = {
   id: string;
@@ -18,6 +21,8 @@ export type InventoryItem = {
   source: "scan" | "manual" | "grocery";
   addedAt: number;
   nutrition?: Nutrition;
+  /** Reference food the user explicitly chose for this item (a FOODS key), when the name alone was ambiguous. */
+  refKey?: string;
 };
 
 /** A draft row from a scan or typed entry, before the user confirms it. */
@@ -39,9 +44,10 @@ export function validNutrition(n: unknown): Nutrition | undefined {
   const protein = num(r.protein, 0, 100);
   const carbs = num(r.carbs, 0, 100);
   const fat = num(r.fat, 0, 100);
-  const fiber = num(r.fiber ?? 0, 0, 100);
-  if (kcal === null || protein === null || carbs === null || fat === null || fiber === null) return undefined;
-  return { kcal, protein, carbs, fat, fiber, source: "label", per: "100g" };
+  if (r.carbsAre !== "total") return undefined; // older shape had no stated basis — not trusted
+  const fiber = r.fiber === null || r.fiber === undefined ? null : num(r.fiber, 0, 100);
+  if (kcal === null || protein === null || carbs === null || fat === null || (r.fiber != null && fiber === null)) return undefined;
+  return { kcal, protein, carbs, fiber, fat, source: "label", per: "100g", carbsAre: "total" };
 }
 
 function parseItem(v: unknown): InventoryItem | null {
@@ -59,6 +65,7 @@ function parseItem(v: unknown): InventoryItem | null {
     source,
     addedAt: typeof r.addedAt === "number" ? r.addedAt : 0,
     ...(validNutrition(r.nutrition) ? { nutrition: validNutrition(r.nutrition) } : {}),
+    ...(typeof r.refKey === "string" && /^[a-z0-9-]{1,40}$/.test(r.refKey) ? { refKey: r.refKey } : {}),
   };
 }
 

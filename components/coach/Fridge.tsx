@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
 import { shrinkImage } from "@/lib/image";
 import { UNITS, ageLabel, checkDraft, confirmDrafts, editItem, fmtQty, removeItem, saveInventory, type Draft, type InventoryItem, type Unit } from "@/lib/nutrition/inventory";
+import { FOODS, matchFood, resolveFood } from "@/lib/nutrition/foods";
 import { BTN, BTN2, CARD, INPUT, LABEL, Note } from "./ui";
 
 type Row = Draft & { key: number };
@@ -221,6 +222,14 @@ export function Fridge({ inventory, onInventory, onEat }: { inventory: Inventory
                         <p className={`text-xs ${age.stale ? "text-amber-300" : "text-zinc-500"}`}>
                           {fmtQty(item.qty, item.unit)} · {age.text}
                         </p>
+                        <RefLine
+                          item={item}
+                          onChoose={(refKey) => {
+                            const next = editItem(inventory, item.id, { refKey });
+                            saveInventory(next);
+                            onInventory(next);
+                          }}
+                        />
                       </div>
                       <button type="button" aria-label={`Edit ${item.name}`} className="h-9 rounded-full px-3 text-xs font-semibold text-zinc-300" onClick={() => setEditing(item.id)}>
                         Edit
@@ -260,7 +269,8 @@ function ItemEditor({ item, onSave, onCancel }: { item: InventoryItem; onSave: (
       onSubmit={(e) => {
         e.preventDefault();
         const q = qty.trim() === "" ? null : Number(qty);
-        onSave({ name, qty: q, unit: q === null ? null : unit || "item", addedAt: Date.now() });
+        // A renamed item may be a different food: its reference choice is cleared.
+        onSave({ name, qty: q, unit: q === null ? null : unit || "item", addedAt: Date.now(), ...(name.trim() !== item.name ? { refKey: undefined } : {}) });
       }}
     >
       <input aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} className={INPUT} />
@@ -284,5 +294,40 @@ function ItemEditor({ item, onSave, onCancel }: { item: InventoryItem; onSave: (
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Which reference food (USDA FoodData Central) an item uses — or a question when the name alone
+ * doesn't say. Nothing is assumed: an ambiguous or unknown item is left out of meal ideas until the
+ * user picks a reference food here (or enters label values when logging).
+ */
+function RefLine({ item, onChoose }: { item: InventoryItem; onChoose: (refKey: string | undefined) => void }) {
+  const food = resolveFood(item.name, item.refKey);
+  if (food)
+    return (
+      <p className="text-xs text-zinc-500">
+        Values: {food.name} · weigh {food.weighed} · USDA FDC {food.source.fdcId}
+        {item.refKey && (
+          <button type="button" className="ml-1 font-semibold text-zinc-400 underline" onClick={() => onChoose(undefined)}>
+            change
+          </button>
+        )}
+      </p>
+    );
+  const m = matchFood(item.name);
+  const options = m.status === "confirm" ? m.options : FOODS;
+  return (
+    <label className="mt-1 grid gap-1 text-xs">
+      <span className="text-amber-200">{m.status === "confirm" ? m.question : m.status === "unknown" ? m.reason : ""}</span>
+      <select aria-label={`Which food is ${item.name}?`} value="" onChange={(e) => e.target.value && onChoose(e.target.value)} className={`${INPUT} h-9 text-sm`}>
+        <option value="">{m.status === "confirm" ? "Choose…" : "Choose a reference food…"}</option>
+        {options.map((o) => (
+          <option key={o.key} value={o.key}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

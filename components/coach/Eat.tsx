@@ -5,8 +5,8 @@
 // user confirms what they actually ate and how much.
 
 import { useState } from "react";
-import { matchFood, scale, type Per100 } from "@/lib/nutrition/foods";
-import { correctEntry, logMeal, saveLog, undoEntry, type LogEntry, type LoggedFood } from "@/lib/nutrition/log";
+import { FOOD_BY_KEY, matchFood, netCarbs, scale, type Per100, type RefFood } from "@/lib/nutrition/foods";
+import { REF_VERSION, correctEntry, logMeal, saveLog, undoEntry, type LogEntry, type LoggedFood } from "@/lib/nutrition/log";
 import { suggestMeals, type Hunger, type Suggestion } from "@/lib/nutrition/suggest";
 import type { Prefs } from "@/lib/nutrition/prefs";
 import type { InventoryItem } from "@/lib/nutrition/inventory";
@@ -176,7 +176,7 @@ export function EatNow({
               </ul>
             </details>
           )}
-          <p className="text-xs text-zinc-500">Estimates use typical values for each food; your brand, cut and cooking change them. Values from a label you confirmed are marked.</p>
+          <p className="text-xs text-zinc-500">Estimates use USDA FoodData Central reference values (per 100 g, in the state shown); your brand, cut, cooking and portion will differ. Values from your own label are marked.</p>
         </div>
       )}
 
@@ -220,6 +220,21 @@ function MealCard({ n, meal, onAte, onAddMissing }: { n: number; meal: Suggestio
           ))}
         </ol>
       </details>
+      <details className="mt-1 text-xs text-zinc-400">
+        <summary className="cursor-pointer font-semibold text-zinc-300">Where the numbers come from</summary>
+        <ul className="mt-1 grid gap-0.5">
+          {meal.ingredients.map((x) => {
+            const ref = FOOD_BY_KEY.get(x.key);
+            return (
+              <li key={x.key}>
+                {x.name}: {x.source === "label" ? "your label values" : `USDA FoodData Central ${x.fdcId} — “${ref?.source.description}”`}, per 100 g, {x.weighed}
+                {x.netCarbsBasis === "fiber-not-reported-total-used" ? "; no fiber value reported, so net carbs = total carbs (upper bound)" : ""}.
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-1">These are still estimates: your brand, cut, cooking and portion will differ from the reference food.</p>
+      </details>
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" className={BTN} onClick={onAte}>
           I ate this
@@ -240,8 +255,9 @@ function ConfirmEaten({ meal, onSave, onCancel }: { meal: Suggestion; onSave: (s
   const foods: LoggedFood[] = meal.ingredients
     .map((x) => {
       const g = num(grams[x.key], 0, 5000) ?? 0;
-      const per100: Per100 = { kcal: (x.totals.kcal / x.grams) * 100, protein: (x.totals.protein / x.grams) * 100, carbs: (x.totals.carbs / x.grams) * 100, fat: (x.totals.fat / x.grams) * 100, fiber: (x.totals.fiber / x.grams) * 100 };
-      return { name: x.name, grams: g, totals: scale(per100, g), source: x.source };
+      // Same per-100 g values the suggestion used, with their source recorded on the entry.
+      const f: LoggedFood = { name: x.name, grams: g, totals: scale(x.per100, g), source: x.source, fdcId: x.fdcId, weighed: x.weighed, netCarbsBasis: x.netCarbsBasis, refVersion: x.refVersion };
+      return f;
     })
     .filter((f) => f.grams > 0);
   const total = foods.reduce((t, f) => ({ kcal: t.kcal + f.totals.kcal, protein: t.protein + f.totals.protein, carbs: t.carbs + f.totals.carbs, fat: t.fat + f.totals.fat }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
@@ -258,7 +274,9 @@ function ConfirmEaten({ meal, onSave, onCancel }: { meal: Suggestion; onSave: (s
       <p className="text-sm text-zinc-400">Change the grams to what you ate. Set a food to 0 if you skipped it.</p>
       {meal.ingredients.map((x) => (
         <label key={x.key} className="flex items-center gap-2 text-sm">
-          <span className="min-w-0 flex-1 truncate">{x.name}</span>
+          <span className="min-w-0 flex-1 truncate">
+            {x.name} <span className="text-xs text-zinc-500">({x.weighed})</span>
+          </span>
           <input aria-label={`${x.name} grams eaten`} inputMode="decimal" value={grams[x.key]} onChange={(e) => setGrams({ ...grams, [x.key]: e.target.value })} className={`${INPUT} w-24 text-right`} />
           <span className="text-zinc-500">g</span>
         </label>
@@ -291,6 +309,9 @@ function LogList({ log, date, onLog }: { log: LogEntry[]; date: string; onLog: (
                 <p className="font-semibold">{e.title}</p>
                 <p className="text-xs text-zinc-400">
                   {macroLine(e.totals)} · <SourceTag source={e.source} />
+                  {e.foods.some((f) => f.source === "estimate" && !f.refVersion) && (
+                    <span className="ml-1 text-zinc-500">· earlier reference values (logged before 2026-11-01)</span>
+                  )}
                 </p>
               </div>
               <button type="button" className="text-xs font-semibold text-zinc-300" onClick={() => setEditing(editing === e.id ? null : e.id)}>
@@ -338,8 +359,10 @@ function EntryEditor({ entry, onSave }: { entry: LogEntry; onSave: (foods: Logge
         onSave(
           entry.foods.map((f, i) => {
             const g = num(grams[i], 0, 5000) ?? 0;
+            // Rescales the entry's OWN stored values (whatever reference produced them) — a
+            // correction never swaps in newer reference values behind the user's back.
             const per = (v: number) => (v / f.grams) * 100;
-            return { ...f, grams: g, totals: scale({ kcal: per(f.totals.kcal), protein: per(f.totals.protein), carbs: per(f.totals.carbs), fat: per(f.totals.fat), fiber: per(f.totals.fiber) }, g) };
+            return { ...f, grams: g, totals: scale({ kcal: per(f.totals.kcal), protein: per(f.totals.protein), carbs: per(f.totals.carbs), fat: per(f.totals.fat), fiber: f.totals.fiber === null ? null : per(f.totals.fiber) }, g) };
           }),
         );
       }}
@@ -358,13 +381,22 @@ function EntryEditor({ entry, onSave }: { entry: LogEntry; onSave: (foods: Logge
   );
 }
 
-/** Log something that wasn't a suggestion. Known foods use reference estimates; others need the label numbers. */
+/**
+ * Log something that wasn't a suggestion. An exact reference match uses its FDC-sourced values; an
+ * ambiguous name asks which reference food it is; anything else needs the label numbers (TOTAL carbs
+ * as printed, plus fiber if shown — net carbs are worked out once).
+ */
 function LogOther({ onSave }: { onSave: (s: { title: string; sourceKey: string; foods: LoggedFood[] }) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [grams, setGrams] = useState("");
-  const [vals, setVals] = useState({ kcal: "", protein: "", carbs: "", fat: "" });
-  const food = name.trim() ? matchFood(name) : null;
+  const [choice, setChoice] = useState("");
+  const [vals, setVals] = useState({ kcal: "", protein: "", carbs: "", fiber: "", fat: "" });
+  const [err, setErr] = useState<string | null>(null);
+  const m = name.trim() ? matchFood(name) : null;
+  const chosen = choice && choice !== "label" ? FOOD_BY_KEY.get(choice) : undefined;
+  const food: RefFood | null = m?.status === "match" ? m.food : (chosen ?? null);
+  const useLabel = !food && !!m && (m.status === "unknown" || choice === "label");
   const g = num(grams, 1, 5000);
   if (!open)
     return (
@@ -378,45 +410,70 @@ function LogOther({ onSave }: { onSave: (s: { title: string; sourceKey: string; 
       className={`${CARD} mt-4 grid grid-cols-1 gap-2`}
       onSubmit={(e) => {
         e.preventDefault();
-        if (!name.trim() || g === null) return;
-        let totals: Per100 | null = null;
-        let source: LoggedFood["source"] = "estimate";
-        if (food) totals = scale(food.per100, g);
-        else {
+        setErr(null);
+        if (!name.trim() || g === null) return setErr("Enter a name and the grams you ate.");
+        let entry: LoggedFood;
+        if (food) {
+          entry = { name: name.trim(), grams: g, totals: scale(food.per100, g), source: "estimate", fdcId: food.source.fdcId, weighed: food.weighed, netCarbsBasis: food.netCarbsBasis, refVersion: REF_VERSION };
+        } else if (useLabel) {
           const k = num(vals.kcal, 0, 5000);
           const p = num(vals.protein, 0, 500);
           const c = num(vals.carbs, 0, 500);
-          const f = num(vals.fat, 0, 500);
-          if (k === null || p === null || c === null || f === null) return;
-          totals = { kcal: k, protein: p, carbs: c, fat: f, fiber: 0 };
-          source = "label";
-        }
-        onSave({ title: name.trim(), sourceKey: `manual:${Date.now()}`, foods: [{ name: name.trim(), grams: g, totals, source }] });
+          const fat = num(vals.fat, 0, 500);
+          const fib = vals.fiber.trim() === "" ? null : num(vals.fiber, 0, 500);
+          if (k === null || p === null || c === null || fat === null || (vals.fiber.trim() !== "" && fib === null)) return setErr("Enter calories, protein, total carbs and fat from the label.");
+          if (fib !== null && fib > c) return setErr("Fiber can't be more than total carbs — check the label.");
+          const net = netCarbs({ carbs: c, fiber: fib });
+          const totals: Per100 = { kcal: k, protein: p, carbs: net.value!, fat, fiber: fib };
+          entry = { name: name.trim(), grams: g, totals, source: "label", netCarbsBasis: net.basis! };
+        } else return setErr("Choose which food it is, or use the label values.");
+        onSave({ title: name.trim(), sourceKey: `manual:${Date.now()}`, foods: [entry] });
         setOpen(false);
         setName("");
         setGrams("");
+        setChoice("");
       }}
     >
       <h2 className="font-semibold">Log something else</h2>
       <div className="flex gap-2">
-        <input aria-label="Food name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Food" className={`${INPUT} flex-1`} />
+        <input aria-label="Food name" value={name} onChange={(e) => { setName(e.target.value); setChoice(""); }} placeholder="Food" className={`${INPUT} flex-1`} />
         <input aria-label="Grams eaten" inputMode="decimal" value={grams} onChange={(e) => setGrams(e.target.value)} placeholder="g" className={`${INPUT} w-20`} />
       </div>
-      {name.trim() && !food && (
+      {m?.status === "confirm" && (
+        <label className="grid gap-1 text-sm">
+          <span className="text-xs text-amber-200">{m.question}</span>
+          <select aria-label="Which food is it?" value={choice} onChange={(e) => setChoice(e.target.value)} className={INPUT}>
+            <option value="">Choose…</option>
+            {m.options.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.name}
+              </option>
+            ))}
+            <option value="label">None of these — use the label</option>
+          </select>
+        </label>
+      )}
+      {useLabel && (
         <>
-          <p className="text-xs text-amber-200">No reference values for this — enter the totals from the label for the amount you ate (net carbs).</p>
-          <div className="grid grid-cols-4 gap-1.5">
-            {(["kcal", "protein", "carbs", "fat"] as const).map((k) => (
-              <input key={k} aria-label={k} inputMode="decimal" placeholder={k} value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={`${INPUT} px-2`} />
+          <p className="text-xs text-amber-200">
+            {m?.status === "unknown" ? m.reason : "Using the label."} Enter the label&apos;s totals for the amount you ate: total carbs as printed, and fiber if it&apos;s shown.
+          </p>
+          <div className="grid grid-cols-5 gap-1.5">
+            {(["kcal", "protein", "carbs", "fiber", "fat"] as const).map((k) => (
+              <input key={k} aria-label={k === "carbs" ? "total carbs" : k} inputMode="decimal" placeholder={k === "carbs" ? "carbs" : k} value={vals[k]} onChange={(e) => setVals({ ...vals, [k]: e.target.value })} className={`${INPUT} px-2`} />
             ))}
           </div>
         </>
       )}
       {food && g !== null && (
         <p className="text-sm text-zinc-300">
-          {macroLine(scale(food.per100, g))} <SourceTag source="estimate" /> <span className="text-xs text-zinc-500">({food.name})</span>
+          {macroLine(scale(food.per100, g))} <SourceTag source="estimate" />{" "}
+          <span className="text-xs text-zinc-500">
+            ({food.name}, {food.weighed} · USDA FDC {food.source.fdcId})
+          </span>
         </p>
       )}
+      {err && <Note tone="warn">{err}</Note>}
       <div className="flex gap-2">
         <button type="submit" className={BTN}>
           Save to today&apos;s log

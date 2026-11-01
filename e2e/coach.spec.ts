@@ -83,6 +83,15 @@ test("fridge → confirm → suggestions → confirmed log (no duplicates, undo)
   const inv = JSON.parse((await page.evaluate(() => localStorage.getItem("ags:nutrition:inventory")))!);
   expect(inv.map((x: { name: string }) => x.name)).toEqual(["eggs", "Greek yogurt", "spinach", "white rice"]);
 
+  // Matched items show their FDC reference; an ambiguous one asks which food it is (nothing assumed).
+  const food = page.locator('section[aria-label="Your food"]');
+  await expect(food).toContainText("Values: whole egg (raw, without shell) · weigh raw weight without shell · USDA FDC 171287");
+  await expect(food).toContainText("Is it plain lowfat Greek yogurt?");
+  await food.getByLabel("Which food is Greek yogurt?").selectOption("greek-yogurt-lowfat");
+  await expect(food).toContainText("USDA FDC 170903");
+  const chosen = JSON.parse((await page.evaluate(() => localStorage.getItem("ags:nutrition:inventory")))!);
+  expect(chosen.find((x: { name: string }) => x.name === "Greek yogurt").refKey).toBe("greek-yogurt-lowfat");
+
   // What should I eat: targets must be confirmed first, then preferences.
   await tap(page.locator('nav[aria-label="Coach sections"] button:has-text("Eat")'));
   await expect(page.locator('section[aria-label="Confirm your targets"]')).toBeVisible();
@@ -99,6 +108,9 @@ test("fridge → confirm → suggestions → confirmed log (no duplicates, undo)
   await page.locator("details summary:has-text('Left out')").click();
   await expect(page.locator("main")).toContainText("Greek yogurt: contains or may contain milk");
   await expect(first).toContainText("Estimate");
+  await first.locator("summary:has-text('Where the numbers come from')").click();
+  await expect(first).toContainText("USDA FoodData Central 171287");
+  await expect(first).toContainText("still estimates");
   await noOverflow(page);
   await shot(page, "coach-suggestions");
 

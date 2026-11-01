@@ -2,7 +2,7 @@
 // Ticking an item off only means "in my basket" — nothing is added to the inventory unless the
 // user confirms "I bought these". No prices, stock or store availability are claimed.
 
-import { allergensOf, matchFood, FOOD_BY_KEY, type Allergen } from "./foods";
+import { allergenCheck, resolveFood, FOOD_BY_KEY, type Allergen } from "./foods";
 import { toUnit, type Unit } from "./inventory";
 import type { Prefs } from "./prefs";
 import { KEYS, cleanText, newId, num, readJson, writeJson, type KV } from "./store";
@@ -68,17 +68,20 @@ export const clearChecked = (items: GroceryItem[]) => items.filter((x) => !x.che
 export function groceryWarnings(name: string, prefs: Prefs | null): string[] {
   if (!prefs) return [];
   const out: string[] = [];
-  const hits = allergensOf(name).filter((a) => prefs.allergies.includes(a as Allergen));
+  const check = allergenCheck(name);
+  const hits = [...check.known, ...check.hinted].filter((a) => prefs.allergies.includes(a as Allergen));
   if (hits.length) out.push(`May contain ${hits.join(", ")} — on your allergy list.`);
   const avoided = prefs.avoid.find((a) => name.toLowerCase().includes(a));
   if (avoided) out.push(`On your avoid list ("${avoided}").`);
-  if (prefs.allergies.length && !matchFood(name) && !hits.length) out.push("Check the package label against your allergies.");
+  // Never "safe": unknown or packaged items can only be settled by their own label.
+  if (prefs.allergies.length && !hits.length && check.uncertain) out.push("Check the package label against your allergies — ingredients and cross-contact vary by product.");
+  if (prefs.allergies.length && check.caution) out.push(check.caution);
   return out;
 }
 
 /** Simple swaps (and an optional lower-cost note), filtered by allergies and avoid list. */
 export function swapsFor(name: string, prefs: Prefs | null): { swaps: string[]; budget: string | null } {
-  const food = matchFood(name);
+  const food = resolveFood(name);
   if (!food) return { swaps: [], budget: null };
   const swaps = (food.subs ?? [])
     .map((k) => FOOD_BY_KEY.get(k))

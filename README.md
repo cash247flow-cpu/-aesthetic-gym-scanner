@@ -241,7 +241,7 @@ Behaviour you'll notice:
 
 ## Food coach
 
-Home → **Food coach**: *Scan My Fridge*, *What Should I Eat?*, *Grocery List*, *I'm Working Late*. Photo → confirm ingredients → choose a meal → confirm what you ate, or add groceries. Suggestions use your confirmed targets, today's confirmed intake, confirmed food on hand, allergies and prep time; numbers are labelled as estimates or label values. Fridge and label photos go to Gemini only after the consent tap and aren't stored. Reminders are in-app only — nothing is delivered while the app is closed. Details, rules and the remaining push-notification work: [`docs/NUTRITION_COACH.md`](docs/NUTRITION_COACH.md). Tests: `tests/nutrition.test.ts`, `e2e/coach.spec.ts`.
+Home → **Food coach**: *Scan My Fridge*, *What Should I Eat?*, *Grocery List*, *I'm Working Late*. Photo → confirm ingredients → choose a meal → confirm what you ate, or add groceries. Suggestions use your confirmed targets, today's confirmed intake, confirmed food on hand, allergies and prep time; numbers are labelled as estimates or label values. Fridge and label photos go to Gemini only after the consent tap and aren't stored. Reminders are in-app only — nothing is delivered while the app is closed. Nutrition values come from USDA FoodData Central (SR Legacy, retrieved 2026-11-01) and are still shown as estimates. Details, rules and the remaining push-notification work: [`docs/NUTRITION_COACH.md`](docs/NUTRITION_COACH.md); sources, methods and allergen limits: [`docs/NUTRITION_REFERENCE.md`](docs/NUTRITION_REFERENCE.md). Tests: `tests/nutrition.test.ts`, `tests/nutrition-reference.test.ts`, `e2e/coach.spec.ts`.
 
 ## End-to-end tests
 

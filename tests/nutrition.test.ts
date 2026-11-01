@@ -94,11 +94,11 @@ test("older inventory is labelled, never removed automatically", () => {
 test("allergies and avoid list: excluded with a reason; unknown items can't be vouched for", () => {
   const p = prefs({ allergies: ["milk", "fish"], avoid: ["mushroom"] });
   const { usable, excluded } = candidates([item("Greek yogurt"), item("salmon fillet"), item("mushrooms"), item("eggs"), item("mystery sauce")], p);
-  assert.deepEqual(usable.map((c) => c.food.key), ["eggs"]);
+  assert.deepEqual(usable.map((c) => c.food.key), ["egg"]);
   assert.match(excluded.find((x) => x.name === "Greek yogurt")!.reason, /milk/);
   assert.match(excluded.find((x) => x.name === "salmon fillet")!.reason, /fish/);
   assert.match(excluded.find((x) => x.name === "mushrooms")!.reason, /avoid list/);
-  assert.match(excluded.find((x) => x.name === "mystery sauce")!.reason, /can't be estimated or checked against your allergies/);
+  assert.match(excluded.find((x) => x.name === "mystery sauce")!.reason, /no values are assumed.*can't be checked against your allergies/);
   // Staples to buy also respect allergies.
   const r = suggestMeals({ remaining: REMAIN, prefs: prefs({ allergies: ["fish", "egg", "milk", "soy"] }), inventory: [], maxPrep: 15, hunger: 2, date: "2026-11-01" });
   assert.equal(r.status, "ok");
@@ -120,11 +120,11 @@ test("no suggestions without confirmed targets or preferences", () => {
 
 // ── Estimated vs verified ──
 test("label values are marked as such; reference values are estimates", () => {
-  const label = { kcal: 120, protein: 25, carbs: 1, fat: 1.5, fiber: 0, source: "label" as const, per: "100g" as const };
+  const label = { kcal: 120, protein: 25, carbs: 1, fat: 1.5, fiber: 0, source: "label" as const, per: "100g" as const, carbsAre: "total" as const };
   const r = suggestMeals({
     remaining: REMAIN,
     prefs: prefs(),
-    inventory: [item("chicken breast", { nutrition: label, qty: 500, unit: "g" }), item("spinach", { qty: 200, unit: "g" }), item("rice", { qty: 1, unit: "kg" })],
+    inventory: [item("chicken breast", { nutrition: label, qty: 500, unit: "g" }), item("spinach", { qty: 200, unit: "g" }), item("white rice", { qty: 1, unit: "kg" })],
     maxPrep: 30,
     hunger: 2,
     date: "2026-11-01",
@@ -132,7 +132,7 @@ test("label values are marked as such; reference values are estimates", () => {
   assert.equal(r.status, "ok");
   if (r.status !== "ok") return;
   const m = r.meals[0];
-  assert.equal(m.ingredients.find((x) => x.key === "chicken")!.source, "label");
+  assert.equal(m.ingredients.find((x) => x.key === "chicken-breast")!.source, "label");
   assert.equal(m.ingredients.find((x) => x.key === "spinach")!.source, "estimate");
   assert.equal(m.source, "mixed");
   assert.equal(r.meals.length, 2); // a second, different meal even with one protein on hand
@@ -140,13 +140,13 @@ test("label values are marked as such; reference values are estimates", () => {
 });
 
 test("amount unknown → the coach asks rather than inventing precision", () => {
-  const r = suggestMeals({ remaining: REMAIN, prefs: prefs(), inventory: [item("canned tuna")], maxPrep: 15, hunger: 2, date: "d" });
+  const r = suggestMeals({ remaining: REMAIN, prefs: prefs(), inventory: [item("canned light tuna")], maxPrep: 15, hunger: 2, date: "d" });
   assert.equal(r.status, "ok");
-  if (r.status === "ok") assert.ok(r.askAmounts.some((q) => q.startsWith("How much canned tuna do you have?")));
+  if (r.status === "ok") assert.ok(r.askAmounts.some((q) => q.startsWith("How much canned light tuna do you have?")));
 });
 
 test("over today's target: modest, protein-forward, no compensation", () => {
-  const r = suggestMeals({ remaining: { kcal: -200, protein: 20, carbs: -30, fat: -10 }, prefs: prefs(), inventory: [item("eggs"), item("chicken breast"), item("rice"), item("spinach")], maxPrep: 30, hunger: 2, date: "d" });
+  const r = suggestMeals({ remaining: { kcal: -200, protein: 20, carbs: -30, fat: -10 }, prefs: prefs(), inventory: [item("eggs"), item("chicken breast"), item("white rice"), item("spinach")], maxPrep: 30, hunger: 2, date: "d" });
   assert.equal(r.status, "ok");
   if (r.status !== "ok") return;
   assert.equal(r.over, true);
@@ -155,7 +155,7 @@ test("over today's target: modest, protein-forward, no compensation", () => {
     assert.ok(m.why.join(" ").includes("No need to cut tomorrow's food"));
     assert.doesNotMatch(m.why.join(" ") + m.steps.join(" "), /burn|earn|punish|cheat|skip/i);
   }
-  assert.equal(r.meals[0].ingredients[0].key, "chicken"); // leaner protein first when over
+  assert.equal(r.meals[0].ingredients[0].key, "chicken-breast"); // leaner protein first when over
 });
 
 // ── Meal-log confirmation and duplicates ──
@@ -203,7 +203,8 @@ test("grocery list: merges, toggles, persists, warns and offers allergy-safe swa
   assert.ok(groceryWarnings("cheddar cheese", p)[0].includes("milk"));
   assert.ok(groceryWarnings("Brand X granola", p)[0].includes("Check the package label"));
   const sw = swapsFor("chicken breast", p);
-  assert.deepEqual(sw.swaps, ["turkey breast (cooked)"]); // tofu (soy) left out
+  assert.deepEqual(sw.swaps, ["chicken thigh, meat only (roasted)", "turkey breast, meat only (roasted)"]);
+  assert.deepEqual(swapsFor("eggs", p).swaps, ["egg white (raw)"]); // tofu (soy) left out
   assert.ok(sw.budget);
 });
 
@@ -239,5 +240,6 @@ test("coach storage never touches other records; malformed data reads as empty w
   assert.equal(kv.data["ags:workouts"], "[{\"id\":1}]");
   assert.equal(kv.data["ags:meals"], "{}");
   assert.ok(Object.values(KEYS).every((k) => k.startsWith("ags:nutrition:"))); // covered by backup/erase
-  assert.equal(matchFood("peanut butter")?.key, "peanut butter");
+  const pb = matchFood("peanut butter");
+  assert.equal(pb.status === "match" && pb.food.key, "peanut-butter");
 });

@@ -1,9 +1,10 @@
 // "What should I eat now?" — two practical meals from confirmed food, built deterministically:
-// portions come from the remaining targets and the reference values (or the user's own label
-// values). AI is not involved here. Every number is an estimate unless it comes from a label
-// the user confirmed, and the result says which.
+// portions come from the remaining targets and the FDC-sourced reference values (or the user's own
+// label values). AI is not involved here. All results are estimates — even sourced values describe a
+// reference food, not the user's exact brand, cut, cooking or portion — and say where they came from.
 
-import { FOODS, add, allergensOf, matchFood, scale, ZERO, type Allergen, type Per100, type RefFood, type Role } from "./foods";
+import { FOODS, add, allergenCheck, labelToPer100, matchFood, resolveFood, scale, ZERO, type Allergen, type NetCarbsBasis, type Per100, type RefFood, type Role } from "./foods";
+import { REF_VERSION } from "./log";
 import { gramsAvailable, type InventoryItem } from "./inventory";
 import type { Prefs } from "./prefs";
 import type { Remaining, Source } from "./log";
@@ -16,8 +17,13 @@ export type Ingredient = {
   grams: number;
   display: string; // "2 eggs (≈100 g)" or "150 g"
   role: Role;
+  per100: Per100; // the values used (net carbs)
   totals: Per100;
   source: Source;
+  fdcId: number;
+  weighed: string; // "cooked weight", "drained weight", …
+  netCarbsBasis: NetCarbsBasis;
+  refVersion: string;
   have: "yes" | "missing";
   amountUnknown: boolean; // in the inventory, but the user didn't say how much
   short: boolean; // in the inventory, but less than the portion
@@ -42,14 +48,17 @@ export type SuggestResult =
   | { status: "needs-targets" }
   | { status: "needs-prefs" };
 
-type Candidate = { food: RefFood; item: InventoryItem | null; per100: Per100; source: Source };
+type Candidate = { food: RefFood; item: InventoryItem | null; per100: Per100; source: Source; netCarbsBasis: NetCarbsBasis };
 
 const round5 = (g: number) => Math.max(5, Math.round(g / 5) * 5);
 
 function blockedBy(name: string, food: RefFood | null, prefs: Prefs): string | null {
-  const allergens = new Set<Allergen>([...(food?.allergens ?? []), ...allergensOf(name)]);
+  const check = allergenCheck(name, food);
+  const allergens = new Set<Allergen>([...check.known, ...check.hinted]);
   const hit = prefs.allergies.find((a) => allergens.has(a));
   if (hit) return `contains or may contain ${hit} (your allergy list)`;
+  // Cross-contact the reference food is known for (e.g. oats processed with wheat).
+  if (check.caution && prefs.allergies.includes("wheat/gluten") && /wheat|gluten/.test(check.caution)) return `may contain wheat/gluten through processing — ${check.caution}`;
   const text = `${name} ${food?.name ?? ""}`.toLowerCase();
   const avoided = prefs.avoid.find((a) => a && text.includes(a));
   if (avoided) return `on your avoid list ("${avoided}")`;
@@ -61,22 +70,28 @@ export function candidates(inventory: InventoryItem[], prefs: Prefs) {
   const usable: Candidate[] = [];
   const excluded: Excluded[] = [];
   for (const item of inventory) {
-    const food = matchFood(item.name);
+    const food = resolveFood(item.name, item.refKey);
     const blocked = blockedBy(item.name, food, prefs);
     if (blocked) {
       excluded.push({ name: item.name, reason: blocked });
       continue;
     }
     if (!food) {
+      const m = matchFood(item.name);
+      const allergyNote = prefs.allergies.length ? " Until then it can't be checked against your allergies." : "";
       excluded.push({
         name: item.name,
-        reason: prefs.allergies.length
-          ? "not in the reference list, so it can't be estimated or checked against your allergies"
-          : "not in the reference list, so it can't be estimated",
+        reason:
+          m.status === "confirm"
+            ? `needs a choice: ${m.question} Pick it under Fridge.${allergyNote}`
+            : `not in the reference list, so no values are assumed. Choose a reference food under Fridge or use the label.${allergyNote}`,
       });
       continue;
     }
-    usable.push({ food, item, per100: item.nutrition ?? food.per100, source: item.nutrition ? "label" : "estimate" });
+    if (item.nutrition) {
+      const l = labelToPer100(item.nutrition);
+      usable.push({ food, item, per100: l.per100, source: "label", netCarbsBasis: l.basis });
+    } else usable.push({ food, item, per100: food.per100, source: "estimate", netCarbsBasis: food.netCarbsBasis });
   }
   return { usable, excluded };
 }
@@ -86,7 +101,7 @@ function staple(role: Role, prefs: Prefs, maxPrep: number, skip: Set<string>): C
   const ok = FOODS.filter((f) => f.role === role && !skip.has(f.key) && !blockedBy(f.name, f, prefs));
   const quick = ok.filter((f) => f.prepMin <= maxPrep);
   const pick = (quick.length ? quick : ok).sort((a, b) => a.prepMin - b.prepMin)[0];
-  return pick ? { food: pick, item: null, per100: pick.per100, source: "estimate" } : null;
+  return pick ? { food: pick, item: null, per100: pick.per100, source: "estimate", netCarbsBasis: pick.netCarbsBasis } : null;
 }
 
 function pickRole(pool: Candidate[], role: Role | Role[], maxPrep: number, skip: Set<string>, lean = false): Candidate | null {
@@ -107,7 +122,10 @@ function portion(c: Candidate, gramsWanted: number): Ingredient {
     grams = n * unit.grams;
     display = `${n} ${unit.name}${n > 1 && !unit.name.includes("(") ? "s" : ""} (≈${grams} g)`;
   }
-  const available = c.item ? gramsAvailable(c.item, unit?.grams) : null;
+  // An amount on hand is usually raw weight; cooked reference values are per cooked gram, so the
+  // two aren't compared (no conversion is assumed).
+  const cookedBasis = /^cooked/.test(c.food.weighed);
+  const available = c.item && !cookedBasis ? gramsAvailable(c.item, unit?.grams) : null;
   const short = available !== null && available < grams;
   if (short) {
     grams = Math.max(5, Math.floor(available! / 5) * 5);
@@ -117,10 +135,15 @@ function portion(c: Candidate, gramsWanted: number): Ingredient {
     key: c.food.key,
     name: c.item?.name ?? c.food.name,
     grams,
-    display,
+    display: `${display} · ${c.food.weighed}`,
     role: c.food.role,
+    per100: c.per100,
     totals: scale(c.per100, grams),
     source: c.source,
+    fdcId: c.food.source.fdcId,
+    weighed: c.food.weighed,
+    netCarbsBasis: c.netCarbsBasis,
+    refVersion: REF_VERSION,
     have: c.item ? "yes" : "missing",
     amountUnknown: !!c.item && (c.item.qty === null || available === null),
     short,
@@ -163,8 +186,7 @@ function build(
     const grams = Math.floor((ing.grams - extra / perGram) / 5) * 5;
     if (grams < 15) ings.splice(i, 1);
     else {
-      const per100 = { kcal: (ing.totals.kcal / ing.grams) * 100, protein: (ing.totals.protein / ing.grams) * 100, carbs: (ing.totals.carbs / ing.grams) * 100, fat: (ing.totals.fat / ing.grams) * 100, fiber: (ing.totals.fiber / ing.grams) * 100 };
-      ings[i] = { ...ing, grams, display: `${grams} g`, totals: scale(per100, grams) };
+      ings[i] = { ...ing, grams, display: `${grams} g · ${ing.weighed}`, totals: scale(ing.per100, grams) };
     }
   }
 
@@ -189,6 +211,8 @@ function build(
     why.push(`Tradeoff: ≈${Math.round(totals.fat)} g fat is over the ${Math.max(remaining.fat, 0)} g left. A smaller portion of ${fattiest.name} keeps it closer.`);
   }
   if (hunger === 3 && ings.some((x) => x.role === "veg")) why.push("A bigger portion of vegetables adds volume for how hungry you are.");
+  const noFiber = ings.filter((x) => x.netCarbsBasis === "fiber-not-reported-total-used").map((x) => x.name);
+  if (noFiber.length) why.push(`Net carbs for ${noFiber.join(", ")} use total carbohydrate because the source reports no fiber value (an upper bound).`);
   const missing = ings.filter((x) => x.have === "missing").map((x) => x.name);
   // Same day + same foods = the same meal, even if portions shift after something else is logged.
   const key = `sugg:${date}:${ings.map((x) => x.key).sort().join("+")}`;
@@ -253,7 +277,17 @@ export function suggestMeals(input: {
   }
 
   const askAmounts = [
-    ...new Set(meals.flatMap((m) => m.ingredients.filter((x) => x.amountUnknown).map((x) => `How much ${x.name} do you have? The portion assumes at least ${x.grams} g.`))),
+    ...new Set(
+      meals.flatMap((m) =>
+        m.ingredients
+          .filter((x) => x.amountUnknown)
+          .map((x) =>
+            /^cooked/.test(x.weighed)
+              ? `${x.name}: the portion is ${x.grams} g cooked weight. Raw weight is more, so check you have enough.`
+              : `How much ${x.name} do you have? The portion assumes at least ${x.grams} g.`,
+          ),
+      ),
+    ),
   ];
   let tradeoff: string | null = null;
   if (meals.length === 2) {

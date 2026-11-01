@@ -2,12 +2,24 @@
 // an entry is only written when the user confirms the foods and grams. Re-confirming the same
 // suggestion on the same day is refused (duplicate), and every entry can be edited or undone.
 
-import { add, ZERO, type Per100 } from "./foods";
+import { add, ZERO, type NetCarbsBasis, type Per100 } from "./foods";
 import { KEYS, cleanText, localDate, newId, num, readJson, writeJson, type KV } from "./store";
 
 export type Source = "estimate" | "label" | "cronometer";
 
-export type LoggedFood = { name: string; grams: number; totals: Per100; source: Source };
+/** Which reference data computed an entry. Entries without it predate the FDC-sourced reference (2026-11-01). */
+export const REF_VERSION = "fdc-sr-legacy@2026-11-01";
+
+export type LoggedFood = {
+  name: string;
+  grams: number;
+  totals: Per100; // carbs are NET carbs; fiber null = not reported by the source
+  source: Source;
+  fdcId?: number; // reference food used, if any
+  weighed?: string; // e.g. "cooked weight"
+  netCarbsBasis?: NetCarbsBasis;
+  refVersion?: string;
+};
 export type LogEntry = {
   id: string;
   date: string; // local YYYY-MM-DD
@@ -26,8 +38,10 @@ const per = (v: unknown): Per100 | null => {
   const protein = num(r.protein, 0, 1000);
   const carbs = num(r.carbs, 0, 1000);
   const fat = num(r.fat, 0, 1000);
-  const fiber = num(r.fiber ?? 0, 0, 1000);
-  return kcal === null || protein === null || carbs === null || fat === null || fiber === null ? null : { kcal, protein, carbs, fat, fiber };
+  // Missing fiber stays missing (null); it isn't turned into 0.
+  const fiber = r.fiber === null || r.fiber === undefined ? null : num(r.fiber, 0, 1000);
+  if (r.fiber != null && fiber === null) return null;
+  return kcal === null || protein === null || carbs === null || fat === null ? null : { kcal, protein, carbs, fat, fiber };
 };
 
 const SOURCES: Source[] = ["estimate", "label", "cronometer"];
@@ -43,7 +57,13 @@ function parseEntry(v: unknown): LogEntry | null {
           const totals = per(x?.totals);
           const grams = num(x?.grams, 0, 5000);
           const name = cleanText(x?.name, 60);
-          return totals && grams !== null && name ? { name, grams, totals, source: SOURCES.includes(x.source as Source) ? (x.source as Source) : "estimate" } : null;
+          if (!totals || grams === null || !name) return null;
+          const food: LoggedFood = { name, grams, totals, source: SOURCES.includes(x.source as Source) ? (x.source as Source) : "estimate" };
+          if (typeof x.fdcId === "number" && Number.isInteger(x.fdcId)) food.fdcId = x.fdcId;
+          if (typeof x.weighed === "string") food.weighed = cleanText(x.weighed, 40);
+          if (x.netCarbsBasis === "carbs-minus-fiber" || x.netCarbsBasis === "fiber-not-reported-total-used") food.netCarbsBasis = x.netCarbsBasis;
+          if (typeof x.refVersion === "string") food.refVersion = cleanText(x.refVersion, 40);
+          return food;
         })
         .filter((x): x is LoggedFood => !!x)
     : [];
@@ -129,27 +149,33 @@ export function todayIntake(opts: {
   const c = opts.cronometerToday;
   if (c && c.kcal !== null) {
     return {
-      totals: { kcal: c.kcal, protein: c.protein ?? 0, carbs: c.netCarbs ?? c.carbs ?? 0, fat: c.fat ?? 0, fiber: 0 },
+      totals: { kcal: c.kcal, protein: c.protein ?? 0, carbs: c.netCarbs ?? c.carbs ?? 0, fat: c.fat ?? 0, fiber: null },
       basis: "cronometer",
       entries,
       uncounted: [],
-      note: entries.length ? "Using today's Cronometer import. Meals confirmed here aren't added on top, so nothing is counted twice." : "Using today's Cronometer import.",
+      note: [
+        entries.length ? "Using today's Cronometer import. Meals confirmed here aren't added on top, so nothing is counted twice." : "Using today's Cronometer import.",
+        c.netCarbs === null && c.carbs !== null ? "The import had no net-carb column, so total carbs are used (an upper bound)." : "",
+        c.protein === null || c.fat === null ? "Some macros were missing from the import and are counted as 0." : "",
+      ].filter(Boolean).join(" "),
     };
   }
   let totals = entries.reduce((t, e) => add(t, e.totals), ZERO);
   const uncounted: string[] = [];
+  const partial: string[] = [];
   for (const m of opts.planMealsEaten) {
     const n = m.nutrition;
-    if (n && n.kcal !== null) totals = add(totals, { kcal: n.kcal, protein: n.protein ?? 0, carbs: n.netCarbs ?? 0, fat: n.fat ?? 0, fiber: n.fiber ?? 0 });
-    else uncounted.push(m.title);
+    if (n && n.kcal !== null) {
+      // Missing macros on an imported recipe are counted as 0 and named below — not hidden.
+      if (n.protein === null || n.netCarbs === null || n.fat === null) partial.push(m.title);
+      totals = add(totals, { kcal: n.kcal, protein: n.protein ?? 0, carbs: n.netCarbs ?? 0, fat: n.fat ?? 0, fiber: n.fiber });
+    } else uncounted.push(m.title);
   }
-  return {
-    totals,
-    basis: "log",
-    entries,
-    uncounted,
-    note: uncounted.length ? `Ticked as eaten but without nutrition values, so not counted: ${uncounted.join(", ")}. Log them here or add their Cronometer recipe in the Meal plan.` : null,
-  };
+  const notes = [
+    uncounted.length ? `Ticked as eaten but without nutrition values, so not counted: ${uncounted.join(", ")}. Log them here or add their Cronometer recipe in the Meal plan.` : "",
+    partial.length ? `Some macros were missing for ${partial.join(", ")} and are counted as 0.` : "",
+  ].filter(Boolean);
+  return { totals, basis: "log", entries, uncounted, note: notes.length ? notes.join(" ") : null };
 }
 
 export type Remaining = { kcal: number; protein: number; carbs: number; fat: number };

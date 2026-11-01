@@ -3,7 +3,7 @@
 // read, every value is type- and range-checked, and anything else is ignored. Nothing here is
 // saved — the user reviews and confirms first.
 
-import { allergensOf, type Allergen } from "./foods";
+import { allergensOf, netCarbs, type Allergen } from "./foods";
 import { toUnit, type Draft } from "./inventory";
 import { cleanText, num } from "./store";
 import type { Remaining } from "./log";
@@ -80,7 +80,9 @@ export type LabelCompare = { lines: string[]; warnings: string[] };
 export function compareLabel(l: LabelReading, remaining: Remaining | null, allergies: Allergen[]): LabelCompare {
   const lines: string[] = [];
   const warnings: string[] = [];
-  const net = l.carbs !== null ? Math.max(0, l.carbs - (l.fiber ?? 0)) : null;
+  // Label carbs are TOTAL carbohydrate; fiber is subtracted once. No fiber on the label → no
+  // assumption of zero: total carbs are shown as an upper bound.
+  const net = l.carbs !== null ? netCarbs({ carbs: l.carbs, fiber: l.fiber }) : null;
   if (!l.addsUp) warnings.push("These numbers don't add up (calories vs. protein, carbs and fat). Check them against the package before relying on them.");
   if (l.kcal !== null && l.protein !== null && l.kcal > 0) lines.push(`${Math.round((l.protein / l.kcal) * 100)} g protein per 100 kcal (per serving: ${l.protein} g protein, ${l.kcal} kcal).`);
   if (remaining && l.kcal !== null) {
@@ -90,9 +92,14 @@ export function compareLabel(l: LabelReading, remaining: Remaining | null, aller
         : "You're at today's calorie target — this would go over it. Your call; tomorrow still starts from your normal targets.",
     );
     if (l.protein !== null && remaining.protein > 0) lines.push(`Protein: ${l.protein} g of the ${remaining.protein} g you have left.`);
-    if (net !== null) lines.push(`Net carbs: ≈${Math.round(net)} g (${l.carbs} g carbs − ${l.fiber ?? 0} g fiber) of the ${Math.max(remaining.carbs, 0)} g left.`);
+    if (net && net.value !== null)
+      lines.push(
+        net.basis === "carbs-minus-fiber"
+          ? `Net carbs: ≈${Math.round(net.value)} g (${l.carbs} g carbs − ${l.fiber} g fiber) of the ${Math.max(remaining.carbs, 0)} g left.`
+          : `Net carbs: up to ${Math.round(net.value)} g — no fiber value was read, so total carbs are shown — of the ${Math.max(remaining.carbs, 0)} g left.`,
+      );
   }
-  const named = allergensOf(l.allergenText).filter((a) => allergies.includes(a));
+  const named = allergensOf(l.allergenText, null).filter((a) => allergies.includes(a));
   if (named.length) warnings.push(`The label's allergen statement mentions ${named.join(", ")} — on your allergy list.`);
   else if (allergies.length)
     warnings.push(

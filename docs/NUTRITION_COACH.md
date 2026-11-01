@@ -10,7 +10,7 @@ Main flow: photo → confirm ingredients → choose a meal → confirm what was 
 | Targets | Meal plan targets (`ags:meals:targets`, plan defaults otherwise) | Used only once **confirmed**: the user edited targets in the Meal plan, or tapped "Use these targets" (`ags:nutrition:targets-ok`). A body-fat goal is never used to set calories. |
 | Today's intake | `ags:nutrition:log` (confirmed meals) + plan meals ticked eaten that carry Cronometer recipe values | If today's Cronometer daily totals were imported, those are used **alone**, so nothing is counted twice. Ticked plan meals without values are listed as "not counted". |
 | Food on hand | `ags:nutrition:inventory` | Only rows the user confirmed. Older than 7 days → "still have it?". Never auto-depleted, bought or eaten. |
-| Allergies / foods avoided / prep time / budget swaps | `ags:nutrition:prefs` | Asked before the first suggestion. Allergies are a fixed list (milk, egg, fish, shellfish, tree nuts, peanuts, wheat/gluten, soy, sesame). |
+| Allergies / foods avoided / prep time / budget swaps | `ags:nutrition:prefs` | Asked before the first suggestion. Allergies are a fixed list based on FDA's nine major food allergens (see NUTRITION_REFERENCE.md for what each covers and the limits). |
 | Grocery list | `ags:nutrition:grocery` | Ticking an item = "in my basket". Moving it to food at home needs an explicit "Yes, add to my food". |
 | Reminders | `ags:nutrition:reminders`, `…:dismissed` | Opt-in; see below. |
 | Stopping time | `ags:nutrition:stop` | Today's date + time only. |
@@ -25,10 +25,13 @@ All keys are `ags:` keys, so the existing backup, restore and "Delete everything
 
 ## Nutrition numbers
 
-- Reference values (`lib/nutrition/foods.ts`) are rounded typical values per 100 g for the stated form (e.g. "cooked"), shown as **Estimate**. Carbs are net carbs, matching the app's targets.
-- Values the user entered from a label show **From your label**; a meal mixing label values and estimates is **Partly estimated**. Today's summary says when it is using a Cronometer import.
-- If an amount on hand is unknown, the coach asks ("How much canned tuna do you have? The portion assumes at least 120 g.") instead of inventing precision.
-- Foods not in the reference list are never estimated; with allergies set, they're also flagged as "can't be checked against your allergies". The coach never calls a product safe.
+- Reference values come from USDA FoodData Central (SR Legacy), retrieved 2026-11-01 and stored with their FDC IDs, descriptions, units and portion weights. Sources, calculation methods, the full table, allergen basis and limits are in [`NUTRITION_REFERENCE.md`](NUTRITION_REFERENCE.md). (Before 2026-11-01 these values were written from memory and were not sourced; that table and what changed are listed there too.)
+- Values are per 100 g of the food in the state FDC describes; each ingredient says how to weigh it (e.g. "cooked weight"). Raw and cooked weights are never converted.
+- Everything stays labelled **Estimate**: a sourced reference still isn't your brand, cut, cooking or portion. Values entered from a label show **From your label**; a meal mixing both is **Partly estimated**. Today's summary says when it is using a Cronometer import.
+- Net carbs = total carbohydrate − fiber, once. Missing fiber is not treated as zero (total carbs are used as an upper bound and flagged).
+- Only exact names match a reference food. Broad names ("rice", "salmon", "nuts", "oil") ask which one; anything else is unknown and is left out until you choose a reference food or use the label. No food is silently substituted for another.
+- If an amount on hand is unknown, the coach asks instead of inventing precision. Cooked-weight portions are not compared with a raw amount on hand.
+- The coach never calls a product safe; unknown and packaged foods point to the package label.
 
 ## Coaching rules (enforced in code and tests)
 
