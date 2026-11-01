@@ -202,3 +202,27 @@ An optional lock, off by default, for **Visual evolution**, **Body tracker** and
 - **Scope:** the lock is per phone, so `ags:lock` is never in backups. While it's on, the Progress tab doesn't show the last weigh-in.
 - **Limits:** it's a privacy screen, not encryption. Data on the phone isn't encrypted by it. The Weekly Review still shows weekly body averages.
 - **Tests:** `tests/appLock.test.ts`.
+
+## Automated checks (Stage 2e)
+
+`.github/workflows/ci.yml` runs on every push and pull request using free GitHub Actions minutes, with no secrets:
+
+- **checks:** type-check, lint, unit tests, production build, and a check that nothing secret-looking reaches the browser bundle.
+- **dependencies:** `npm audit` blocks on high or critical advisories in shipped packages. Development tooling is only reported; critical advisories still block.
+- **secrets:** gitleaks 8.30.1 scans the full history. `.gitleaks.toml` allowlists only obviously synthetic test values.
+
+Third-party actions are pinned to exact commits. `.github/dependabot.yml` opens weekly update PRs for npm and Actions; nothing merges automatically.
+
+## Login limits, AI caps and per-device sign-out (Stage 2f)
+
+These use a small Upstash Redis store (`lib/kv.ts`, `lib/guard.ts`). Add it with Vercel's **Upstash for Redis** integration, which provides `KV_REST_API_URL` and `KV_REST_API_TOKEN`; the free tier is enough.
+
+- **Login rate limit:** 5 failed passcodes per network address per 15 minutes, and 50 overall. After that, even the right passcode gets "Try again in N minutes" (HTTP 429). Addresses are stored only as keyed hashes.
+- **AI daily caps:** photo reads per signed-in device (default 30) and in total (default 100) per UTC day. Set them with `AI_DAILY_LIMIT_PER_SESSION` and `AI_DAILY_LIMIT_TOTAL`.
+- **Per-device sign-out:**
+  - More → Data on this phone → **Signed-in devices** lists each sign-in: browser and phone type, first and last used, never the IP.
+  - You can sign out one device, or all others. The signed-out device is refused on its next request and shown why.
+  - Signing out also invalidates this phone's session on the server.
+  - Sessions from before this feature are adopted, not signed out.
+- **Fail-open by design:** if the store isn't set up or doesn't answer within 1.5 s, these three checks step aside. The app keeps working behind Vercel login and signed sessions; an outage never locks you out.
+- **Tests:** `tests/guard.test.ts`, including the real REST client against a fake server.

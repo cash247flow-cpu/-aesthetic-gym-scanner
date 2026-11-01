@@ -61,7 +61,8 @@ test("erase: sign-out is optional, and a blocked photo store is reported (not hi
 });
 
 test("logout route clears the passcode cookie", async () => {
-  const res = await logout();
+  const { NextRequest } = await import("next/server");
+  const res = await logout(new NextRequest("https://app.example/api/logout", { method: "POST" }));
   assert.equal(res.status, 200);
   const c = res.headers.get("set-cookie") ?? "";
   assert.match(c, /__Host-ags_session=;/);

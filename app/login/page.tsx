@@ -12,6 +12,7 @@ export default function Login() {
     const q = new URLSearchParams(window.location.search);
     if (q.has("expired")) setNotice("You were signed out because your session ended (30 days without use, or 90 days since signing in). Enter the passcode to continue — your data is still on this phone.");
     else if (q.has("signedout")) setNotice("Signed out. Your data is still on this phone.");
+    else if (q.has("revoked")) setNotice("This device was signed out from another device. Enter the passcode to continue — your data is still on this phone.");
   }, []);
 
   async function submit(e: React.FormEvent) {

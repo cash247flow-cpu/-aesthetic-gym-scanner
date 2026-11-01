@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { NOT_CONFIGURED, authMode, sessionSecret } from "@/lib/passcode";
 import { LEGACY_COOKIE, SESSION_COOKIE, cookieMaxAge, cookieOptions, nowSeconds, signSession, verifySession } from "@/lib/session";
 import { buildCsp, newNonce } from "@/lib/csp";
+import { kvFromEnv } from "@/lib/kv";
+import { checkSession } from "@/lib/guard";
 
 // Pages that must work before signing in.
 const PUBLIC = new Set(["/login", "/api/login"]);
@@ -39,7 +41,9 @@ export async function middleware(req: NextRequest) {
 
   const now = nowSeconds();
   const v = await verifySession(req.cookies.get(SESSION_COOKIE)?.value, sessionSecret()!, now);
-  if (v.ok) {
+  // A device signed out from another device (per-device sign-out) is refused here.
+  const revoked = v.ok && (await checkSession(kvFromEnv(), v.session.sid, req.headers.get("user-agent"), !!v.renewed)) === "revoked";
+  if (v.ok && !revoked) {
     const res = dropLegacy(req, pass(req, dev));
     // Using the app renews the 30-day idle limit (at most once a day, never past 90 days).
     if (v.renewed) res.cookies.set(SESSION_COOKIE, await signSession(v.renewed, sessionSecret()!), cookieOptions(cookieMaxAge(v.renewed, now)));
@@ -51,7 +55,7 @@ export async function middleware(req: NextRequest) {
     : (() => {
         const login = req.nextUrl.clone();
         login.pathname = "/login";
-        login.search = v.reason === "expired" ? "?expired=1" : "";
+        login.search = revoked ? "?revoked=1" : !v.ok && v.reason === "expired" ? "?expired=1" : "";
         return NextResponse.redirect(login);
       })();
   if (req.cookies.has(SESSION_COOKIE)) res.cookies.set(SESSION_COOKIE, "", cookieOptions(0));

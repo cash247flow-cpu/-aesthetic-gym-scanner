@@ -2,6 +2,18 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { CONSENT_HEADER, isFailure, newRequestId, readImageUpload, runVision, safeLog, type Generate } from "@/lib/aiSafety";
+import { SESSION_COOKIE, nowSeconds, verifySession } from "@/lib/session";
+import { sessionSecret } from "@/lib/passcode";
+import { kvFromEnv } from "@/lib/kv";
+import { takeAiCall } from "@/lib/guard";
+
+/** This request's session id (for the per-session daily cap), or "anon" in local open dev. */
+async function sessionId(req: Request) {
+  const secret = sessionSecret();
+  const raw = req.headers.get("cookie")?.split(/;\s*/).find((c) => c.startsWith(`${SESSION_COOKIE}=`))?.slice(SESSION_COOKIE.length + 1);
+  const v = secret ? await verifySession(raw, secret, nowSeconds()) : null;
+  return v?.ok ? v.session.sid : "anon";
+}
 
 // Shared by the photo-reading routes. Server-only, so GEMINI_API_KEY never reaches the browser.
 // See lib/aiSafety.ts for upload checks and what is (and isn't) logged.
@@ -44,6 +56,11 @@ export async function visionRoute(
     return reply(requestId, { error: upload.message, requestId }, upload.status);
   }
 
+  const cap = await takeAiCall(kvFromEnv(), await sessionId(req));
+  if (!cap.ok) {
+    safeLog("warn", { tag: opts.tag, requestId, category: cap.reason === "session" ? "daily_cap_session" : "daily_cap_total" });
+    return reply(requestId, { error: "Today's photo-reading limit is used up. It resets at midnight UTC — type the numbers in instead.", requestId }, 429);
+  }
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === "your_key_here") {
     safeLog("error", { tag: opts.tag, requestId, category: "not_configured" });
