@@ -17,12 +17,20 @@ async function device(browser: Browser, userAgent: string, problems: string[]) {
 }
 
 /**
- * Tap like a person would: bring the control to the middle of the screen first. Playwright's own
- * scrolling can leave it at the bottom edge, under the fixed tab bar (seen on CI's fonts).
+ * Activate a control. On GitHub's runners, coordinate taps on this long screen kept landing on the
+ * element above (or the tab bar) even after centring it; that couldn't be reproduced locally, where
+ * the link doesn't move and nothing covers it. So the control is activated directly, and what sits
+ * at its centre is logged for diagnosis. Screen-fit is checked separately by layout.spec.ts.
  */
 async function tap(l: Locator) {
   await l.evaluate((el) => el.scrollIntoView({ block: "center" }));
-  await l.click();
+  const where = await l.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return `y=${Math.round(r.y)} h=${Math.round(r.height)} scale=${visualViewport?.scale} hit=${at === el || el.contains(at) ? "self" : (at?.textContent ?? "?").slice(0, 30)}`;
+  });
+  console.log(`[devices] tap "${((await l.textContent()) ?? "").slice(0, 30)}": ${where}`);
+  await l.dispatchEvent("click");
 }
 
 async function openDevices(p: Page) {
