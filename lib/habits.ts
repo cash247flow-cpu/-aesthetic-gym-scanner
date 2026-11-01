@@ -47,10 +47,12 @@ export const HABITS: Habit[] = [
     unitLabel: "Meal",
   },
   {
+    // The id stays "cortisol": it is the key for saved ticks, streaks and backups (renamed from
+    // "Cortisol Cut" — the app makes no hormone claims). Done = the walk; the barefoot pause is optional.
     id: "cortisol",
     emoji: "🌙",
-    title: "Cortisol Cut",
-    what: "A 10–15 min walk outside after dinner — barefoot on grass.",
+    title: "Sunset Reset",
+    what: "Take a 10–15 minute walk outside after dinner. If conditions are safe and comfortable, finish with a brief barefoot pause on the grass.",
     kind: "check",
     action: "Walked after dinner",
   },

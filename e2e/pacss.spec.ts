@@ -194,3 +194,28 @@ test("data statement lists every destination; certificates say they're self-reco
     await expect(page.locator("text=Some content is tight")).toHaveCount(0);
   }
 });
+
+test("Habit #4 shows as Sunset Reset; existing ticks and streak carry over", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.clear();
+    const d = (n: number) => { const x = new Date(); x.setDate(x.getDate() - n); return x.toLocaleDateString("en-CA"); };
+    // History saved under the habit's unchanged id, before the rename.
+    localStorage.setItem("ags:habits", JSON.stringify({ [d(3)]: { cortisol: true }, [d(2)]: { cortisol: true }, [d(1)]: { cortisol: true } }));
+  });
+  await openApp(page);
+  await page.locator("nav[aria-label=Main] >> text=More").dispatchEvent("click");
+  await expect(page.locator('button:has-text("Daily habits")')).toContainText("Sunset Reset");
+  await expect(page.locator("main")).not.toContainText(/cortisol/i);
+  await page.locator('button:has-text("Daily habits")').first().click();
+  const card = page.locator("li, section, div").filter({ has: page.locator("text=Sunset Reset") }).filter({ hasText: "Walked after dinner" }).last();
+  await expect(card).toContainText("Take a 10–15 minute walk outside after dinner. If conditions are safe and comfortable, finish with a brief barefoot pause on the grass.");
+  await expect(card).toContainText("3"); // the streak from saved history
+  await expect(page.locator("main")).not.toContainText(/cortisol/i);
+  await card.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: test.info().outputPath("sunset-reset.png"), fullPage: true });
+  // Ticking the walk alone completes it today.
+  await card.locator('button:has-text("Walked after dinner")').click();
+  const today = await page.evaluate(() => JSON.parse(localStorage.getItem("ags:habits")!)[new Date().toLocaleDateString("en-CA")]);
+  expect(today).toEqual({ cortisol: true });
+});

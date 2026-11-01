@@ -433,3 +433,18 @@ test("safety: pain hold at and past the old 14-day boundary — still held witho
     assert.equal(painHold({ events: [{ type: "reported", at }, { type: "resumed", at: at + DAY }] }, null).held, false, `resumed after ${days} days`);
   }
 });
+
+test("Sunset Reset: renamed copy, same id and history; the walk alone completes it", async () => {
+  const { HABITS, isDone, streak: habitStreak } = await import("@/lib/habits");
+  const h = HABITS.find((x) => x.id === "cortisol")!;
+  assert.equal(HABITS.indexOf(h), 3, "still habit #4");
+  assert.equal(h.title, "Sunset Reset");
+  assert.equal(h.what, "Take a 10–15 minute walk outside after dinner. If conditions are safe and comfortable, finish with a brief barefoot pause on the grass.");
+  assert.ok(!/cortisol/i.test(`${h.title} ${h.what}`), "no cortisol claim in user-facing copy");
+  assert.equal(h.kind, "check");
+  // Saved ticks under the old id still count, and completion needs only that tick.
+  const logs = { "2026-10-30": { cortisol: true }, "2026-10-31": { cortisol: true }, "2026-11-01": { cortisol: true } };
+  assert.equal(isDone(logs["2026-11-01"], h), true);
+  assert.equal(habitStreak(logs, h, "2026-11-01"), 3);
+  assert.equal(isDone({}, h), false);
+});
