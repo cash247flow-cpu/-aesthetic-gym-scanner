@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 // Callers await requestAiConsent(kind); only a "Send" tap resolves true. The fetch must then
 // carry AI_CONSENT_HEADERS — the server refuses photo uploads without it.
 
-export type AiPhotoKind = "gym" | "scale" | "report" | "cardio" | "ingredients";
+export type AiPhotoKind = "gym" | "scale" | "report" | "cardio" | "ingredients" | "pantry" | "foodlabel";
 export const AI_CONSENT_HEADERS = { "x-ai-consent": "granted" } as const;
 
 const WHAT: Record<AiPhotoKind, { noun: string; returns: string; tip: string }> = {
@@ -22,6 +22,16 @@ const WHAT: Record<AiPhotoKind, { noun: string; returns: string; tip: string }> 
     noun: "ingredient screenshot",
     returns: "the ingredient lines, as a draft for you to check",
     tip: "Crop to the ingredient list — screenshots can show your name, email or other personal details.",
+  },
+  pantry: {
+    noun: "fridge or pantry photo",
+    returns: "a draft list of foods it can see, for you to check",
+    tip: "Frame the food only — keep people, mail and anything with your name or address out of the shot. The photo isn't kept by AESTHETIQ.",
+  },
+  foodlabel: {
+    noun: "nutrition label photo",
+    returns: "the numbers on the label, for you to check",
+    tip: "Frame just the Nutrition Facts panel and the allergen line.",
   },
 };
 
@@ -47,7 +57,7 @@ export function AiConsentHost() {
     pending.resolve(ok);
     setPending(null);
   };
-  const manual = pending.kind === "scale" || pending.kind === "report" || pending.kind === "cardio" || pending.kind === "ingredients";
+  const manual = pending.kind === "scale" || pending.kind === "report" || pending.kind === "cardio" || pending.kind === "ingredients" || pending.kind === "pantry" || pending.kind === "foodlabel";
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="ai-consent-title" className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 sm:items-center">

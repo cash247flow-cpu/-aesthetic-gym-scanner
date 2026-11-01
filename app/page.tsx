@@ -34,6 +34,7 @@ import { loadActive, saveActive, sameWorkout, type ActiveWorkout } from "@/lib/a
 import { ResumeCard } from "@/components/ResumeCard";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 import { dayName, type DayItem, type MakeupFor } from "@/lib/missed";
+import { CoachHome, NutritionCoach, type CoachTab } from "@/components/coach/NutritionCoach";
 
 type View =
   | { state: "upload" }
@@ -51,6 +52,7 @@ type View =
   | { state: "photos" }
   | { state: "activity" }
   | { state: "data" }
+  | { state: "coach"; tab: CoachTab; shopping?: boolean }
   | { state: "wins"; back: View }
   | { state: "result"; plan: PlanResult; session: SessionKey; withAbs: boolean; standard?: boolean };
 
@@ -125,6 +127,12 @@ export default function Home() {
     setReturnTo((stack) => [...stack.slice(-5), hub]);
     if (state === "sleep") setSleep(loadSleep());
     show({ state });
+  }
+
+  // Opens a screen that carries its own state (the food coach), remembering where it came from.
+  function goView(next: View) {
+    setReturnTo((stack) => [...stack.slice(-5), view.state === "progress" || view.state === "more" ? view : ({ state: "upload" } as View)]);
+    show(next);
   }
 
   function onTab(tab: Tab) {
@@ -323,6 +331,8 @@ export default function Home() {
             <Tile icon="💊" label="Supps" value={supps ? `${supps.taken}/${supps.total}` : ""} onClick={() => go("supps")} />
           </div>
 
+          <CoachHome onOpen={(tab, opts) => goView({ state: "coach", tab, shopping: opts?.shopping })} />
+
           <h2 className="mt-6 text-xs font-semibold uppercase tracking-wider text-zinc-500">Pick a session</h2>
           <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {SESSION_BUTTONS.map((s) => {
@@ -445,6 +455,10 @@ export default function Home() {
       {view.state === "meals" && <MealPlanView onBack={back} fromReview={returnTo[returnTo.length - 1]?.state === "review"} />}
 
       {view.state === "supps" && <SupplementsView onBack={back} />}
+
+      {view.state === "coach" && (
+        <NutritionCoach key={view.tab} initialTab={view.tab} shopping={view.shopping} onBack={back} onMealPlan={() => go("meals", view)} />
+      )}
 
       {view.state === "wins" && <WinsView onBack={() => show(view.back)} />}
 

@@ -128,7 +128,7 @@ ready" card.
 ## Security (Stage 1 hardening)
 
 - **Sign-in:** a shared passcode cookie on every page and API, failing closed (see above).
-- **Photo reading with AI:** a scale photo, report, cardio screen, ingredient-list screenshot or gym photo is sent to Google Gemini only after the user taps **Send to Gemini** in a confirmation dialog, every time. The server refuses uploads without that confirmation (`x-ai-consent`).
+- **Photo reading with AI:** a scale photo, report, cardio screen, ingredient-list screenshot, fridge/pantry photo, nutrition label or gym photo is sent to Google Gemini only after the user taps **Send to Gemini** in a confirmation dialog, every time. The server refuses uploads without that confirmation (`x-ai-consent`).
   - Uploads are limited to one file of at most 4 MB.
   - The format is checked from the file's bytes: JPEG, PNG, WebP, HEIC/HEIF, and PDF for reports. PDFs with scripts or attachments are refused.
   - Images are passed straight to Gemini and never stored on the server.
@@ -238,6 +238,10 @@ Behaviour you'll notice:
 - **Access:** More → Data on this phone explains the shared passcode vs per-browser data (see `docs/PACSS.md` §8).
 
 `tests/pacss.test.ts` covers these boundaries.
+
+## Food coach
+
+Home → **Food coach**: *Scan My Fridge*, *What Should I Eat?*, *Grocery List*, *I'm Working Late*. Photo → confirm ingredients → choose a meal → confirm what you ate, or add groceries. Suggestions use your confirmed targets, today's confirmed intake, confirmed food on hand, allergies and prep time; numbers are labelled as estimates or label values. Fridge and label photos go to Gemini only after the consent tap and aren't stored. Reminders are in-app only — nothing is delivered while the app is closed. Details, rules and the remaining push-notification work: [`docs/NUTRITION_COACH.md`](docs/NUTRITION_COACH.md). Tests: `tests/nutrition.test.ts`, `e2e/coach.spec.ts`.
 
 ## End-to-end tests
 
