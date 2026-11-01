@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 // Callers await requestAiConsent(kind); only a "Send" tap resolves true. The fetch must then
 // carry AI_CONSENT_HEADERS — the server refuses photo uploads without it.
 
-export type AiPhotoKind = "gym" | "scale" | "report" | "cardio";
+export type AiPhotoKind = "gym" | "scale" | "report" | "cardio" | "ingredients";
 export const AI_CONSENT_HEADERS = { "x-ai-consent": "granted" } as const;
 
 const WHAT: Record<AiPhotoKind, { noun: string; returns: string; tip: string }> = {
@@ -18,6 +18,11 @@ const WHAT: Record<AiPhotoKind, { noun: string; returns: string; tip: string }> 
     tip: "Reports often show your name, age or date of birth — crop to just the numbers if you can.",
   },
   cardio: { noun: "cardio screen photo", returns: "steps, floors and time", tip: "Crop out anything other than the workout summary." },
+  ingredients: {
+    noun: "ingredient screenshot",
+    returns: "the ingredient lines, as a draft for you to check",
+    tip: "Crop to the ingredient list — screenshots can show your name, email or other personal details.",
+  },
 };
 
 type Pending = { kind: AiPhotoKind; resolve: (ok: boolean) => void };
@@ -42,7 +47,7 @@ export function AiConsentHost() {
     pending.resolve(ok);
     setPending(null);
   };
-  const manual = pending.kind === "scale" || pending.kind === "report" || pending.kind === "cardio";
+  const manual = pending.kind === "scale" || pending.kind === "report" || pending.kind === "cardio" || pending.kind === "ingredients";
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="ai-consent-title" className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-3 sm:items-center">

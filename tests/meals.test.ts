@@ -83,3 +83,39 @@ test("Cronometer recipe export: several recipes, missing or absurd values, and w
   assert.ok("error" in parseCronometerFoods("hello"));
   assert.equal(checkDraft({ ...mine, nutrition: { source: "cronometer", recipe: "", serving: "", kcal: 1, protein: 1, netCarbs: 1, fiber: 1, fat: 1 } }).ok, false, "malformed nutrition refused");
 });
+
+// ---- Ingredient screenshot reader: the model's reply is untrusted ----
+import { normalizeIngredients } from "../lib/ingredientsReading";
+
+test("ingredient reader: keeps name + amount, maps the type, defaults unknown types", () => {
+  const r = normalizeIngredients({
+    ingredients: [
+      { name: "test salmon", amount: "180 g", type: "protein" },
+      { name: "test rice", amount: "1 cup", type: "Carbs" },
+      { name: "test spinach", amount: null, type: "vegetable" },
+      { name: "psyllium husk", amount: "1 tsp", type: null },
+      { name: "test sauce", amount: null, type: "mystery" },
+    ],
+  });
+  assert.deepEqual(r.foods, [
+    { kind: "P", text: "180 g test salmon" },
+    { kind: "C", text: "1 cup test rice" },
+    { kind: "F", text: "test spinach" },
+    { kind: "note", text: "1 tsp psyllium husk" },
+    { kind: "F", text: "test sauce" },
+  ]);
+});
+
+test("ingredient reader: drops junk, strips markup and control characters, caps count and length", () => {
+  const junk = normalizeIngredients({
+    ingredients: [null, 5, "text", { name: "" }, { name: { x: 1 } }, { name: "<script>alert(1)</script>\u0000egg", amount: "2", type: "protein" }],
+    foods: [{ kind: "P", text: "smuggled" }],
+  });
+  assert.deepEqual(junk.foods, [{ kind: "P", text: "2 script alert(1) /script egg" }]);
+  assert.deepEqual(normalizeIngredients({}).foods, []);
+  assert.deepEqual(normalizeIngredients({ ingredients: "nope" }).foods, []);
+  const many = normalizeIngredients({ ingredients: Array.from({ length: 40 }, (_, i) => ({ name: `food ${i} ${"x".repeat(300)}`, amount: "1 g" })) });
+  assert.equal(many.foods.length, 15);
+  assert.ok(many.foods.every((f) => f.text.length <= 120));
+  assert.deepEqual(Object.keys(many), ["foods"]);
+});

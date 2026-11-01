@@ -49,7 +49,7 @@ test("authMode: missing or blank passcode never grants access outside local `nex
 
 test("middleware: misconfigured production refuses every page and API with 503, no config details", async () => {
   setEnv({ NODE_ENV: "production", VERCEL: "1", VERCEL_ENV: "preview" });
-  for (const path of ["/", "/login", "/api/login", "/api/plan", "/api/identify", "/api/read-scale", "/api/read-cardio", "/api/supp-label/1", "/achievements/emblem-gold.webp"]) {
+  for (const path of ["/", "/login", "/api/login", "/api/plan", "/api/identify", "/api/read-scale", "/api/read-cardio", "/api/read-ingredients", "/api/supp-label/1", "/achievements/emblem-gold.webp"]) {
     const res = await middleware(req(path, { cookie: await sessionCookie() })); // even a validly signed cookie
     assert.equal(res.status, 503, path);
     const text = await res.text();

@@ -293,7 +293,7 @@ test("meals: edit, save, undo, reset — and name a meal with nutrition from a C
   const dform = dinner.locator("form");
   const before = await dform.locator("ol > li").count();
   await dform.getByLabel("Cronometer recipe file").setInputFiles({ name: "food.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
-  await expect(dform.locator("[role=status]")).toContainText("Test Tilapia Bowl");
+  await expect(dform.locator('[aria-label="Cronometer nutrition"] [role=status]')).toContainText("Test Tilapia Bowl");
   await expect(dform.getByLabel("Meal name")).toHaveValue("Test Tilapia Bowl");
   await expect(dform.locator('[aria-label="Cronometer nutrition"]')).toContainText("1 serving (900 g): ≈560 kcal · 64.3 g protein · 28.2 g net carbs · 16.6 g fat · 17.9 g fiber");
   expect(await dform.locator("ol > li").count()).toBe(before); // food list untouched
@@ -308,4 +308,57 @@ test("meals: edit, save, undo, reset — and name a meal with nutrition from a C
   await tap(dinner.locator('button:has-text("Reset to the plan")'));
   await expect(dinner).toContainText("Fish Avocado Rice Bowl");
   await expect(dinner).not.toContainText("Cronometer ·");
+});
+
+test("meals: ingredients read from a screenshot only after consent, as a draft to check before Save", async ({ page }) => {
+  const tap = async (l: import("@playwright/test").Locator) => {
+    await l.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await l.click();
+  };
+  const sent: (string | undefined)[] = [];
+  await page.route("**/api/read-ingredients", (r) => {
+    sent.push(r.request().headers()["x-ai-consent"]);
+    // Made-up reply, including junk the client must drop.
+    return r.fulfill({ json: { foods: [{ kind: "P", text: "150 g test chicken" }, { kind: "C", text: "1 cup test rice" }, { kind: "X", text: "bad kind" }, { kind: "F", text: "" }] } });
+  });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await page.locator("nav[aria-label=Main] >> text=Meals").dispatchEvent("click");
+  const dinner = page.locator('li[aria-label="Dinner"]');
+  await tap(dinner.locator('button:has-text("Edit")'));
+  const form = dinner.locator("form");
+  const before = await form.locator("ol > li").count();
+  const shot = { name: "list.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64") };
+
+  // Declining sends nothing and leaves the list alone.
+  await form.getByLabel("Ingredient screenshot").setInputFiles(shot);
+  await expect(page.locator("[aria-labelledby=ai-consent-title]")).toBeVisible();
+  await expect(page.locator("[aria-labelledby=ai-consent-title]")).toContainText("ingredient");
+  await page.locator('button:has-text("Don\'t send")').click();
+  await expect(form.getByLabel("Screenshot reading")).toContainText("Not sent");
+  expect(sent).toEqual([]);
+  expect(await form.locator("ol > li").count()).toBe(before);
+
+  // Allowing sends it with the consent header; valid rows replace the list as a draft.
+  await form.getByLabel("Ingredient screenshot").setInputFiles(shot);
+  await page.locator('button:has-text("Send to Gemini")').click();
+  await expect(form.getByLabel("Screenshot reading")).toContainText("Read 2 ingredients");
+  expect(sent).toEqual(["granted"]);
+  await expect(form.locator("ol > li")).toHaveCount(2);
+  await expect(form.getByLabel("Food 1", { exact: true })).toHaveValue("150 g test chicken");
+  await expect(form.getByLabel("Food 2 type")).toHaveValue("C");
+  expect(await page.evaluate(() => localStorage.getItem("ags:meals:custom"))).toBeNull(); // nothing saved yet
+  await page.screenshot({ path: test.info().outputPath("meal-screenshot.png"), fullPage: true });
+
+  // Cancel keeps the plan's dinner; reading again and saving keeps the new list.
+  await tap(form.locator('button:has-text("Cancel")'));
+  await expect(dinner).not.toContainText("test chicken");
+  await tap(dinner.locator('button:has-text("Edit")'));
+  await form.getByLabel("Ingredient screenshot").setInputFiles(shot);
+  await page.locator('button:has-text("Send to Gemini")').click();
+  await expect(form.getByLabel("Screenshot reading")).toContainText("Read 2 ingredients");
+  await tap(form.locator('button:has-text("Save meal")'));
+  await expect(dinner).toContainText("150 g test chicken");
+  await expect(dinner).toContainText("your version");
 });

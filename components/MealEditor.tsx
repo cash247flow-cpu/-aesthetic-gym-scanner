@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import type { Food, FoodKind, Meal } from "@/lib/meals";
 import { LIMITS, checkDraft, type MealContent } from "@/lib/mealEdits";
 import { nutritionLine, parseCronometerFoods, type MealNutrition } from "@/lib/cronometerMeals";
+import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
+import { shrinkImage } from "@/lib/image";
 
 const KIND_LABEL: Record<FoodKind, string> = { P: "Protein", F: "Fiber", C: "Carbs", note: "Psyllium / note" };
 type Row = Food;
@@ -33,6 +35,9 @@ export function MealEditor({
   const [choices, setChoices] = useState<MealNutrition[] | null>(null);
   const [note, setNote] = useState<{ text: string; ok: boolean } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const shotRef = useRef<HTMLInputElement>(null);
+  const [reading, setReading] = useState(false);
+  const [shotNote, setShotNote] = useState<{ text: string; ok: boolean } | null>(null);
 
   const setRow = (i: number, patch: Partial<Row>) => setRows(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const move = (i: number, d: -1 | 1) => {
@@ -61,6 +66,35 @@ export function MealEditor({
     }
     setChoices(r.foods);
     setNote({ text: `That file has ${r.foods.length} foods or recipes — pick the one for this meal.`, ok: true });
+  }
+
+  // Reads an ingredient list from a screenshot (AI photo reader, asked for consent every time).
+  // The rows replace the food list as a draft only — nothing is saved until Save.
+  async function onShot(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!(await requestAiConsent("ingredients"))) return setShotNote({ text: "Not sent. Type the foods in instead.", ok: false });
+    setReading(true);
+    setShotNote(null);
+    try {
+      const form = new FormData();
+      form.append("image", await shrinkImage(file), "ingredients.jpg");
+      const res = await fetch("/api/read-ingredients", { method: "POST", body: form, headers: AI_CONSENT_HEADERS });
+      const data = (await res.json().catch(() => ({}))) as { foods?: unknown; error?: unknown };
+      if (!res.ok) throw new Error(typeof data.error === "string" ? data.error : "Couldn't read that screenshot.");
+      const foods = (Array.isArray(data.foods) ? data.foods : [])
+        .filter((f): f is Row => !!f && typeof f === "object" && typeof (f as Row).text === "string" && (f as Row).text.trim() !== "" && Object.hasOwn(KIND_LABEL, (f as Row).kind))
+        .slice(0, LIMITS.foods)
+        .map((f) => ({ kind: f.kind, text: f.text.slice(0, LIMITS.foodText) }));
+      if (!foods.length) throw new Error("No ingredients found. Crop to the ingredient list and try again, or type them in.");
+      setRows(foods);
+      setShotNote({ text: `Read ${foods.length} ingredient${foods.length === 1 ? "" : "s"} into the food list. Check each line and type, then Save — Cancel keeps the old list.`, ok: true });
+    } catch (err) {
+      setShotNote({ text: err instanceof Error ? err.message : "Couldn't read that screenshot.", ok: false });
+    } finally {
+      setReading(false);
+    }
   }
 
   function save() {
@@ -133,6 +167,20 @@ export function MealEditor({
       >
         + Add food
       </button>
+      <input ref={shotRef} type="file" accept="image/*" className="sr-only" aria-label="Ingredient screenshot" onChange={onShot} />
+      <button
+        type="button"
+        disabled={reading}
+        onClick={() => shotRef.current?.click()}
+        className="h-10 rounded-lg border border-lime-400/40 text-sm font-semibold text-lime-200 disabled:opacity-50"
+      >
+        {reading ? "Reading…" : "📷 Read ingredients from a screenshot"}
+      </button>
+      {shotNote && (
+        <p role="status" aria-label="Screenshot reading" className={`text-xs ${shotNote.ok ? "text-lime-200" : "text-amber-300"}`}>
+          {shotNote.text}
+        </p>
+      )}
 
       <div aria-label="Cronometer nutrition" className="rounded-lg border border-orange-400/30 p-2.5 text-xs text-zinc-300">
         <p>

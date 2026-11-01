@@ -128,7 +128,7 @@ ready" card.
 ## Security (Stage 1 hardening)
 
 - **Sign-in:** a shared passcode cookie on every page and API, failing closed (see above).
-- **Photo reading with AI:** a scale photo, report, cardio screen or gym photo is sent to Google Gemini only after the user taps **Send to Gemini** in a confirmation dialog, every time. The server refuses uploads without that confirmation (`x-ai-consent`).
+- **Photo reading with AI:** a scale photo, report, cardio screen, ingredient-list screenshot or gym photo is sent to Google Gemini only after the user taps **Send to Gemini** in a confirmation dialog, every time. The server refuses uploads without that confirmation (`x-ai-consent`).
   - Uploads are limited to one file of at most 4 MB.
   - The format is checked from the file's bytes: JPEG, PNG, WebP, HEIC/HEIF, and PDF for reports. PDFs with scripts or attachments are refused.
   - Images are passed straight to Gemini and never stored on the server.
