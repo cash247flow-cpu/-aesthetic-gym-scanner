@@ -157,3 +157,21 @@ More → **Data on this phone** → **Create an encrypted backup** saves one `.a
 - **Reminders:** a "last backup" line in More and in Data on this phone, and a reminder card in the Weekly Review once the last backup is over 7 days old.
 - **Tests:** `tests/backup.test.ts` (format, tampering, validation, restore plans).
 - **Limit:** the whole backup is built in memory. Very large photo libraries (hundreds of photos) may be slow or run out of memory on older phones.
+
+## Delete everything on this phone (Stage 2b)
+
+More → **Data on this phone** → **Delete everything on this phone** (`lib/erase.ts`, `components/ErasePanel.tsx`) removes:
+
+- every `ags:` record;
+- the photo and report store (IndexedDB `ags`);
+- the app's offline caches;
+- optionally, the passcode sign-in cookie (`POST /api/logout`).
+
+Safeguards:
+
+- You must type `DELETE`.
+- With no backup from the last 24 hours, there's an extra acknowledgement that the data will be lost.
+- Files are removed first, so no record is left pointing at a missing photo.
+- The result screen reports exactly what was removed, including anything that didn't finish.
+
+It can't remove copies elsewhere: backup files you saved, or photos already sent to Gemini for reading. Tests: `tests/erase.test.ts`.

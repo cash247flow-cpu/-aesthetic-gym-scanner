@@ -15,6 +15,7 @@ import { EVENT_LABEL, loadEvents, type EventName } from "@/lib/events";
 import { referralUrl } from "@/lib/achievements/sharePrefs";
 import { requestPersistentStorage, storageStatus, type StorageStatus } from "@/lib/storageInfo";
 import { BackupPanel, lastBackupText } from "@/components/BackupPanel";
+import { ErasePanel } from "@/components/ErasePanel";
 import { loadLastBackup } from "@/lib/backupStore";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
@@ -282,6 +283,7 @@ export function DataView({ onBack }: { onBack: () => void }) {
           </p>
         </div>
         <BackupPanel />
+        <ErasePanel />
       </div>
     </section>
   );
