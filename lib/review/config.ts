@@ -1,7 +1,8 @@
 // Weekly review and coaching rules — one place to tune them. Deliberately conservative: the coach
 // never calls a plateau from one slow week and never changes a plan by itself.
 
-export const REVIEW_RULE_VERSION = 1;
+// v2: coach results list data limits (missing, stale or contradictory records).
+export const REVIEW_RULE_VERSION = 2;
 
 export const COACH = {
   /** Weigh-ins in a week needed before that week's average counts as evidence. */
@@ -22,4 +23,8 @@ export const COACH = {
   MIN_INTAKE_DAYS: 4,
   /** A logged day counts as "on target" when calories are within this fraction of target. */
   KCAL_TOLERANCE: 0.1,
+  /** Data-quality only: a latest weigh-in older than this (days) is reported as stale. */
+  STALE_DAYS: 14,
+  /** Data-quality only: same-day weigh-ins differing by more than this fraction are flagged as a possible typo. */
+  SAME_DAY_MISMATCH: 0.05,
 };

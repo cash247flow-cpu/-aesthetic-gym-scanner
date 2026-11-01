@@ -17,12 +17,14 @@ import {
   type Tier,
 } from "@/lib/achievements/config";
 import type { WorkoutRecord } from "@/lib/achievements/workoutRecords";
+import { countableSet } from "@/lib/units";
 
 export type Perf = {
   weightLb?: number;
   reps?: number;
   volumeLb?: number;
   count?: number; // workouts, days
+  paused?: number; // recovery days inside a habit streak (not counted, not breaking it)
   percent?: number; // body fat %
 };
 
@@ -56,7 +58,7 @@ export type Achievement = {
 
 // Inputs, kept structural so tests can pass plain data.
 export type HistoryLike = { date: string; session: string; volumeLb: number; sets: number; cardioMin: number };
-export type HabitDays = Record<string, boolean>; // date → all daily habits done
+export type HabitDays = Record<string, boolean | "rest">; // date → all daily habits done, or a recovery day
 export type BodyEntryLike = { id: string; date: string; weightLb: number; bodyFatPct?: number };
 export type BodyGoalLike = { type: "lose" | "gain" | "maintain"; targetLb: number } | null;
 export type EngineInput = {
@@ -98,7 +100,8 @@ export function detectPRs(workouts: WorkoutRecord[]): Achievement[] {
 
   for (const w of sorted) {
     for (const ex of w.exercises) {
-      const sets = ex.sets.filter((s) => s.reps > 0 && s.weightLb >= 0);
+      // Implausible sets (probable typos) stay in the log but never count toward records.
+      const sets = ex.sets.filter((s) => countableSet(s.weightLb, s.reps));
       if (!sets.length) continue;
       const weighted = sets.filter((s) => s.weightLb > 0);
       const bodyweight = sets.filter((s) => s.weightLb === 0);
@@ -273,20 +276,38 @@ const nextDay = (d: string) => {
   return x.toLocaleDateString("en-CA");
 };
 
-/** Perfect-day habit streaks: every daily habit ticked, on consecutive calendar days. */
+/** Recovery days strictly between two perfect days, or null if any other day breaks the run. */
+function restGap(prev: string, d: string, perfectDays: HabitDays): number | null {
+  let n = 0;
+  for (let x = nextDay(prev), guard = 0; x < d && guard < 3660; x = nextDay(x), guard++) {
+    if (perfectDays[x] !== "rest") return null;
+    n++;
+  }
+  return n;
+}
+
+/**
+ * Perfect-day habit streaks: every daily habit ticked, on consecutive calendar days. Recovery
+ * days pause a streak — they don't count toward it and don't break it.
+ */
 export function detectStreaks(perfectDays: HabitDays): Achievement[] {
   const days = Object.keys(perfectDays)
-    .filter((d) => perfectDays[d])
+    .filter((d) => perfectDays[d] === true)
     .sort();
   const out: Achievement[] = [];
   const reached = new Set<number>();
   let run = 0;
+  let paused = 0;
   let start = "";
   let prev: string | null = null;
   for (const d of days) {
-    if (prev && nextDay(prev) === d) run++;
-    else {
+    const gap = prev ? restGap(prev, d, perfectDays) : null;
+    if (gap !== null) {
+      run++;
+      paused += gap;
+    } else {
       run = 1;
+      paused = 0;
       start = d;
     }
     prev = d;
@@ -301,7 +322,7 @@ export function detectStreaks(perfectDays: HabitDays): Achievement[] {
           subtitle: FAMILIES.discipline.subtitle,
           declaration: DECLARATION["habit-streak"],
           date: d,
-          current: { count: m.at },
+          current: paused ? { count: m.at, paused } : { count: m.at },
           previous: null,
           improvement: { kind: "milestone" },
           milestone: m.at,
@@ -420,8 +441,8 @@ export function lockedMilestones(input: EngineInput, earned: Set<string>): Locke
   let best = 0;
   let run = 0;
   let prev: string | null = null;
-  for (const d of Object.keys(input.perfectDays).filter((x) => input.perfectDays[x]).sort()) {
-    run = prev && nextDay(prev) === d ? run + 1 : 1;
+  for (const d of Object.keys(input.perfectDays).filter((x) => input.perfectDays[x] === true).sort()) {
+    run = prev && restGap(prev, d, input.perfectDays) !== null ? run + 1 : 1;
     best = Math.max(best, run);
     prev = d;
   }

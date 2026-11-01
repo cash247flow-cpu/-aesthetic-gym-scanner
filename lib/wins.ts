@@ -3,9 +3,10 @@ import { loadLog as loadCardioLog } from "@/components/CardioCard";
 import { bestPerfectStreak, loadHabitLogs } from "@/lib/habits";
 import { statsTotal } from "@/lib/cardioStats";
 import { saveWorkoutRecord, workoutId, type ExerciseSets } from "@/lib/achievements/workoutRecords";
+import { LB_PER_KG, countableSet } from "@/lib/units";
 
-// Weights are typed in whatever unit the toggle shows; everything stored here is in lb.
-const LB_PER_KG = 2.20462;
+// Weights are typed in whatever unit the toggle showed at the time (the set log records it);
+// everything stored here is in lb.
 const HISTORY_KEY = "ags:history";
 const prKey = (exercise: string) => `ags:pr:${exercise}`;
 const today = () => new Date().toLocaleDateString("en-CA");
@@ -79,11 +80,14 @@ const num = (s: string) => {
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
-/** Best weight / single-set volume / reps (reps only counted for unweighted sets). */
-function bestOf(rows: Row[], unit: Unit): Best | null {
-  const sets = rows.filter((r) => r.reps.trim() !== "" || r.weight.trim() !== "");
-  if (!sets.length) return null;
+/**
+ * Best weight / single-set volume / reps (reps only counted for unweighted sets). Only sets
+ * with reps logged and plausible numbers count — a weight typed without reps isn't a lift.
+ */
+export function bestOf(rows: Row[], unit: Unit): Best | null {
   const toLb = unit === "kg" ? LB_PER_KG : 1;
+  const sets = rows.filter((r) => countableSet(num(r.weight) * toLb, num(r.reps)));
+  if (!sets.length) return null;
   const best: Best = { weight: 0, setVolume: 0, reps: 0 };
   for (const r of sets) {
     const w = num(r.weight) * toLb;
@@ -178,7 +182,6 @@ export function finishWorkout(opts: {
 }): Summary {
   const { session, label, exercises, unit, includeCardio, makeupFor, durationMin } = opts;
   const t = today();
-  const toLb = unit === "kg" ? LB_PER_KG : 1;
 
   let volumeLb = 0;
   let sets = 0;
@@ -191,6 +194,9 @@ export function finishWorkout(opts: {
   for (const exercise of exercises) {
     const rec = loadRecord(exercise);
     if (rec?.date !== t) continue;
+    // Convert with the unit the sets were typed in (older logs: the current unit).
+    const typedIn: Unit = rec.unit ?? unit;
+    const toLb = typedIn === "kg" ? LB_PER_KG : 1;
     const done = rec.sets.filter((r) => r.done && (r.weight.trim() !== "" || r.reps.trim() !== ""));
     if (!done.length) continue;
     exercisesDone++;
@@ -199,16 +205,16 @@ export function finishWorkout(opts: {
       name: exercise,
       sets: done
         .map((r) => ({ weightLb: Math.round(num(r.weight) * toLb * 100) / 100, reps: num(r.reps) }))
-        .filter((s) => s.reps > 0),
+        .filter((s) => s.reps > 0), // kept as logged; the achievement engine skips implausible sets
     });
     sets += done.length;
-    volumeLb += done.reduce((v, r) => v + num(r.weight) * toLb * num(r.reps), 0);
+    volumeLb += done.reduce((v, r) => (countableSet(num(r.weight) * toLb, num(r.reps)) ? v + num(r.weight) * toLb * num(r.reps) : v), 0);
 
-    const todayBest = bestOf(done, unit);
+    const todayBest = bestOf(done, typedIn);
     if (!todayBest) continue;
     const stored = read<PrRecord>(prKey(exercise));
     // Before PR tracking existed, the set log's previous session is the best baseline we have.
-    const before = stored ? (stored.date === t ? stored.before : stored.best) : bestOf(rec.prevSets, unit);
+    const before = stored ? (stored.date === t ? stored.before : stored.best) : bestOf(rec.prevSets, rec.prevUnit ?? typedIn);
     const bestDate = { ...(stored?.bestDate ?? {}) };
     if (before) {
       for (const kind of Object.keys(PR_LABEL) as PRKind[]) {

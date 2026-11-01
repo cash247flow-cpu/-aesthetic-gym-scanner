@@ -47,7 +47,8 @@ export function localProfileRef(): string {
 
 export function engineInput(): EngineInput {
   const logs = loadHabitLogs();
-  const perfectDays = Object.fromEntries(Object.entries(logs).map(([d, log]) => [d, HABITS.every((h) => isDone(log, h))]));
+  // Recovery days pause streaks ("rest"): they neither count toward nor break them.
+  const perfectDays = Object.fromEntries(Object.entries(logs).map(([d, log]) => [d, log?.rest ? ("rest" as const) : HABITS.every((h) => isDone(log, h))]));
   return {
     workouts: loadWorkouts(),
     history: loadHistory(),

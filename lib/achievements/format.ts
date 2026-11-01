@@ -78,7 +78,7 @@ export function columns(a: Achievement, unit: Unit, show: { exercise: boolean; p
         { label: "Milestone", value: `${fmtWeight(a.milestone!, unit)} lifted` },
         hide({ label: "Total lifted", value: fmtWeight(a.current.volumeLb!, unit) }, p),
         hide({ label: "Workouts", value: String(a.current.count ?? "") }, p),
-        { label: "Recorded in", value: "Logged workouts" },
+        { label: "Recorded in", value: "Your workout log (self-recorded)" },
       ];
     case "workout-count": {
       const since = a.sourceId.split("since:")[1];
@@ -86,16 +86,16 @@ export function columns(a: Achievement, unit: Unit, show: { exercise: boolean; p
         { label: "Milestone", value: `${a.milestone} workouts` },
         hide({ label: "Workouts", value: String(a.current.count) }, p),
         hide({ label: "Training since", value: since ? fmtDate(since) : "" }, p),
-        { label: "Recorded in", value: "Logged workouts" },
+        { label: "Recorded in", value: "Your workout log (self-recorded)" },
       ];
     }
     case "habit-streak": {
       const start = a.sourceId.match(/habits:([\d-]+)\.\./)?.[1];
       return [
         { label: "Streak", value: `${a.milestone} perfect days` },
-        { label: "Daily habits", value: "All 5, every day" },
+        { label: "Daily habits", value: a.current.paused ? `All 5 · ${a.current.paused} recovery day${a.current.paused === 1 ? "" : "s"} paused` : "All 5, every day" },
         hide({ label: "Streak began", value: start ? fmtDate(start) : "" }, p),
-        { label: "Recorded in", value: "Daily habit log" },
+        { label: "Recorded in", value: "Your habit log (self-recorded)" },
       ];
     }
     case "weight-goal":

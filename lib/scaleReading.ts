@@ -1,7 +1,9 @@
 // Turns Gemini's raw reading of a scale photo / body-scan report into checked numbers (lb).
-// Anything missing, mis-typed or outside a plausible human range comes back as null.
+// Anything missing, mis-typed or outside a plausible human range comes back as null. The ranges
+// are shared with typed-in entries (lib/units.ts BODY_RANGES). The model's output is untrusted:
+// only these fields are read, each type- and range-checked; anything else it returns is dropped.
 
-const LB_PER_KG = 2.20462;
+import { BODY_RANGES as R, LB_PER_KG } from "@/lib/units";
 
 export type ScaleReading = {
   kind: "scale" | "report" | "unknown";
@@ -38,11 +40,11 @@ export function normalizeScaleReading(raw: Record<string, unknown>): ScaleReadin
   return {
     kind,
     date: isoDate(raw.date),
-    weightLb: lb(raw.weight, 50, 700),
-    bodyFatPct: numberIn(raw.bodyFatPercent, 2, 70),
-    muscleLb: lb(raw.muscleMass, 20, 300),
-    bmi: numberIn(raw.bmi, 10, 80),
-    visceralFat: numberIn(raw.visceralFat, 1, 60),
-    bmr: numberIn(raw.bmr, 500, 5000),
+    weightLb: lb(raw.weight, ...R.weightLb),
+    bodyFatPct: numberIn(raw.bodyFatPercent, ...R.bodyFatPct),
+    muscleLb: lb(raw.muscleMass, ...R.muscleLb),
+    bmi: numberIn(raw.bmi, ...R.bmi),
+    visceralFat: numberIn(raw.visceralFat, ...R.visceralFat),
+    bmr: numberIn(raw.bmr, ...R.bmr),
   };
 }

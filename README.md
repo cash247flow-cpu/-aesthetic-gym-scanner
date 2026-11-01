@@ -214,6 +214,27 @@ An optional lock, off by default, for **Visual evolution**, **Body tracker** and
 
 Third-party actions are pinned to exact commits. `.github/dependabot.yml` opens weekly update PRs for npm and Actions; nothing merges automatically.
 
+## PACSS controls (privacy, accuracy, compliance readiness, safety, security)
+
+[`docs/PACSS.md`](docs/PACSS.md) records what the app does with data, the gaps found and fixed, the action policy (what's automatic, what needs you, what nothing may do on its own), items for legal review and a control matrix.
+
+Behaviour you'll notice:
+
+- **Units:** sets remember the unit they were typed in. Switching lb/kg converts them.
+- **Records:** sets with no reps, or numbers that look like a typo, are flagged and never count toward records.
+- **Body tracker:**
+  - refuses out-of-range entries;
+  - marks numbers read by the AI reader.
+- **Weekly review:**
+  - lists what the data can't tell;
+  - ticking "pain" holds workout targets at last time's numbers for up to 2 weeks.
+- **Daily habits:** a "Recovery day" pauses streaks.
+- **Meals:** macro-target changes are logged with Undo.
+- **Restore:** never writes this phone's app lock or "last backup" stamp from a file.
+- **Shared images:** certificates and cards say the data is self-recorded and not independently verified.
+
+`tests/pacss.test.ts` covers these boundaries.
+
 ## End-to-end tests
 
 `e2e/` holds browser tests (Playwright, Chromium) that drive a production build like a phone would:

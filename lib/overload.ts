@@ -53,12 +53,23 @@ function range(reps: string): [number, number] | null {
   return nums.length ? [nums[0], nums[nums.length - 1]] : null;
 }
 
-/** Targets for `count` sets from last session's sets, or null when there's nothing to go on. */
-export function overloadPlan(prev: Row[], reps: string, unit: Unit, count: number, exercise = ""): Plan {
+/**
+ * Targets for `count` sets from last session's sets, or null when there's nothing to go on.
+ * `hold`: a recent weekly check-in reported pain or a possible injury, so nothing goes up —
+ * targets repeat last session's numbers (still editable) until the check-in no longer says so.
+ */
+export function overloadPlan(prev: Row[], reps: string, unit: Unit, count: number, exercise = "", opts: { hold?: boolean } = {}): Plan {
   const step = stepFor(exercise, unit);
   const last = prev.filter((r) => Number.isFinite(num(r.reps)) && num(r.reps) > 0);
   if (!last.length || count < 1) return null;
   const pick = (i: number) => last[Math.min(i, last.length - 1)];
+
+  if (opts.hold) {
+    return {
+      targets: Array.from({ length: count }, (_, i) => ({ weight: pick(i).weight, reps: pick(i).reps })),
+      note: "Holding at last time's numbers — your weekly check-in reported pain. Get it checked before adding load; lower anything that hurts.",
+    };
+  }
   const r = range(reps);
   const hasWeight = last.some((s) => num(s.weight) > 0);
 

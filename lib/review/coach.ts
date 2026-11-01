@@ -15,6 +15,8 @@ export type CheckIn = { energy?: 1 | 2 | 3 | 4 | 5; pain?: boolean };
 export type CoachResult = {
   status: Status;
   shows: string[]; // WHAT THE DATA SHOWS
+  /** What this week's data can't tell (missing, stale or contradictory records). Older saved reviews lack it. */
+  limits?: string[];
   means: string; // WHAT IT MAY MEAN
   next: Focus; // WHAT TO DO NEXT
   reviewAgain: string; // WHEN TO REVIEW AGAIN
@@ -54,10 +56,39 @@ function waistOver(body: BodyEntry[], from: string, to: string): number | null {
   return Math.round((w[w.length - 1].waistIn! - w[0].waistIn!) * 10) / 10;
 }
 
+/**
+ * Data-quality notes: what the records can't support. Never fills a gap with an assumption —
+ * a missing value is reported as missing, not as zero or "on track".
+ */
+export function dataLimits(input: CoachInput): string[] {
+  const { week: m, averages, goal, body } = input;
+  const out: string[] = [];
+  if (m.body.weighIns < COACH.MIN_WEIGHINS)
+    out.push(m.body.weighIns ? `Only ${m.body.weighIns} weigh-in this week — not enough for a weekly average.` : "No weigh-ins this week, so there's no weight trend for it.");
+  else if (averages[1] == null) out.push("Last week had too few weigh-ins to compare with.");
+  const latest = [...body].filter((e) => e.date <= m.period.end).sort((a, b) => b.date.localeCompare(a.date))[0];
+  if (latest) {
+    const age = Math.round((new Date(m.period.end + "T12:00").getTime() - new Date(latest.date + "T12:00").getTime()) / 86_400_000);
+    if (age > COACH.STALE_DAYS) out.push(`Your latest weigh-in is ${age} days older than the end of this week.`);
+  }
+  const inWeek = body.filter((e) => e.date >= m.period.start && e.date <= m.period.end);
+  const byDay = new Map<string, number[]>();
+  for (const e of inWeek) byDay.set(e.date, [...(byDay.get(e.date) ?? []), e.weightLb]);
+  for (const [day, ws] of byDay)
+    if (ws.length > 1 && (Math.max(...ws) - Math.min(...ws)) / Math.min(...ws) > COACH.SAME_DAY_MISMATCH)
+      out.push(`Two weigh-ins on ${day} differ by more than ${Math.round(COACH.SAME_DAY_MISMATCH * 100)}% — one may be a typo. Check Body tracker.`);
+  if (!goal) out.push("No weight goal is set, so the coach can't tell which direction counts as progress.");
+  if (m.workouts.rate == null && m.workouts.sessions) out.push("This week's planned sessions aren't on record, so completion can't be measured.");
+  if (m.nutrition.intakeDays < COACH.MIN_INTAKE_DAYS)
+    out.push(m.nutrition.intakeDays ? `Only ${m.nutrition.intakeDays} day${m.nutrition.intakeDays === 1 ? "" : "s"} of imported food log — nutrition wasn't assessed.` : "No imported food log this week — nutrition wasn't assessed.");
+  return out;
+}
+
 export function coach(input: CoachInput): CoachResult {
   const { week: m, averages, goal, checkIn, unit } = input;
   const shows: string[] = [];
   const flags: string[] = [];
+  const limits = dataLimits(input);
   const dir = goal?.type === "lose" ? -1 : goal?.type === "gain" ? 1 : 0;
 
   // ── Data layer → what the data shows ──────────────────────────────────
@@ -103,7 +134,7 @@ export function coach(input: CoachInput): CoachResult {
   }
 
   function result(status: Status, means: string, next: Focus, reviewAgain = "Next week", proposal: CoachResult["proposal"] = null): CoachResult {
-    return { status, shows, means, next, reviewAgain, flags, proposal };
+    return { status, shows, limits, means, next, reviewAgain, flags, proposal };
   }
 
   const s = safety();

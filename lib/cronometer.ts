@@ -68,6 +68,9 @@ const num = (v: string | undefined) => {
   return Number.isFinite(n) ? Math.round(n * 10) / 10 : null;
 };
 
+export const MAX_KCAL = 20_000;
+export const MAX_GRAMS = 2_000;
+
 /** Daily totals from a Cronometer daily-nutrition export, or an error explaining what's wrong. */
 export function parseCronometerDaily(text: string): { days: DayTotals[] } | { error: string } {
   const rows = parseCsv(text);
@@ -88,13 +91,18 @@ export function parseCronometerDaily(text: string): { days: DayTotals[] } | { er
         "This doesn't look like a Cronometer Daily Nutrition export (no Date / Protein / Carbs / Fat columns). Food & recipe entries exports aren't supported.",
     };
   }
-  const read = (r: string[], i: number) => (i === -1 ? null : num(r[i]));
+  // Imported numbers are untrusted: a value outside a believable daily range (negative, or more
+  // than MAX_KCAL / MAX_GRAMS) is treated as unreadable (null), never as a real intake.
+  const read = (r: string[], i: number, max: number) => {
+    const v = i === -1 ? null : num(r[i]);
+    return v === null || v < 0 || v > max ? null : v;
+  };
   const totalsOf = (r: string[]): Omit<DayTotals, "date"> => ({
-    kcal: read(r, iKcal),
-    protein: read(r, iProtein),
-    carbs: read(r, iCarbs),
-    netCarbs: read(r, iNet),
-    fat: read(r, iFat),
+    kcal: read(r, iKcal, MAX_KCAL),
+    protein: read(r, iProtein, MAX_GRAMS),
+    carbs: read(r, iCarbs, MAX_GRAMS),
+    netCarbs: read(r, iNet, MAX_GRAMS),
+    fat: read(r, iFat, MAX_GRAMS),
     ...(iDone === -1 ? {} : { completed: /^true$/i.test((r[iDone] ?? "").trim()) }),
   });
 

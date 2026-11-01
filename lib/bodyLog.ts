@@ -13,6 +13,8 @@ export type BodyEntry = {
   visceralFat?: number;
   bmr?: number;
   source: BodySource;
+  /** Numbers were read from the photo by the AI reader, then reviewed and saved by the user. */
+  aiRead?: boolean;
   fileId?: string; // scale photo or report in IndexedDB
   fileType?: string;
 };

@@ -21,6 +21,7 @@ import {
 } from "@/lib/meals";
 import { loadCronometer, parseCronometerDaily, saveCronometer, type DayTotals } from "@/lib/cronometer";
 import { todayStr } from "@/lib/habits";
+import { ORIGIN_LABEL, applyChange, lastChange, loadChanges, markUndone, recordChange, undoChange, type PlanChange } from "@/lib/planChanges";
 import { AccentLast, TITLE } from "@/components/ui";
 
 const KIND_STYLE: Record<FoodKind, { tag: string; className: string }> = {
@@ -32,7 +33,7 @@ const KIND_STYLE: Record<FoodKind, { tag: string; className: string }> = {
 
 const shortDate = (d: string) => new Date(d + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
-export function MealPlanView({ onBack }: { onBack: () => void }) {
+export function MealPlanView({ onBack, fromReview = false }: { onBack: () => void; fromReview?: boolean }) {
   const [phase, setPhase] = useState<MealPhase>(loadPhase);
   const [eaten, setEaten] = useState(loadEaten);
   const [cron, setCron] = useState<DayTotals[]>(loadCronometer);
@@ -50,11 +51,34 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
     savePhase(p);
   }
 
-  function changeTargets(next: Macros | null) {
-    const all = { ...targets, [phase]: next ?? DEFAULT_TARGETS[phase] };
+  const [changes, setChanges] = useState<PlanChange[]>(loadChanges);
+  const [undoMsg, setUndoMsg] = useState<string | null>(null);
+  const last = lastChange(changes, phase);
+
+  function persist(all: Targets) {
     setTargets(all);
     const isDefault = (Object.keys(all) as MealPhase[]).every((p) => sameMacros(all[p], DEFAULT_TARGETS[p]));
     saveTargets(isDefault ? null : all);
+  }
+
+  // Every saved edit is recorded (before → after, when, what prompted it) so it can be undone.
+  function changeTargets(next: Macros | null) {
+    const { targets: all, change } = applyChange(targets, phase, next ?? DEFAULT_TARGETS[phase], fromReview ? "weekly-review" : "you");
+    if (!change) return;
+    persist(all);
+    recordChange(change);
+    setChanges(loadChanges());
+    setUndoMsg(null);
+  }
+
+  function undoLast() {
+    if (!last) return;
+    const r = undoChange(targets, last);
+    if (!r.ok) return setUndoMsg(r.reason);
+    persist(r.targets);
+    markUndone(last.id);
+    setChanges(loadChanges());
+    setUndoMsg("Undone — your previous targets are back.");
   }
 
   function toggleMeal(id: MealId) {
@@ -102,6 +126,22 @@ export function MealPlanView({ onBack }: { onBack: () => void }) {
         isDefault={sameMacros(macros, DEFAULT_TARGETS[phase])}
         onChange={changeTargets}
       />
+      {last && (
+        <div aria-label="Last target change" className="mt-2 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-400">
+          <p>
+            Last change {new Date(last.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} ({ORIGIN_LABEL[last.origin]}): was{" "}
+            {last.before.protein} P · {last.before.carbs} C · {last.before.fat} F g.
+          </p>
+          <button type="button" onClick={undoLast} className="mt-1 font-semibold text-lime-300/90 hover:text-lime-200">
+            ↶ Undo this change
+          </button>
+        </div>
+      )}
+      {undoMsg && (
+        <p role="status" className="mt-1 px-1 text-xs text-zinc-300">
+          {undoMsg}
+        </p>
+      )}
 
       <ol className="mt-4 grid grid-cols-1 gap-3">
         {meals.map((meal) => {

@@ -439,7 +439,7 @@ export default function Home() {
 
       {view.state === "sleep" && sleep && <SleepHelper settings={sleep} onChange={setSleep} onBack={back} />}
 
-      {view.state === "meals" && <MealPlanView onBack={back} />}
+      {view.state === "meals" && <MealPlanView onBack={back} fromReview={returnTo[returnTo.length - 1]?.state === "review"} />}
 
       {view.state === "supps" && <SupplementsView onBack={back} />}
 

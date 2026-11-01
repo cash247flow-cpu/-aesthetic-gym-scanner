@@ -33,6 +33,8 @@ export type CertOptions = {
 
 export type RenderReport = { overflow: boolean; shrunkText: string[]; emblemH: number };
 
+/** Printed on every certificate: what it is based on, and that nobody checked it. */
+export const VERIFY_NOTE = "FROM YOUR OWN TRAINING LOG · NOT INDEPENDENTLY VERIFIED";
 export const SERIF = "Cinzel, 'Times New Roman', serif";
 
 export const METAL: Record<Tier, { stops: string[]; line: string; glow: string; bg: [string, string, string]; ray: string; text: string; dim: string }> = {
@@ -586,6 +588,17 @@ export async function renderCertificate(a: Achievement, opts: CertOptions, forma
         spaced(ctx, ct, cx, y, cs * 0.3);
       }
       y += S.gap * 0.6;
+    }
+    // Provenance: certificates restate the user's own log; they don't claim verification.
+    {
+      const vs = fit(ctx, VERIFY_NOTE, innerW, S.line * 0.62, 9, 600, S.line * 0.2, r);
+      y += vs;
+      if (draw) {
+        ctx.fillStyle = m.dim;
+        setFont(ctx, vs, 600);
+        spaced(ctx, VERIFY_NOTE, cx, y, vs * 0.2);
+      }
+      y += S.gap * 0.5;
     }
     if (draw) rule(ctx, S.pad, W - S.pad, y, m.line, 0.5);
 

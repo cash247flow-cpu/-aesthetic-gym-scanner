@@ -2,7 +2,8 @@
 // wording lives here, so awards can be retuned without touching detection or design code.
 // Bump RULE_VERSION when a rule changes; each stored achievement records the version it used.
 
-export const RULE_VERSION = 1;
+// v2: sets without reps or with implausible numbers (lib/units.ts) never count.
+export const RULE_VERSION = 2;
 
 export type Family = "conqueror" | "transformation" | "discipline";
 export type Tier = "silver" | "gold" | "platinum";
@@ -59,6 +60,8 @@ export const DECLARATION: Record<AchievementType, string> = {
  *                     workout's total.
  *  bodyweight-pr    — sets with no added weight compare only with earlier no-added-weight sets:
  *                     more reps in one set than ever before.
+ * Only sets with reps logged and plausible numbers count (lib/units.ts countableSet); weights are
+ * compared in lb after converting from the unit each set was typed in.
  */
 export const PR_RULES = { WEIGHT_PR_MIN_REPS: 5, WEIGHT_MATCH_LB: 0.1 } as const;
 

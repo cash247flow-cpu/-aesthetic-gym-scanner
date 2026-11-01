@@ -47,7 +47,7 @@ export type WeekMetrics = {
   cardio: { sessions: number; minutes: number; steps: number; floors: number };
   strength: { prs: AwardRef[]; prevVolumeLb: number | null; volumeChangePct: number | null };
   awards: AwardRef[];
-  habits: { tracked: boolean; done: number; eligible: number; rate: number | null; perfectDays: number; sleepRoutineNights: number; loggedDays: number };
+  habits: { tracked: boolean; done: number; eligible: number; rate: number | null; perfectDays: number; sleepRoutineNights: number; loggedDays: number; restDays?: number };
   nutrition: {
     mealsChecked: number | null; // plan meals ticked as eaten — NOT a record of calories eaten
     mealDays: number;
@@ -137,9 +137,10 @@ export function computeWeek(input: ReviewInput, p: Period): WeekMetrics {
 
   const inWeek = input.achievements.filter((a) => inPeriod(a.date, p));
 
-  // Habits: eligible = 5 habits × days in the period since habit logging began.
+  // Habits: eligible = 5 habits × days in the period since habit logging began, minus recovery days.
   const firstLog = Object.keys(input.habitLogs).sort()[0] ?? null;
-  const habitDates = firstLog ? dates.filter((d) => d >= firstLog) : [];
+  const sinceFirst = firstLog ? dates.filter((d) => d >= firstLog) : [];
+  const habitDates = sinceFirst.filter((d) => !input.habitLogs[d]?.rest);
   const logs = habitDates.map((d) => input.habitLogs[d]);
   const done = sum(logs.map((l) => HABITS.filter((h) => isDone(l, h)).length));
   const sleepHabit = HABITS.find((h) => h.id === "sleep")!;
@@ -188,7 +189,8 @@ export function computeWeek(input: ReviewInput, p: Period): WeekMetrics {
     },
     awards: inWeek.map(awardRef),
     habits: {
-      tracked: habitDates.length > 0,
+      tracked: sinceFirst.length > 0,
+      restDays: sinceFirst.length - habitDates.length,
       done,
       eligible: habitDates.length * HABITS.length,
       rate: habitDates.length ? round(done / (habitDates.length * HABITS.length), 3) : null,

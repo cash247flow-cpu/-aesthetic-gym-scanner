@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BODY_LABEL, implausibleBody } from "@/lib/units";
 import { loadUnit, saveUnit, type Unit } from "@/components/SetLogger";
 import { BodyChart, type BodyMetric } from "@/components/BodyChart";
 import {
@@ -51,6 +52,8 @@ type Draft = {
   file?: Blob;
   previewUrl?: string;
   reading: boolean;
+  /** Numbers were filled in by the AI reader (the user reviews them before saving). */
+  aiFilled?: boolean;
   note?: { text: string; tone: "ok" | "warn" };
 };
 
@@ -144,6 +147,7 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
               bmi: r.bmi?.toString() ?? "",
               visceral: r.visceralFat?.toString() ?? "",
               bmr: r.bmr?.toString() ?? "",
+              aiFilled: found,
               note: found
                 ? { text: "Read by Gemini — check the numbers before saving.", tone: "ok" }
                 : { text: "Couldn't find the numbers — type them in. The file will still be saved.", tone: "warn" },
@@ -170,16 +174,8 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
     if (!draft) return;
     const weight = num(draft.weight);
     if (!weight) return;
-    let fileId: string | undefined;
-    if (draft.file) {
-      try {
-        fileId = await putFile(draft.file);
-      } catch {
-        fileId = undefined; // storage full/blocked: keep the numbers anyway
-      }
-    }
     const opt = (s: string) => num(s) ?? undefined;
-    const entry: BodyEntry = {
+    const candidate: BodyEntry = {
       id: newId(),
       date: draft.date || today(),
       weightLb: Math.round(toLb(weight, unit) * 10) / 10,
@@ -191,9 +187,24 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
       visceralFat: opt(draft.visceral),
       bmr: opt(draft.bmr),
       source: draft.source,
-      fileId,
       fileType: draft.file?.type,
+      ...(draft.aiFilled ? { aiRead: true } : {}),
     };
+    // Typos like 1850 for 185.0 are refused here (before anything is stored) rather than skewing trends and awards.
+    const bad = implausibleBody(candidate);
+    if (bad.length) {
+      setDraft({ ...draft, note: { text: `${bad.map((k) => BODY_LABEL[k]).join(", ")} ${bad.length === 1 ? "looks" : "look"} out of range — check for a typo or the unit (${unit}).`, tone: "warn" } });
+      return;
+    }
+    let fileId: string | undefined;
+    if (draft.file) {
+      try {
+        fileId = await putFile(draft.file);
+      } catch {
+        fileId = undefined; // storage full/blocked: keep the numbers anyway
+      }
+    }
+    const entry: BodyEntry = { ...candidate, fileId };
     const next = [...entries, entry].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
     setEntries(next);
     saveEntries(next);
@@ -328,6 +339,7 @@ export function BodyTracker({ onBack, onPhotos }: { onBack: () => void; onPhotos
                   </p>
                   <p className="truncate text-xs text-zinc-500">
                     {shortDate(e.date)}
+                    {e.aiRead && " · AI-read, checked by you"}
                     {e.bodyFatPct != null && ` · ${e.bodyFatPct}% fat`}
                     {e.muscleLb != null && ` · ${fmt(e.muscleLb, unit)} muscle`}
                     {e.waistIn != null && ` · waist ${unit === "kg" ? `${Math.round(e.waistIn * 2.54 * 10) / 10} cm` : `${e.waistIn} in`}`}
@@ -572,6 +584,12 @@ function EntryForm({
             )}
           </p>
         </div>
+      )}
+
+      {!draft.file && draft.note && (
+        <p role="alert" className={`mt-3 text-sm ${draft.note.tone === "warn" ? "text-amber-300" : "text-lime-300"}`}>
+          {draft.note.text}
+        </p>
       )}
 
       <div className="mt-3 grid grid-cols-2 gap-2">

@@ -7,6 +7,8 @@ export type DayLog = Partial<{
   squat: number; // post-meal squat sets (0–3)
   cortisol: boolean;
   sleep: boolean[]; // the three Sleep Lock rules
+  /** Recovery day (illness, pain or planned rest): streaks pause — the day neither counts nor breaks them. */
+  rest: boolean;
 }>;
 type Logs = Record<string, DayLog>; // keyed by YYYY-MM-DD
 
@@ -98,6 +100,7 @@ export function isDone(log: DayLog | undefined, habit: Habit): boolean {
 }
 
 export const doneCount = (log: DayLog | undefined) => HABITS.filter((h) => isDone(log, h)).length;
+export const isRestDay = (log: DayLog | undefined) => !!log?.rest;
 const dayComplete = (log: DayLog | undefined, habit: Habit | "all") =>
   habit === "all" ? doneCount(log) === HABITS.length : isDone(log, habit);
 
@@ -108,11 +111,22 @@ const dayComplete = (log: DayLog | undefined, habit: Habit | "all") =>
 export function streak(logs: Logs, habit: Habit | "all", today = todayStr()): number {
   let day = dayComplete(logs[today], habit) ? today : addDays(today, -1);
   let n = 0;
-  while (dayComplete(logs[day], habit)) {
+  for (let guard = 0; guard < 3660; guard++) {
+    if (isRestDay(logs[day])) {
+      day = addDays(day, -1); // recovery day: paused, not broken
+      continue;
+    }
+    if (!dayComplete(logs[day], habit)) break;
     n++;
     day = addDays(day, -1);
   }
   return n;
+}
+
+/** Whether every day strictly between `a` and `b` (YYYY-MM-DD, a < b) is a recovery day. */
+export function onlyRestBetween(a: string, b: string, isRest: (d: string) => boolean): boolean {
+  for (let d = addDays(a, 1), guard = 0; d < b && guard < 3660; d = addDays(d, 1), guard++) if (!isRest(d)) return false;
+  return true;
 }
 
 /** Longest run of perfect days ever logged (for badges). */
@@ -124,7 +138,7 @@ export function bestPerfectStreak(logs: Logs): number {
   let run = 0;
   let prev: string | null = null;
   for (const d of days) {
-    run = prev && addDays(prev, 1) === d ? run + 1 : 1;
+    run = prev && onlyRestBetween(prev, d, (x) => isRestDay(logs[x])) ? run + 1 : 1;
     best = Math.max(best, run);
     prev = d;
   }

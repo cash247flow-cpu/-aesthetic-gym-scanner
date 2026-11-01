@@ -251,23 +251,31 @@ export const hasUserData = (records: Record<string, string>, fileCount: number) 
 
 export type RestoreMode = "replace" | "add-missing";
 
+/**
+ * Records that belong to this phone, never to a backup: the app lock (PIN hash, passkey) and the
+ * "last backup" stamp that the erase safeguard trusts. A backup file is untrusted input, so these
+ * are never written by a restore even if a (crafted or edited) file contains them.
+ */
+export const DEVICE_ONLY_RECORDS = new Set(["ags:lock", "ags:backup:last"]);
+
 /** What a restore would write, given what's on the phone now. Nothing is written here. */
 export function planRestore(
   current: { records: Record<string, string>; fileIds: string[] },
   backup: BackupPayload,
   mode: RestoreMode,
 ): { writeRecords: Record<string, string>; removeRecords: string[]; writeFiles: BackupFile[]; removeFiles: string[] } {
+  const restorable = Object.fromEntries(Object.entries(backup.records).filter(([k]) => !DEVICE_ONLY_RECORDS.has(k)));
   if (mode === "replace") {
     return {
-      writeRecords: backup.records,
-      removeRecords: Object.keys(current.records).filter((k) => !(k in backup.records)),
+      writeRecords: restorable,
+      removeRecords: Object.keys(current.records).filter((k) => !(k in restorable) && !DEVICE_ONLY_RECORDS.has(k)),
       writeFiles: backup.files,
       removeFiles: current.fileIds.filter((id) => !backup.files.some((f) => f.id === id)),
     };
   }
   const have = new Set(current.fileIds);
   return {
-    writeRecords: Object.fromEntries(Object.entries(backup.records).filter(([k]) => !(k in current.records))),
+    writeRecords: Object.fromEntries(Object.entries(restorable).filter(([k]) => !(k in current.records))),
     removeRecords: [],
     writeFiles: backup.files.filter((f) => !have.has(f.id)),
     removeFiles: [],

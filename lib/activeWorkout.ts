@@ -52,7 +52,8 @@ export const pauseTimer = (a: ActiveWorkout, now = Date.now()): ActiveWorkout =>
 
 /** 1:02:05 or 32:10 */
 export function formatDuration(ms: number) {
-  const s = Math.floor(ms / 1000);
+  // Never negative: the screen's clock can lag the start stamp by up to a second.
+  const s = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(s / 3600);
   const mm = String(Math.floor((s % 3600) / 60)).padStart(h ? 2 : 1, "0");
   const ss = String(s % 60).padStart(2, "0");

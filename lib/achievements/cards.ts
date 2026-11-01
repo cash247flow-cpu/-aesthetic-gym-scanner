@@ -64,7 +64,8 @@ async function footer(ctx: Ctx, W: number, H: number, k: number, pad: number, ti
   const textW = W - pad * 2 - (qr ? qrSize + 40 : 0);
   const cx = qr ? pad + textW / 2 : W / 2;
   const base = H - pad - 4;
-  const brand = opts.coach ? `AESTHETIQ™  ·  COACHED BY ${opts.coach.toUpperCase()}` : "AESTHETIQ™";
+  // Shared images restate the user's own records; they don't claim verification.
+  const brand = `${opts.coach ? `AESTHETIQ™  ·  COACHED BY ${opts.coach.toUpperCase()}` : "AESTHETIQ™"}  ·  SELF-RECORDED`;
   const bs = fit(ctx, brand, textW, 19 * k + 4, 11, 600, 6, r);
   ctx.fillStyle = m.dim;
   spaced(ctx, brand, cx, base, 6 * (bs / (19 * k + 4)));

@@ -13,6 +13,7 @@ import { DAY_NAMES } from "@/lib/schedule";
 import { todayStr } from "@/lib/habits";
 import { track } from "@/lib/events";
 import { STATUS_LABEL, type CheckIn, type CoachResult } from "@/lib/review/coach";
+import { setPainReport } from "@/lib/review/pain";
 import type { WeekMetrics } from "@/lib/review/metrics";
 import { lastCompleted, periodFor, periodLabel, previousPeriod, type Period } from "@/lib/review/period";
 import {
@@ -282,9 +283,12 @@ export function WeeklyReview({
             <span>Great</span>
           </p>
           <label className="mt-2 flex items-center gap-2.5">
-            <input type="checkbox" checked={!!checkIn.pain} onChange={(e) => setCheckIn((c) => ({ ...c, pain: e.target.checked }))} className="h-5 w-5 accent-amber-300" />
+            <input type="checkbox" checked={!!checkIn.pain} onChange={(e) => { const pain = e.target.checked; setPainReport(pain); setCheckIn((c) => ({ ...c, pain })); }} className="h-5 w-5 accent-amber-300" />
             Pain or a possible injury this week
           </label>
+          {checkIn.pain && (
+            <p className="mt-1 pl-7 text-xs text-amber-200">While this is ticked, workout targets stop adding weight or reps (for up to 2 weeks). This app can&apos;t assess pain.</p>
+          )}
         </Card>
       ) : null}
 
@@ -298,6 +302,16 @@ export function WeeklyReview({
             <li key={s}>{s}</li>
           ))}
         </ul>
+        {!!c.limits?.length && (
+          <div aria-label="Limits of this data">
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">What the data can&apos;t tell</p>
+            <ul className="mt-1 grid list-disc gap-0.5 pl-5 text-zinc-400">
+              {c.limits.map((s) => (
+                <li key={s}>{s}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">What it may mean</p>
         <p className="mt-1 text-zinc-200">{c.means}</p>
         {c.flags.map((f) => (
@@ -310,7 +324,10 @@ export function WeeklyReview({
         <p className="text-xs text-zinc-400">{c.next.why}</p>
         <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-zinc-400">When to review again</p>
         <p className="mt-1 text-zinc-200">{c.reviewAgain}</p>
-        <p className="mt-3 text-[11px] text-zinc-500">Based only on your records and simple, conservative rules. Not medical advice.</p>
+        <p className="mt-3 text-[11px] text-zinc-500">
+          Based only on your records and simple, conservative rules — not AI, and not medical advice. A number looks wrong? Fix it in Body tracker,
+          your workout or Daily habits; this review recalculates, and a saved review shows what changed.
+        </p>
 
         {c.proposal && (
           <div className="mt-3 rounded-xl border border-zinc-700 p-2.5">

@@ -88,11 +88,18 @@ export function HabitsView({ onBack }: { onBack: () => void }) {
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-800">
         <div className="h-full rounded-full bg-lime-400 transition-[width]" style={{ width: `${(done / HABITS.length) * 100}%` }} />
       </div>
-      {done === HABITS.length && (
+      {done === HABITS.length && !log.rest && (
         <p className="mt-3 rounded-xl border border-lime-400/40 bg-lime-400/10 px-3 py-2 text-center text-sm font-semibold text-lime-200">
           Perfect day 🔥 All five habits done.
         </p>
       )}
+      <label className="mt-3 flex items-start gap-2.5 rounded-xl border border-zinc-800 bg-zinc-900 px-3 py-2.5 text-sm">
+        <input type="checkbox" checked={!!log.rest} onChange={(e) => update({ rest: e.target.checked })} className="mt-0.5 h-5 w-5 shrink-0 accent-sky-400" />
+        <span>
+          <span className="font-semibold">Recovery day</span>
+          <span className="block text-xs text-zinc-400">Sick, sore, injured or resting? Streaks pause — this day won&apos;t count or break them.</span>
+        </span>
+      </label>
 
       <ul className="mt-4 grid grid-cols-1 gap-3">
         {HABITS.map((h) => (

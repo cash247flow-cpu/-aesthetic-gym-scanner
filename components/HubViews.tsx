@@ -266,8 +266,15 @@ export function DataView({ onBack }: { onBack: () => void }) {
           <p className="font-semibold">Where your data lives</p>
           <ul className="mt-1.5 grid list-disc gap-1 pl-5 text-zinc-300">
             <li>Workouts, nutrition, body entries, habits, reviews, awards and progress photos are stored in this browser on this phone.</li>
-            <li>There are no accounts and no cloud copy.</li>
+            <li>There are no accounts and no cloud copy of that data. Progress photos are never sent anywhere by the app.</li>
             <li>Scale photos, reports, cardio and gym photos are sent to Google Gemini only when you confirm reading them with AI.</li>
+            <li>Supplement label searches are looked up in the NIH label database through this app&apos;s server; exercise videos load from YouTube when you tap one.</li>
+            <li>
+              To keep you signed in, the server keeps a short record per device: device type, sign-in and last-used dates, and today&apos;s count of AI
+              photo reads. After a wrong passcode, a scrambled (hashed) form of the network address is kept for 15 minutes. No workout, body or food
+              data is in it.
+            </li>
+            <li>The hosting provider (Vercel) handles every request and keeps its own access logs.</li>
           </ul>
         </div>
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3.5" aria-label="Storage status">

@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { loadOverload, overloadPlan } from "@/lib/overload";
+import { convertRows, countableSet, toLb, type Unit } from "@/lib/units";
+import { recentPainReport } from "@/lib/review/pain";
 
-export type Unit = "lb" | "kg";
+export type { Unit };
 export type Row = { weight: string; reps: string; done: boolean };
 // One record per exercise: today's sets plus the last earlier session's sets ("Previous").
-export type LogRecord = { date: string; sets: Row[]; prevSets: Row[] };
+// `unit` / `prevUnit` say what unit the numbers were typed in. Logs saved before units were
+// recorded have neither and are read in the current unit (the old behaviour).
+export type LogRecord = { date: string; sets: Row[]; prevSets: Row[]; unit?: Unit; prevUnit?: Unit };
 
 const MAX_SETS = 10;
 const emptyRow = (): Row => ({ weight: "", reps: "", done: false });
@@ -73,23 +77,40 @@ export function SetLogger({
   const [initial] = useState(() => {
     const rec = loadRecord(exercise);
     const isToday = rec?.date === today();
-    const prev = (isToday ? rec?.prevSets : rec?.sets)?.filter(hasData) ?? [];
+    // Everything on screen is shown in the current unit, converted from the unit it was typed in.
+    const prevFrom = (isToday ? rec?.prevUnit : rec?.unit) ?? unit;
+    const prev = convertRows((isToday ? rec?.prevSets : rec?.sets)?.filter(hasData) ?? [], prevFrom, unit);
     const count = targetSetCount(sets);
-    // Progressive overload: today's targets from last session, prefilled but editable.
-    const plan = loadOverload() ? overloadPlan(prev, reps, unit, isToday && rec?.sets.length ? rec.sets.length : count, exercise) : null;
+    // Progressive overload: today's targets from last session, prefilled but editable. Held at
+    // last time's numbers while a recent weekly check-in reports pain.
+    const plan = loadOverload()
+      ? overloadPlan(prev, reps, unit, isToday && rec?.sets.length ? rec.sets.length : count, exercise, { hold: recentPainReport() })
+      : null;
     const rows =
       isToday && rec?.sets.length
-        ? rec.sets
+        ? convertRows(rec.sets, rec.unit ?? unit, unit)
         : plan
           ? plan.targets.map((t) => ({ weight: t.weight, reps: t.reps, done: false }))
           : Array.from({ length: count }, emptyRow);
     return { prev, rows, plan };
   });
-  const prev = initial.prev;
+  const [prev, setPrev] = useState<Row[]>(initial.prev);
   const plan = initial.plan;
   const isTarget = (i: number, field: "weight" | "reps", value: string) =>
     !!plan?.targets[i] && plan.targets[i][field] === value && value !== "";
   const [rows, setRows] = useState<Row[]>(initial.rows);
+  const [rowsUnit, setRowsUnit] = useState<Unit>(unit);
+
+  // Switching lb/kg mid-workout converts what's typed, so the same lift is never recorded 2.2× off.
+  useEffect(() => {
+    if (unit === rowsUnit) return;
+    const nextRows = convertRows(rows, rowsUnit, unit);
+    const nextPrev = convertRows(prev, rowsUnit, unit);
+    setRowsUnit(unit);
+    setPrev(nextPrev);
+    setRows(nextRows);
+    if (rows.some(hasData)) saveRecord(exercise, { date: today(), sets: nextRows, prevSets: nextPrev, unit, prevUnit: unit });
+  }, [unit, rowsUnit, rows, prev, exercise]);
 
   const doneCount = rows.filter((r) => r.done).length;
   useEffect(() => {
@@ -100,7 +121,7 @@ export function SetLogger({
 
   function commit(next: Row[]) {
     setRows(next);
-    saveRecord(exercise, { date: today(), sets: next, prevSets: prev });
+    saveRecord(exercise, { date: today(), sets: next, prevSets: prev, unit: rowsUnit, prevUnit: rowsUnit });
   }
 
   function update(i: number, patch: Partial<Row>) {
@@ -143,6 +164,9 @@ export function SetLogger({
       <ol className="mt-1.5 grid gap-1.5">
         {rows.map((row, i) => {
           const p = prev[i];
+          const w = Number(row.weight.replace(",", ".") || "0");
+          const r = Number(row.reps || "0");
+          const suspect = row.done && hasData(row) && (!r || !countableSet(toLb(w, rowsUnit), r));
           return (
             <li
               key={i}
@@ -191,6 +215,11 @@ export function SetLogger({
               >
                 ✓
               </button>
+              {suspect && (
+                <p role="note" className="col-span-5 px-1 pt-0.5 text-[11px] text-amber-300">
+                  {!r ? "No reps logged — this set won't count toward records." : "Check this set — the numbers look like a typo, so it won't count toward records."}
+                </p>
+              )}
             </li>
           );
         })}

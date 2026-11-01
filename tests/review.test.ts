@@ -192,7 +192,7 @@ test("coach: unusually fast loss two weeks running is flagged", () => {
 
 test("coach never changes targets itself: output is text and an optional proposal only", () => {
   const r = coach(coachIn({ averages: [200, 200.2, 199.8, 200.1] }));
-  assert.deepEqual(Object.keys(r).sort(), ["flags", "means", "next", "proposal", "reviewAgain", "shows", "status"]);
+  assert.deepEqual(Object.keys(r).sort(), ["flags", "limits", "means", "next", "proposal", "reviewAgain", "shows", "status"]);
 });
 
 // ─── Visual Evolution helpers ────────────────────────────────────────────
