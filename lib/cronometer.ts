@@ -46,7 +46,7 @@ export function parseCsv(text: string): string[][] {
 
 const norm = (h: string) => h.replace(/^﻿/, "").trim().toLowerCase();
 
-function column(headers: string[], ...patterns: RegExp[]): number {
+export function column(headers: string[], ...patterns: RegExp[]): number {
   for (const p of patterns) {
     const i = headers.findIndex((h) => p.test(norm(h)));
     if (i !== -1) return i;
@@ -54,7 +54,7 @@ function column(headers: string[], ...patterns: RegExp[]): number {
   return -1;
 }
 
-function toIsoDate(value: string): string | null {
+export function toIsoDate(value: string): string | null {
   const v = value.trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0, 10);
   const us = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // M/D/YYYY

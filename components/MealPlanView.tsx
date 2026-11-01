@@ -21,6 +21,9 @@ import {
 } from "@/lib/meals";
 import { loadCronometer, parseCronometerDaily, saveCronometer, type DayTotals } from "@/lib/cronometer";
 import { todayStr } from "@/lib/habits";
+import { MealEditor } from "@/components/MealEditor";
+import { nutritionLine } from "@/lib/cronometerMeals";
+import { applyEdits, editMeal, loadMealEdits, resetMeal, saveMealEdits, undoMeal, type MealContent, type MealEdits } from "@/lib/mealEdits";
 import { ORIGIN_LABEL, applyChange, lastChange, loadChanges, markUndone, recordChange, undoChange, type PlanChange } from "@/lib/planChanges";
 import { AccentLast, TITLE } from "@/components/ui";
 
@@ -43,7 +46,19 @@ export function MealPlanView({ onBack, fromReview = false }: { onBack: () => voi
   const todayEaten = eaten[today] ?? {};
   const [targets, setTargets] = useState<Targets>(loadTargets);
   const macros = targets[phase];
-  const meals = MEALS[phase];
+  const [mealEdits, setMealEdits] = useState<MealEdits>(loadMealEdits);
+  const [editing, setEditing] = useState<MealId | null>(null);
+  const [mealMsg, setMealMsg] = useState<{ id: MealId; text: string } | null>(null);
+  const meals = applyEdits(phase, MEALS[phase], mealEdits);
+  const baseOf = (id: MealId) => MEALS[phase].find((m) => m.id === id)!;
+
+  function commitMeals(next: MealEdits, id: MealId, text: string) {
+    setMealEdits(next);
+    saveMealEdits(next);
+    setEditing(null);
+    setMealMsg({ id, text });
+  }
+  const shared = (id: MealId) => (id === "dinner" ? "" : " (both phases)");
   const eatenCount = meals.filter((m) => todayEaten[m.id]).length;
 
   function choosePhase(p: MealPhase) {
@@ -147,12 +162,32 @@ export function MealPlanView({ onBack, fromReview = false }: { onBack: () => voi
         {meals.map((meal) => {
           const done = !!todayEaten[meal.id];
           return (
-            <li key={meal.id} className={`rounded-2xl border bg-zinc-900 p-4 ${done ? "border-lime-400/50" : "border-zinc-800"}`}>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{meal.when}</p>
+            <li key={meal.id} aria-label={meal.when} className={`rounded-2xl border bg-zinc-900 p-4 ${done ? "border-lime-400/50" : "border-zinc-800"}`}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  {meal.when}
+                  {meal.edited && <span className="ml-1.5 rounded bg-zinc-800 px-1 normal-case tracking-normal text-zinc-300">your version</span>}
+                </p>
+                {editing !== meal.id && (
+                  <button type="button" onClick={() => { setEditing(meal.id); setMealMsg(null); }} className="shrink-0 text-xs font-semibold text-lime-300/90 hover:text-lime-200">
+                    ✎ Edit
+                  </button>
+                )}
+              </div>
+              {editing === meal.id ? (
+                <MealEditor
+                  meal={meal}
+                  isDefault={!meal.edited}
+                  onCancel={() => setEditing(null)}
+                  onSave={(next: MealContent) => commitMeals(editMeal(mealEdits, phase, baseOf(meal.id), next), meal.id, `Saved${shared(meal.id)}.`)}
+                  onReset={() => commitMeals(resetMeal(mealEdits, phase, baseOf(meal.id)), meal.id, `Back to the plan's default${shared(meal.id)}.`)}
+                />
+              ) : (
+              <>
               <p className="mt-0.5 font-semibold">{meal.title}</p>
               <ol className="mt-3 grid gap-1.5">
                 {meal.foods.map((food, i) => (
-                  <li key={food.text} className="flex items-start gap-2.5 text-sm">
+                  <li key={`${i}-${food.text}`} className="flex items-start gap-2.5 text-sm">
                     <span className="mt-0.5 w-4 shrink-0 text-right text-xs font-semibold tabular-nums text-zinc-500">{i + 1}</span>
                     <span className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${KIND_STYLE[food.kind].className}`}>
                       {KIND_STYLE[food.kind].tag}
@@ -161,6 +196,29 @@ export function MealPlanView({ onBack, fromReview = false }: { onBack: () => voi
                   </li>
                 ))}
               </ol>
+              {meal.nutrition && (
+                <p className="mt-2 rounded-lg bg-orange-400/10 px-2.5 py-1.5 text-xs text-orange-100">
+                  <span className="font-semibold">Cronometer · </span>
+                  {meal.nutrition.serving ? `${meal.nutrition.serving}: ` : ""}
+                  {nutritionLine(meal.nutrition)}
+                </p>
+              )}
+              {(mealMsg?.id === meal.id || meal.canUndo) && (
+                <p role="status" className="mt-2 text-xs text-zinc-400">
+                  {mealMsg?.id === meal.id ? mealMsg.text : "Edited."}{" "}
+                  {meal.canUndo && (
+                    <button
+                      type="button"
+                      onClick={() => commitMeals(undoMeal(mealEdits, phase, baseOf(meal.id)), meal.id, "Undone — the previous version is back.")}
+                      className="font-semibold text-lime-300/90 hover:text-lime-200"
+                    >
+                      ↶ Undo
+                    </button>
+                  )}
+                </p>
+              )}
+              </>
+              )}
               <button
                 type="button"
                 onClick={() => toggleMeal(meal.id)}

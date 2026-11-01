@@ -239,3 +239,73 @@ test("Reverse Crunch (with Ab Mat) can be swapped, and swapped back", async ({ p
   await page.locator('button:has-text("Reverse Crunch (with Ab Mat)")').last().click();
   await expect(page.locator('button[aria-label="Swap Reverse Crunch (with Ab Mat)"]')).toBeVisible();
 });
+
+test("meals: edit, save, undo, reset — and name a meal with nutrition from a Cronometer recipe CSV", async ({ page }) => {
+  // Bring a control to mid-screen before tapping, clear of the fixed tab bar.
+  const tap = async (l: import("@playwright/test").Locator) => {
+    await l.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await l.click();
+  };
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem("ags:meals", JSON.stringify({ [new Date().toLocaleDateString("en-CA")]: { lunch: true } }));
+  });
+  await openApp(page);
+  await page.locator("nav[aria-label=Main] >> text=Meals").dispatchEvent("click");
+  const lunch = page.locator('li[aria-label="Lunch — best time for psyllium"]');
+  await tap(lunch.locator('button:has-text("Edit")'));
+  const form = lunch.locator('form[aria-label="Edit Lunch — best time for psyllium"]');
+  await form.getByLabel("Meal name").fill("Chicken Rice Bowl");
+  await form.getByLabel("Food 1", { exact: true }).fill("200 g chicken breast");
+  await tap(form.locator('button:has-text("+ Add food")'));
+  const n = await form.locator("ol > li").count();
+  await form.getByLabel(`Food ${n}`, { exact: true }).fill("1 lime");
+  await form.getByLabel(`Food ${n} type`).selectOption("C");
+  await tap(form.getByLabel(`Move food ${n} up`));
+  await page.screenshot({ path: test.info().outputPath("meal-editor.png"), fullPage: true });
+  await tap(form.locator('button:has-text("Save meal")'));
+  await expect(lunch).toContainText("Chicken Rice Bowl");
+  await expect(lunch).toContainText("200 g chicken breast");
+  await expect(lunch).toContainText("your version");
+  await expect(lunch.locator('button:has-text("✓ Eaten")')).toBeVisible(); // today's tick untouched
+
+  // Persisted, and shared with Phase 2 (dinner is not).
+  await page.reload();
+  await page.locator("nav[aria-label=Main] >> text=Meals").dispatchEvent("click");
+  await expect(lunch).toContainText("Chicken Rice Bowl");
+  await page.locator('button:has-text("Phase 2")').click();
+  await expect(lunch).toContainText("Chicken Rice Bowl");
+  await page.locator('button:has-text("Current")').first().click();
+
+  // Undo goes back to the plan's lunch.
+  await tap(lunch.locator('button:has-text("Undo")'));
+  await expect(lunch).toContainText("Salmon Rice Bowl");
+  await expect(lunch).not.toContainText("your version");
+
+  // Name and nutrition for dinner from a Cronometer recipe export (made-up values, real layout).
+  const csv = [
+    "Food ID,Food Name,Comments,Amount,Energy (kcal),Alcohol (g),Net Carbs (g),Carbs (g),Fiber (g),Fat (g),Protein (g)",
+    '1,"Test Tilapia Bowl","","serving  — 900.0g",560.40,0.00,28.20,46.10,17.90,16.60,64.30',
+  ].join("\n");
+  const dinner = page.locator('li[aria-label="Dinner"]');
+  await tap(dinner.locator('button:has-text("Edit")'));
+  const dform = dinner.locator("form");
+  const before = await dform.locator("ol > li").count();
+  await dform.getByLabel("Cronometer recipe file").setInputFiles({ name: "food.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+  await expect(dform.locator("[role=status]")).toContainText("Test Tilapia Bowl");
+  await expect(dform.getByLabel("Meal name")).toHaveValue("Test Tilapia Bowl");
+  await expect(dform.locator('[aria-label="Cronometer nutrition"]')).toContainText("1 serving (900 g): ≈560 kcal · 64.3 g protein · 28.2 g net carbs · 16.6 g fat · 17.9 g fiber");
+  expect(await dform.locator("ol > li").count()).toBe(before); // food list untouched
+  await page.screenshot({ path: test.info().outputPath("meal-cronometer.png"), fullPage: true });
+  expect(await page.evaluate(() => localStorage.getItem("ags:meals:custom"))).toBeNull(); // nothing saved yet
+  await tap(dform.locator('button:has-text("Save meal")'));
+  await expect(dinner).toContainText("Test Tilapia Bowl");
+  await expect(dinner).toContainText("Cronometer · 1 serving (900 g): ≈560 kcal");
+
+  // Reset to the plan's default.
+  await tap(dinner.locator('button:has-text("Edit")'));
+  await tap(dinner.locator('button:has-text("Reset to the plan")'));
+  await expect(dinner).toContainText("Fish Avocado Rice Bowl");
+  await expect(dinner).not.toContainText("Cronometer ·");
+});
