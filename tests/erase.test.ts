@@ -64,7 +64,8 @@ test("logout route clears the passcode cookie", async () => {
   const res = await logout();
   assert.equal(res.status, 200);
   const c = res.headers.get("set-cookie") ?? "";
-  assert.match(c, /^ags_auth=;/);
+  assert.match(c, /__Host-ags_session=;/);
+  assert.match(c, /ags_auth=;/);
   assert.match(c, /Max-Age=0/i);
   assert.match(c, /HttpOnly/i);
 });

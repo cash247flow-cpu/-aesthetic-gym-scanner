@@ -175,3 +175,16 @@ Safeguards:
 - The result screen reports exactly what was removed, including anything that didn't finish.
 
 It can't remove copies elsewhere: backup files you saved, or photos already sent to Gemini for reading. Tests: `tests/erase.test.ts`.
+
+## Sign-in sessions (Stage 2c)
+
+Signing in with the passcode starts a **signed session** (`lib/session.ts`): an HttpOnly, Secure, SameSite=Lax `__Host-ags_session` cookie, HMAC-SHA-256-signed with the server-only `SESSION_SECRET`. The old year-long `ags_auth` cookie is no longer accepted.
+
+- **Lifetime:**
+  - Idle limit: 30 days without using the app. Using it renews the limit, at most once a day.
+  - Absolute limit: 90 days after signing in.
+  - After either, the app asks for the passcode again and says why.
+- **Sign out** of this phone: More → Data on this phone → **Sign out of this phone**. This clears the session and the offline copy; data stays on the phone.
+- **Lost phone:** change `SESSION_SECRET` in Vercel and redeploy. That signs out **every** device; there's no per-device list without a database. Also sign out of Vercel, and change `APP_PASSCODE` if it may be known.
+- **Configuration:** `SESSION_SECRET` (32+ random characters) is **required** wherever `APP_PASSCODE` is. Without it the app fails closed (503). Only local `npm run dev` uses a stand-in key.
+- **Tests:** `tests/session.test.ts` and `tests/security-auth.test.ts`.

@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE } from "@/lib/passcode";
+import { LEGACY_COOKIE, SESSION_COOKIE, cookieOptions } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-// POST → removes this browser's passcode cookie (used by "Delete everything on this phone").
-// Behind the passcode gate like every API route.
+// POST → signs this browser out (removes its session cookie). Behind the passcode gate.
 export async function POST() {
   const res = NextResponse.json({ ok: true }, { headers: { "cache-control": "no-store" } });
-  res.cookies.set(AUTH_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+  res.cookies.set(SESSION_COOKIE, "", cookieOptions(0));
+  res.cookies.set(LEGACY_COOKIE, "", { path: "/", maxAge: 0 });
   return res;
 }

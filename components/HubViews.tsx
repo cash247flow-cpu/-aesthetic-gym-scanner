@@ -16,6 +16,7 @@ import { referralUrl } from "@/lib/achievements/sharePrefs";
 import { requestPersistentStorage, storageStatus, type StorageStatus } from "@/lib/storageInfo";
 import { BackupPanel, lastBackupText } from "@/components/BackupPanel";
 import { ErasePanel } from "@/components/ErasePanel";
+import { SessionCard } from "@/components/SessionCard";
 import { loadLastBackup } from "@/lib/backupStore";
 
 type Row = { icon: string; label: string; sub?: string; onClick: () => void };
@@ -283,6 +284,7 @@ export function DataView({ onBack }: { onBack: () => void }) {
           </p>
         </div>
         <BackupPanel />
+        <SessionCard />
         <ErasePanel />
       </div>
     </section>

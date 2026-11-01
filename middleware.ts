@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE, NOT_CONFIGURED, authMode, authToken, sameString } from "@/lib/passcode";
+import { NOT_CONFIGURED, authMode, sessionSecret } from "@/lib/passcode";
+import { LEGACY_COOKIE, SESSION_COOKIE, cookieMaxAge, cookieOptions, nowSeconds, signSession, verifySession } from "@/lib/session";
 import { buildCsp, newNonce } from "@/lib/csp";
 
 // Pages that must work before signing in.
@@ -17,6 +18,12 @@ function pass(req: NextRequest, dev: boolean) {
   return res;
 }
 
+/** The old year-long cookie is no longer accepted; tidy it away when a browser still sends it. */
+function dropLegacy(req: NextRequest, res: NextResponse) {
+  if (req.cookies.has(LEGACY_COOKIE)) res.cookies.set(LEGACY_COOKIE, "", { path: "/", maxAge: 0 });
+  return res;
+}
+
 // Everything except static files goes through here. Fails closed (see lib/passcode.ts).
 export async function middleware(req: NextRequest) {
   const mode = authMode();
@@ -28,18 +35,27 @@ export async function middleware(req: NextRequest) {
       ? NextResponse.json({ error: NOT_CONFIGURED }, { status: 503 })
       : new NextResponse(NOT_CONFIGURED, { status: 503, headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" } });
   }
-  if (mode === "open-dev" || PUBLIC.has(path)) return pass(req, dev);
+  if (mode === "open-dev" || PUBLIC.has(path)) return dropLegacy(req, pass(req, dev));
 
-  const cookie = req.cookies.get(AUTH_COOKIE)?.value ?? "";
-  if (cookie && sameString(cookie, await authToken())) return pass(req, dev);
-
-  if (path.startsWith("/api/")) {
-    return NextResponse.json({ error: "Enter the app passcode first." }, { status: 401 });
+  const now = nowSeconds();
+  const v = await verifySession(req.cookies.get(SESSION_COOKIE)?.value, sessionSecret()!, now);
+  if (v.ok) {
+    const res = dropLegacy(req, pass(req, dev));
+    // Using the app renews the 30-day idle limit (at most once a day, never past 90 days).
+    if (v.renewed) res.cookies.set(SESSION_COOKIE, await signSession(v.renewed, sessionSecret()!), cookieOptions(cookieMaxAge(v.renewed, now)));
+    return res;
   }
-  const login = req.nextUrl.clone();
-  login.pathname = "/login";
-  login.search = "";
-  return NextResponse.redirect(login);
+
+  const res = path.startsWith("/api/")
+    ? NextResponse.json({ error: "Enter the app passcode first." }, { status: 401 })
+    : (() => {
+        const login = req.nextUrl.clone();
+        login.pathname = "/login";
+        login.search = v.reason === "expired" ? "?expired=1" : "";
+        return NextResponse.redirect(login);
+      })();
+  if (req.cookies.has(SESSION_COOKIE)) res.cookies.set(SESSION_COOKIE, "", cookieOptions(0));
+  return dropLegacy(req, res);
 }
 
 export const config = {

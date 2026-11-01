@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Accent, ArrowCircle, TITLE } from "@/components/ui";
 
 export default function Login() {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.has("expired")) setNotice("You were signed out because your session ended (30 days without use, or 90 days since signing in). Enter the passcode to continue — your data is still on this phone.");
+    else if (q.has("signedout")) setNotice("Signed out. Your data is still on this phone.");
+  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +47,11 @@ export default function Login() {
       </h1>
       <p className="mt-2 text-sm text-zinc-400">Enter your app passcode. You&apos;ll stay signed in on this phone.</p>
 
+      {notice && (
+        <p role="status" className="mt-4 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300">
+          {notice}
+        </p>
+      )}
       <form onSubmit={submit} className="mt-6">
         <input
           type="password"
