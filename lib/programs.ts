@@ -31,6 +31,7 @@ export const AESTHETIC_RANK: Record<string, { rank: number; reason: string }> = 
   "Cable Rope Crunch":        { rank: 4,  reason: "Direct ab development, not just leanness." },
   "High-to-Low Cable Fly":    { rank: 5,  reason: "Upper chest gives the superhero look, avoids a saggy chest." },
   "Incline Dumbbell Press":   { rank: 5,  reason: "Upper chest gives the superhero look, avoids a saggy chest." },
+  "Lower Chest Dip":          { rank: 5,  reason: "Lower chest fills out the bottom edge of the pecs." },
   "Shrugs":                   { rank: 6,  reason: "Upper back shows in tight shirts and shirtless." },
   "Reverse Pec Deck":         { rank: 7,  reason: "Rear delts at 45° are the most underrated aesthetic muscle." },
   "Cable Rope Pushdown":      { rank: 8,  reason: "Long-head tricep fills out t-shirts." },
@@ -115,6 +116,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         equipmentNeeded: ["chest press machine"], aestheticKey: "High-to-Low Cable Fly", aestheticMap: "upper",
         substitutes: [
           { name: "Flat Dumbbell Press", cue: "Full stretch at the bottom; elbows ~45°.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "High-to-Low Cable Fly", aestheticMap: "upper" },
+          { name: "Reverse-Seated Machine Dip", cue: "Sit backwards on the seat, facing the machine, and grip the handles. Lean your chest well forward over your hands and keep that lean the whole set. From bent elbows, press the handles down until your arms are straight, then let them rise slowly as your elbows bend. The lean puts more of the work on the lower chest; triceps and front shoulders help.", equipmentNeeded: ["seated dip machine"], aestheticKey: "Lower Chest Dip", aestheticMap: "upper" },
         ] },
     ],
   },

@@ -27,6 +27,7 @@ const BY_HAND: Record<string, Targets> = {
   "Reverse Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
   "Reverse Cable Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
   "Dumbbell Reverse Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
+  "Reverse-Seated Machine Dip": { primaryMuscles: ["chest"], secondaryMuscles: ["triceps", "shoulders"] },
   "Meadows Row": { primaryMuscles: ["lats", "middle back"], secondaryMuscles: ["biceps", "shoulders"] },
 };
 

@@ -385,3 +385,22 @@ test("The Abs session ends with the Cable Oblique Crunch", async ({ page }) => {
   await expect(page.locator("text=Abs · Obliques").first()).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("oblique-crunch.png"), fullPage: true });
 });
+
+test("Machine Chest Press can be swapped for the Reverse-Seated Machine Dip, and the card stays on screen", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await page.locator('button[aria-label^="Push:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  // The way a person does it: tap the exercise's number, then Swap on its card.
+  await page.locator('button[aria-label="Machine Chest Press"]').click();
+  await expect(page.locator('button[aria-label="Swap Machine Chest Press"]')).toBeInViewport();
+  await page.locator('button[aria-label="Swap Machine Chest Press"]').click();
+  await page.locator('button:has-text("Reverse-Seated Machine Dip")').first().click();
+  // Regression: a swap used to collapse the exercise area to nothing.
+  await expect(page.locator('button[aria-label="Swap Reverse-Seated Machine Dip"]')).toBeInViewport();
+  await expect(page.locator("text=Sit backwards on the seat").first()).toBeVisible();
+  await expect(page.locator("text=Lower chest fills out").first()).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("ags:swaps"))).toContain("Reverse-Seated Machine Dip");
+  await page.screenshot({ path: test.info().outputPath("seated-dip.png") });
+});

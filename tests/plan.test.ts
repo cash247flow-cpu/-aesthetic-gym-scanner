@@ -50,3 +50,23 @@ test("Cable Oblique Crunch is the 4th ab slot on Legs, in the Abs session and on
   assert.ok(!abNames(noCable).includes(OC));
   assert.match(noCable.missingNote ?? "", /Couldn.t fill: .*Cable Oblique Crunch/);
 });
+
+test("Reverse-Seated Machine Dip is a lower-chest swap for Machine Chest Press", () => {
+  const MCP = "Machine Chest Press";
+  const DIP = "Reverse-Seated Machine Dip";
+  const slotOf = (equipment: string[]) => buildPlan("push", equipment).exercises.find((e) => e.name === MCP || e.swappedFrom === MCP);
+  const all = [...CANONICAL_EQUIPMENT];
+  const s = slotOf(all)!;
+  assert.equal(s.name, MCP, "the chest press stays the default");
+  const dip = s.alternatives!.find((a) => a.name === DIP)!;
+  assert.ok(dip, "offered as a swap");
+  assert.equal(dip.swappedFrom, MCP);
+  assert.equal(dip.sets, "2–3");
+  assert.equal(dip.reps, "8–12", "same programmed sets/reps/rest as the slot");
+  assert.match(dip.cue, /Sit backwards on the seat.*lower chest/);
+  assert.match(dip.reason, /^Lower chest/, "its own reason line, not the slot's upper-chest one");
+  // Only with a seated dip machine; a dip station alone doesn't offer it.
+  assert.ok(!slotOf(all.filter((e) => e !== "seated dip machine"))!.alternatives?.some((a) => a.name === DIP));
+  // With only the dip machine, it fills the slot instead of leaving it empty.
+  assert.equal(slotOf(["seated dip machine"])!.name, DIP);
+});
