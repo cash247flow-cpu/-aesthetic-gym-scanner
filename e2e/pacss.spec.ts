@@ -372,3 +372,16 @@ test("home shows the persistence quote", async ({ page }) => {
     "“A river cuts through rock, not because of its power, but because of its persistence.”",
   );
 });
+
+test("The Abs session ends with the Cable Oblique Crunch", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await page.locator('button[aria-label^="Abs:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  const oc = page.locator("text=Cable Oblique Crunch").first();
+  await oc.scrollIntoViewIfNeeded();
+  await expect(oc).toBeVisible();
+  await expect(page.locator("text=Abs · Obliques").first()).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("oblique-crunch.png"), fullPage: true });
+});
