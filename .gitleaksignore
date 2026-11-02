@@ -1,0 +1,3 @@
+# Reviewed false positives. Each line is one exact gitleaks finding (commit:file:rule:line).
+# b7fb16c foods.ts:111 is the food entry key "ground-beef-90", not a credential.
+b7fb16cd5c7d8d4d20b583fe8388fa94a14b4ed4:lib/nutrition/foods.ts:generic-api-key:111
