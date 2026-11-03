@@ -21,6 +21,7 @@ import { Celebrate } from "@/components/Celebrate";
 import { PreWorkoutReminder } from "@/components/PreWorkoutReminder";
 import { ExerciseGuide, hasGuide } from "@/components/ExerciseGuide";
 import { finishWorkout, type Summary } from "@/lib/wins";
+import { workoutId } from "@/lib/achievements/workoutRecords";
 import type { MakeupFor } from "@/lib/missed";
 import { WorkoutTimer } from "@/components/WorkoutTimer";
 import { elapsedMs, loadActive, pauseTimer, saveActive, startTimer, type ActiveWorkout } from "@/lib/activeWorkout";
@@ -104,8 +105,13 @@ export function ResultView({
   const timerPause = () => workout && updateWorkout(pauseTimer(workout));
   const durationMin = () => (workout?.started ? Math.max(1, Math.round(elapsedMs(workout) / 60000)) : undefined);
 
+  // The id this workout's cardio is saved under — the same id its history entry gets. Fixed at
+  // open time, so a workout still open past midnight keeps finding its own cardio.
+  const [cardioOwner] = useState(() => workoutId(new Date().toLocaleDateString("en-CA"), plan.sessionLabel, makeup?.date));
+
   const record = () =>
     finishWorkout({
+      cardioOwner,
       durationMin: durationMin(),
       session: plan.sessionLabel,
       label: plan.sessionLabel,
@@ -414,6 +420,7 @@ export function ResultView({
           >
             {sl.kind === "cardio" && cardio ? (
               <CardioCard
+                owner={cardioOwner}
                 plan={cardio}
                 unit={unit}
                 onChange={updateCardio}

@@ -1,5 +1,5 @@
 import { loadRecord, type Row, type Unit } from "@/components/SetLogger";
-import { loadLog as loadCardioLog } from "@/components/CardioCard";
+import { ownCardioMinutes } from "@/lib/cardioLog";
 import { bestPerfectStreak, loadHabitLogs } from "@/lib/habits";
 import { statsTotal } from "@/lib/cardioStats";
 import { saveWorkoutRecord, workoutId, type ExerciseSets } from "@/lib/achievements/workoutRecords";
@@ -185,8 +185,10 @@ export function finishWorkout(opts: {
   includeCardio: boolean;
   makeupFor?: string;
   durationMin?: number;
+  /** The id the workout's cardio card saved under; defaults to this workout's history id. */
+  cardioOwner?: string;
 }): Summary {
-  const { session, label, exercises, unit, includeCardio, makeupFor, durationMin } = opts;
+  const { session, label, exercises, unit, includeCardio, makeupFor, durationMin, cardioOwner } = opts;
   const t = today();
 
   let volumeLb = 0;
@@ -249,10 +251,8 @@ export function finishWorkout(opts: {
     prUpdates.push([exercise, { date: t, before, best: maxBest(before, todayBest), bestDate }]);
   }
 
-  const cardioMin = (includeCardio ? (["treadmill", "stairmaster"] as const) : []).reduce((m, machine) => {
-    const log = loadCardioLog(machine);
-    return log?.date === t ? m + log.minutes : m;
-  }, 0);
+  // Only this workout's own cardio counts, so a second session the same day isn't counted twice.
+  const cardioMin = includeCardio ? ownCardioMinutes(cardioOwner ?? workoutId(t, session, makeupFor), t) : 0;
 
   // Steps/floors are typed or photo-read on the cardio card; count today's when cardio is included.
   const stepStats = includeCardio ? statsTotal(t, t) : { steps: 0, floors: 0 };

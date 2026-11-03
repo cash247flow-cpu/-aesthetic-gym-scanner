@@ -5,6 +5,7 @@ import { CardioCard, DEFAULT_CARDIO, type CardioPlan } from "@/components/Cardio
 import { loadUnit } from "@/components/SetLogger";
 import { Celebrate } from "@/components/Celebrate";
 import { finishWorkout, type Summary } from "@/lib/wins";
+import { workoutId } from "@/lib/achievements/workoutRecords";
 import type { MakeupFor } from "@/lib/missed";
 import { AccentLast, TITLE } from "@/components/ui";
 
@@ -43,10 +44,12 @@ export function CardioSession({
   const [unit] = useState(loadUnit);
   const [done, setDone] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
+  // This session's own cardio log (a make-up is a separate session from today's own cardio).
+  const [owner] = useState(() => workoutId(new Date().toLocaleDateString("en-CA"), "Cardio Day", makeup?.date));
 
   function celebrate() {
     setSummary(
-      finishWorkout({ session: "Cardio Day", label: "Cardio Day", exercises: [], unit, includeCardio: true, makeupFor: makeup?.date }),
+      finishWorkout({ session: "Cardio Day", label: "Cardio Day", exercises: [], unit, includeCardio: true, makeupFor: makeup?.date, cardioOwner: owner }),
     );
   }
 
@@ -71,6 +74,7 @@ export function CardioSession({
 
       <div className="mt-5">
         <CardioCard
+          owner={owner}
           standalone
           plan={plan}
           unit={unit}

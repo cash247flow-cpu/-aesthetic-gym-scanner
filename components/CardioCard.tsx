@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { beep, formatClock, unlockAudio, useWakeLock } from "@/components/RestTimer";
 import type { Unit } from "@/components/SetLogger";
 import { CardioStats } from "@/components/CardioStats";
+import { loadLastLog, loadOwnLog, saveOwnLog, type CardioLog, type CardioMachine } from "@/lib/cardioLog";
 
-export type CardioMachine = "treadmill" | "stairmaster";
+export type { CardioLog, CardioMachine } from "@/lib/cardioLog";
 export type CardioPosition = "before" | "after";
 export type CardioPlan = { position: CardioPosition; machine: CardioMachine; minutes: number; level?: string };
 
@@ -14,8 +15,6 @@ export const DEFAULT_CARDIO: CardioPlan = { position: "after", machine: "stairma
 // v2: earlier builds stored "no cardio" as a missing key; now it's on by default.
 const PLAN_KEY = "ags:cardio:v2";
 const OFF = "off";
-
-export type CardioLog = { date: string; minutes: number; speed: string; incline: string; level: string };
 
 export const MACHINE_LABEL: Record<CardioMachine, string> = { treadmill: "Treadmill", stairmaster: "StairMaster" };
 const PRESETS = [10, 15, 20, 30, 40];
@@ -44,24 +43,8 @@ export function saveCardioPlan(plan: CardioPlan | null) {
   }
 }
 
-export function loadLog(machine: CardioMachine): CardioLog | null {
-  try {
-    const raw = localStorage.getItem(`ags:cardio:log:${machine}`);
-    return raw ? (JSON.parse(raw) as CardioLog) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLog(machine: CardioMachine, log: CardioLog) {
-  try {
-    localStorage.setItem(`ags:cardio:log:${machine}`, JSON.stringify(log));
-  } catch {
-    /* ignore */
-  }
-}
-
 export function CardioCard({
+  owner,
   plan,
   unit,
   onChange,
@@ -70,6 +53,8 @@ export function CardioCard({
   onFinishedChange,
   standalone = false,
 }: {
+  /** The workout this cardio belongs to (its history id); each workout keeps its own log. */
+  owner: string;
   plan: CardioPlan;
   unit: Unit;
   onChange: (plan: CardioPlan) => void;
@@ -83,11 +68,8 @@ export function CardioCard({
   const { machine, minutes, position } = plan;
   const speedUnit = unit === "kg" ? "km/h" : "mph";
 
-  const [last, setLast] = useState<CardioLog | null>(() => loadLog(machine));
-  const [todayLog, setTodayLog] = useState(() => {
-    const l = loadLog(machine);
-    return l?.date === today() ? l : null;
-  });
+  const [last, setLast] = useState<CardioLog | null>(() => loadLastLog(machine));
+  const [todayLog, setTodayLog] = useState(() => loadOwnLog(owner, machine, today()));
   const [speed, setSpeed] = useState(todayLog?.speed ?? "");
   const [incline, setIncline] = useState(todayLog?.incline ?? "");
   // StairMaster level starts at the plan's target (level 7) until something is logged.
@@ -119,25 +101,24 @@ export function CardioCard({
     return () => clearInterval(id);
   }, [running]);
 
-  // Switching machine loads that machine's history.
+  // Switching machine loads that machine's history (this workout's own log for today).
   useEffect(() => {
-    const l = loadLog(machine);
-    const t = l?.date === today() ? l : null;
-    setLast(l);
+    const t = loadOwnLog(owner, machine, today());
+    setLast(loadLastLog(machine));
     setTodayLog(t);
     setSpeed(t?.speed ?? "");
     setIncline(t?.incline ?? "");
     setLevel(t?.level ?? targetLevelRef.current);
     setFinished(t !== null);
     firedRef.current = false;
-  }, [machine]);
+  }, [machine, owner]);
 
   // Edits made after finishing still update today's saved entry.
   function editField(key: "speed" | "incline" | "level", value: string) {
     ({ speed: setSpeed, incline: setIncline, level: setLevel })[key](value);
     if (todayLog) {
       const log = { ...todayLog, [key]: value };
-      saveLog(machine, log);
+      saveOwnLog(owner, machine, log);
       setTodayLog(log);
       setLast(log);
     }
@@ -147,7 +128,7 @@ export function CardioCard({
     if (firedRef.current) return;
     firedRef.current = true;
     const log: CardioLog = { date: today(), minutes: elapsedMinutes, speed, incline, level };
-    saveLog(machine, log);
+    saveOwnLog(owner, machine, log);
     setTodayLog(log);
     setLast(log);
     setEndAt(null);

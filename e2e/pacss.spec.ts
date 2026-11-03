@@ -404,3 +404,28 @@ test("Machine Chest Press can be swapped for the Reverse-Seated Machine Dip, and
   expect(await page.evaluate(() => localStorage.getItem("ags:swaps"))).toContain("Reverse-Seated Machine Dip");
   await page.screenshot({ path: test.info().outputPath("seated-dip.png") });
 });
+
+test("two StairMaster sessions on one day: the second starts fresh and neither overwrites the other", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  // 1) Push day's own StairMaster (40 min, the plan default), marked done inside the lifting workout.
+  await page.locator('button[aria-label^="Push:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  await page.locator('button[aria-label="Cardio: StairMaster"]').click();
+  const liftCardio = page.locator('[aria-roledescription="slide"]').filter({ hasText: "Cardio · after lifting" });
+  await liftCardio.locator('button:has-text("Mark done")').click();
+  await expect(liftCardio.locator("text=Cardio done")).toBeVisible();
+  await page.locator('button:has-text("Back to home")').click();
+  // 2) A separate cardio session the same day (e.g. a make-up): it must not open as already done.
+  await page.locator('button:text-is("Cardio")').dispatchEvent("click");
+  await page.waitForSelector("text=Back to sessions");
+  await expect(page.locator("text=Cardio done")).toHaveCount(0);
+  await expect(page.getByRole("timer").locator("text=Ready")).toBeVisible();
+  await page.locator('button[aria-pressed]:text-is("20")').click();
+  await page.locator('button:has-text("Mark done")').click();
+  await expect(page.locator("text=Cardio done")).toBeVisible();
+  await page.waitForTimeout(1200); // the session records itself shortly after finishing
+  const history = await page.evaluate(() => JSON.parse(localStorage.getItem("ags:history") ?? "[]") as { session: string; cardioMin: number }[]);
+  expect(history.map((h) => [h.session, h.cardioMin]).sort()).toEqual([["Cardio Day", 20], ["Push Day", 40]]);
+});
