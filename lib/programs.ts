@@ -31,6 +31,7 @@ export const AESTHETIC_RANK: Record<string, { rank: number; reason: string }> = 
   "Cable Rope Crunch":        { rank: 4,  reason: "Direct ab development, not just leanness." },
   "High-to-Low Cable Fly":    { rank: 5,  reason: "Upper chest gives the superhero look, avoids a saggy chest." },
   "Incline Dumbbell Press":   { rank: 5,  reason: "Upper chest gives the superhero look, avoids a saggy chest." },
+  "Lower Chest Dip":          { rank: 5,  reason: "Lower chest fills out the bottom edge of the pecs." },
   "Shrugs":                   { rank: 6,  reason: "Upper back shows in tight shirts and shirtless." },
   "Reverse Pec Deck":         { rank: 7,  reason: "Rear delts at 45° are the most underrated aesthetic muscle." },
   "Cable Rope Pushdown":      { rank: 8,  reason: "Long-head tricep fills out t-shirts." },
@@ -55,6 +56,8 @@ export const LEG_AESTHETIC: Record<string, { label: string; reason: string }> = 
   // Swaps for the reverse-crunch slot (same pelvis-curl pattern, different equipment).
   "Lower-Ab Raise":      { label: "Abs · Lower", reason: "Curls the pelvis toward the ribs to work the lower abs. Keep it slow so momentum doesn't take over." },
   "Dragon Flag":         { label: "Abs · Advanced", reason: "A demanding whole-core move with a big lower-ab load. Build up with slow lowering before full reps." },
+  // Obliques: the three slots above all crunch straight forward; this one bends to the side.
+  "Oblique Crunch":      { label: "Abs · Obliques", reason: "Works the obliques along the sides of the waist, which the straight-ahead ab exercises barely train." },
 };
 
 // ─── Sessions ──────────────────────────────────────────────────────────
@@ -113,6 +116,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         equipmentNeeded: ["chest press machine"], aestheticKey: "High-to-Low Cable Fly", aestheticMap: "upper",
         substitutes: [
           { name: "Flat Dumbbell Press", cue: "Full stretch at the bottom; elbows ~45°.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "High-to-Low Cable Fly", aestheticMap: "upper" },
+          { name: "Reverse-Seated Machine Dip", cue: "Sit backwards on the seat, facing the machine, and grip the handles. Lean your chest well forward over your hands and keep that lean the whole set. From bent elbows, press the handles down until your arms are straight, then let them rise slowly as your elbows bend. The lean puts more of the work on the lower chest; triceps and front shoulders help.", equipmentNeeded: ["seated dip machine"], aestheticKey: "Lower Chest Dip", aestheticMap: "upper" },
         ] },
     ],
   },
@@ -239,7 +243,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
           { name: "Cable Hip Abduction", cue: "Lean slightly away; sweep out and hold 1–2s at the top.", equipmentNeeded: ["cable machine","ankle strap"], aestheticKey: "Hip Abduction", aestheticMap: "legs" },
           { name: "Side-Lying Hip Abduction", cue: "Lie on your side, top leg straight and slightly behind you; lift with the side of the hip and hold 1–2s at the top.", equipmentNeeded: [], aestheticKey: "Hip Abduction", aestheticMap: "legs" },
         ] },
-      // Abs: only the S-tier picks. Slot 1's swaps are the face-away crunch variations.
+      // Abs: the S-tier picks, plus one oblique slot. Slot 1's swaps are the face-away crunch variations.
       { name: "Assisted Lat Pulldown Crunch", sets: "3", reps: "failure", restSeconds: "90–120",
         cue: "Let the cable's upward pull assist you as you crunch, then control the way down — slow lowering into a full stretch.",
         equipmentNeeded: ["lat pulldown"], aestheticKey: "Face-Away Crunch", aestheticMap: "legs", abs: true,
@@ -261,6 +265,9 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
       { name: "Garhammer Raise", sets: "3", reps: "failure", restSeconds: "90–120",
         cue: "Hips off the end of a bench, knees tucked. Lower your legs as far as you can without touching the floor, then raise by curling your pelvis — no swinging. Add load as you get stronger.",
         equipmentNeeded: ["bench"], aestheticKey: "Garhammer Raise", aestheticMap: "legs", abs: true },
+      { name: "Cable Oblique Crunch", sets: "3", reps: "12–15", restSeconds: "60–90",
+        cue: "Each side. Kneel or stand side-on to a high cable, rope or handle beside your ear. Crunch down and to the side, bringing your ribs toward the hip on that side — move from the waist, not the arms — then let the cable pull you back up slowly into the stretch. Do all reps on one side, then switch; log one side's reps.",
+        equipmentNeeded: ["cable machine"], aestheticKey: "Oblique Crunch", aestheticMap: "legs", abs: true },
     ],
   },
 };

@@ -22,7 +22,7 @@ const COMBOS = {
       ["pull", "Cable Hammer Curl"],
     ] as const,
   },
-  // Stand-alone ab session for rest days: the two ab exercises from Legs.
+  // Stand-alone ab session for rest days: the ab exercises from Legs.
   abs: {
     label: "Abs",
     note: "Up to 3× a week, with a day off between.",
@@ -30,6 +30,7 @@ const COMBOS = {
       ["legs", "Assisted Lat Pulldown Crunch"],
       ["legs", "Reverse Crunch (with Ab Mat)"],
       ["legs", "Garhammer Raise"],
+      ["legs", "Cable Oblique Crunch"],
     ] as const,
   },
   // Stand-alone forearm session for rest days: the two forearm exercises from Pull.

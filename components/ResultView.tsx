@@ -150,18 +150,21 @@ export function ResultView({
 
   // The track is as tall as the card you're on (not the tallest card), so short cards don't
   // leave an empty gap above "Finish workout". Follows the card as sets are added or it grows.
+  // A swap replaces the current card's element, so this re-attaches when the card's key changes;
+  // a card that has left the page is ignored (it would measure 0 and collapse the track).
+  const currentKey = current?.key;
   useEffect(() => {
     const track = trackRef.current;
     const slide = track?.children[Math.min(active, track.children.length - 1)] as HTMLElement | undefined;
     if (!track || !slide) return;
     const fit = () => {
-      track.style.height = `${slide.offsetHeight}px`;
+      if (slide.isConnected) track.style.height = `${slide.offsetHeight}px`;
     };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(slide);
     return () => ro.disconnect();
-  }, [active, count]);
+  }, [active, count, currentKey]);
 
   function onTrackScroll() {
     const track = trackRef.current;
