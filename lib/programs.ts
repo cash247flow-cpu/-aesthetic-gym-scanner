@@ -89,6 +89,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
           { name: "Cable Y-Raise", cue: "Two low cables crossed, one in each hand. Raise up and out into a Y, thumbs up, without shrugging — side delts do the work.", equipmentNeeded: ["cable machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
           { name: "Lying Side Raise", cue: "Lie on your side on an incline bench, dumbbell in the top hand starting across your body. Raise out to the side leading with the elbow — constant tension on the side delt.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
           { name: "Seated Side Lateral Raise", cue: "Sit tall, lead with the elbow, no shrug or swing.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
+          { name: "Cable Scapular-Plane Raise", cue: "One arm at a time from a low cable. Raise at about 45° in front of your body (between straight out to the side and straight ahead), leading with the elbow up to shoulder height, no shrug. Do all reps on one side, then switch; log one side's reps. Pairs well with the Cable Y-Raise.", equipmentNeeded: ["cable machine"], aestheticKey: "Lateral Raise", aestheticMap: "upper" },
         ] },
       { name: "High-to-Low Cable Fly", sets: "2–3", reps: "12–15", restSeconds: "90–120",
         cue: "The fly is a fly. If you can cheat it, the weight is too heavy.",
@@ -110,6 +111,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         substitutes: [
           { name: "Incline Front Dumbbell Raise", cue: "Lie back on a 45–60° incline so the front delts start stretched. Raise the dumbbells to eye level, thumbs slightly up — no swinging.", equipmentNeeded: ["dumbbells","incline bench"], aestheticKey: "Overhead Press", aestheticMap: "upper" },
           { name: "Dips", cue: "Lean slightly forward, elbows back. Lower until your shoulders stretch below your elbows, then press up — add weight once bodyweight is easy.", equipmentNeeded: ["dip station"], aestheticKey: "Overhead Press", aestheticMap: "upper" },
+          { name: "Cable Partial Front Raise", cue: "Low cable behind you so it pulls hardest with your arm by your side. Raise the arm straight forward only to about 30°, then let it drift back slightly behind you. Stay in that low range; going higher hands the work to the upper chest.", equipmentNeeded: ["cable machine"], aestheticKey: "Overhead Press", aestheticMap: "upper" },
         ] },
       { name: "Machine Chest Press", sets: "2–3", reps: "8–12", restSeconds: "120–180",
         cue: "Full stretch at the bottom.",
@@ -181,6 +183,7 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         substitutes: [
           { name: "Reverse Cable Crossover", cue: "Cables at shoulder height, crossed — left hand holds the right cable. Sweep out wide at 45°, leading with the elbows; let them cross back for a full stretch.", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
           { name: "Rear Delt Raise (head on bench)", cue: "Forehead on the bench, sweep out wide and lead with the elbows.", equipmentNeeded: ["dumbbells","bench"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
+          { name: "Single-Arm Cable Rear Delt Raise", cue: "One arm at a time, cable at shoulder height, handle taken across your body. Brace with your free hand on the machine. Sweep the arm out and back at about 45°, keeping shoulder, arm and wrist in line with the cable; don't squeeze your shoulder blades together. Do all reps on one side, then switch; log one side's reps.", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
         ] },
       // Forearms, last on Pull day (also a stand-alone rest-day session).
       { name: "Wrist Curl", sets: "2", reps: "12–20", restSeconds: "60–90",

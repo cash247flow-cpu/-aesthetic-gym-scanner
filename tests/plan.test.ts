@@ -1,7 +1,7 @@
 // Workout plan swaps — run with `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildPlan } from "@/lib/plan";
+import { buildPlan, type SessionKey } from "@/lib/plan";
 import { CANONICAL_EQUIPMENT } from "@/lib/equipment";
 
 const RC = "Reverse Crunch (with Ab Mat)";
@@ -69,4 +69,28 @@ test("Reverse-Seated Machine Dip is a lower-chest swap for Machine Chest Press",
   assert.ok(!slotOf(all.filter((e) => e !== "seated dip machine"))!.alternatives?.some((a) => a.name === DIP));
   // With only the dip machine, it fills the slot instead of leaving it empty.
   assert.equal(slotOf(["seated dip machine"])!.name, DIP);
+});
+
+test("shoulder cable swaps: one per head, offered with a cable machine, programmed sets kept", () => {
+  const all = [...CANONICAL_EQUIPMENT];
+  const cases: [SessionKey, string, string][] = [
+    ["push", "Chest-Supported Lateral Raise", "Cable Scapular-Plane Raise"],
+    ["push", "Dumbbell Overhead Press", "Cable Partial Front Raise"],
+    ["pull", "Reverse Pec Deck", "Single-Arm Cable Rear Delt Raise"],
+  ];
+  for (const [session, slotName, swap] of cases) {
+    const slot = (eq: string[]) => buildPlan(session, eq).exercises.find((e) => e.name === slotName || e.swappedFrom === slotName)!;
+    const s = slot(all);
+    assert.equal(s.name, slotName, "the programmed exercise stays the default");
+    const alt = s.alternatives!.find((a) => a.name === swap)!;
+    assert.ok(alt, `${swap} offered`);
+    assert.equal(alt.sets, s.sets);
+    assert.equal(alt.reps, s.reps);
+    assert.ok(alt.cue.length > 40);
+    // Needs a cable machine.
+    assert.ok(!slot(all.filter((e) => e !== "cable machine")).alternatives?.some((a) => a.name === swap));
+  }
+  // The rear-delt swap also appears on Pump day, where the Reverse Pec Deck is used too.
+  const pump = buildPlan("pump", all).exercises.find((e) => e.name === "Reverse Pec Deck")!;
+  assert.ok(pump.alternatives!.some((a) => a.name === "Single-Arm Cable Rear Delt Raise"));
 });

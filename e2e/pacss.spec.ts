@@ -429,3 +429,18 @@ test("two StairMaster sessions on one day: the second starts fresh and neither o
   const history = await page.evaluate(() => JSON.parse(localStorage.getItem("ags:history") ?? "[]") as { session: string; cardioMin: number }[]);
   expect(history.map((h) => [h.session, h.cardioMin]).sort()).toEqual([["Cardio Day", 20], ["Push Day", 40]]);
 });
+
+test("Reverse Pec Deck can be swapped for the Single-Arm Cable Rear Delt Raise", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await page.locator('button[aria-label^="Pull:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  await page.locator('button[aria-label="Reverse Pec Deck"]').click();
+  await page.locator('button[aria-label="Swap Reverse Pec Deck"]').click();
+  for (const n of ["Reverse Cable Crossover", "Single-Arm Cable Rear Delt Raise"]) await expect(page.locator(`button:has-text("${n}")`).first()).toBeVisible();
+  await page.locator('button:has-text("Single-Arm Cable Rear Delt Raise")').first().click();
+  await expect(page.locator('button[aria-label="Swap Single-Arm Cable Rear Delt Raise"]')).toBeInViewport();
+  await expect(page.locator("text=don't squeeze your shoulder blades together").first()).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("rear-delt-swap.png") });
+});
