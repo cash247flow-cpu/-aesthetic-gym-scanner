@@ -444,3 +444,40 @@ test("Reverse Pec Deck can be swapped for the Single-Arm Cable Rear Delt Raise",
   await expect(page.locator("text=don't squeeze your shoulder blades together").first()).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("rear-delt-swap.png") });
 });
+
+test("a missed day can carry a note: added on Home, kept after Skip, shown in that week's review", async ({ page, context }) => {
+  await context.clock.setFixedTime(new Date("2026-11-18T12:00:00")); // a Wednesday
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem("ags:missed:since", JSON.stringify("2026-11-15"));
+    localStorage.setItem(
+      "ags:schedule:days",
+      JSON.stringify({
+        "2026-11-15": { choice: "rest", name: "Rest", cardio: null },
+        "2026-11-16": { choice: "rest", name: "Rest", cardio: null },
+        "2026-11-17": { choice: "push", name: "Chest", cardio: "StairMaster 40 min" },
+      }),
+    );
+  });
+  await openApp(page);
+  const card = page.locator('section[aria-label="Missed this week"]');
+  await expect(card).toContainText("Tue · Chest");
+  await expect(card).toContainText("Tue · StairMaster 40 min");
+  // One note per day, offered once even though two things were missed that day.
+  await expect(card.locator('button[aria-label^="Add a note for"]')).toHaveCount(1);
+  await card.locator('button[aria-label^="Add a note for"]').click();
+  await card.locator("textarea").fill("Sore after going too heavy on the weights");
+  await card.locator('button:has-text("Save note")').click();
+  await expect(card).toContainText("📝 Sore after going too heavy on the weights");
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("ags:missed:notes")!))).toEqual({ "2026-11-17": "Sore after going too heavy on the weights" });
+  await page.screenshot({ path: test.info().outputPath("missed-note.png") });
+  // Skipping both items keeps the note; it shows in the week's review.
+  page.on("dialog", (d) => d.accept());
+  await card.locator('button:has-text("Skip")').first().click();
+  await card.locator('button:has-text("Skip")').first().click();
+  await expect(card).toHaveCount(0);
+  await go(page, "Progress", "Weekly evolution");
+  await page.locator('button[aria-label="Next week"]').click();
+  await expect(page.locator('[aria-label="Missed-day notes"]')).toContainText("Sore after going too heavy on the weights");
+});

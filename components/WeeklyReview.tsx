@@ -16,7 +16,8 @@ import { STATUS_LABEL, type CheckIn, type CoachResult } from "@/lib/review/coach
 import { setPainReport } from "@/lib/review/pain";
 import { PainHoldControl } from "@/components/PainHold";
 import type { WeekMetrics } from "@/lib/review/metrics";
-import { lastCompleted, periodFor, periodLabel, previousPeriod, type Period } from "@/lib/review/period";
+import { inPeriod, lastCompleted, periodFor, periodLabel, previousPeriod, type Period } from "@/lib/review/period";
+import { dayName, loadMissedNotes } from "@/lib/missed";
 import {
   decide,
   decisionHistory,
@@ -85,6 +86,8 @@ export function WeeklyReview({
   const changed = !!(snapshot && live && fingerprint(snapshot.metrics) !== fingerprint(live.metrics));
   const shown = snapshot && !showLive ? snapshot : live;
   const inProgress = period ? period.end >= today : false;
+  // Notes the user added to missed days in this period (Home → Missed this week). Shown as written.
+  const missedNotes = period ? Object.entries(loadMissedNotes()).filter(([d]) => inPeriod(d, period)).sort(([a], [b]) => a.localeCompare(b)) : [];
   const current = periodFor(today, startDay);
 
   // The focus approved in the previous review, to ask whether it helped.
@@ -245,6 +248,15 @@ export function WeeklyReview({
           <li>
             Planned sessions:{" "}
             {m.workouts.rate != null ? `${m.workouts.completed} of ${m.workouts.scheduled} (${pct(m.workouts.rate)})${m.workouts.missed ? ` · ${m.workouts.missed} missed` : ""}` : "plan for this week isn't on record"}
+            {missedNotes.length > 0 && (
+              <ul aria-label="Missed-day notes" className="mt-1 grid gap-0.5 text-xs text-zinc-400">
+                {missedNotes.map(([date, note]) => (
+                  <li key={date} className="break-words">
+                    📝 {dayName(date)} {new Date(date + "T12:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}: {note}
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
           <li>Habits: {m.habits.rate != null ? `${m.habits.done} of ${m.habits.eligible} (${pct(m.habits.rate)}) · ${m.habits.perfectDays} perfect day${m.habits.perfectDays === 1 ? "" : "s"}` : "not tracked yet"}</li>
           <li>Cardio: {m.cardio.minutes ? `${m.cardio.minutes} min in ${m.cardio.sessions} session${m.cardio.sessions === 1 ? "" : "s"}${m.cardio.steps ? ` · ${m.cardio.steps.toLocaleString()} steps` : ""}` : "none logged"}</li>

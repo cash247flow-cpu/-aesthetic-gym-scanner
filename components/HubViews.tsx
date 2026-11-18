@@ -265,7 +265,7 @@ export function DataView({ onBack }: { onBack: () => void }) {
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-3.5">
           <p className="font-semibold">Where your data lives</p>
           <ul className="mt-1.5 grid list-disc gap-1 pl-5 text-zinc-300">
-            <li>Workouts, nutrition, body entries, habits, reviews, awards and progress photos are stored in this browser on this phone.</li>
+            <li>Workouts, notes on missed days, nutrition, body entries, habits, reviews, awards and progress photos are stored in this browser on this phone.</li>
             <li>There are no accounts and no cloud copy of that data. Progress photos are never sent anywhere by the app.</li>
             <li>Scale photos, reports, cardio and gym photos, ingredient screenshots, fridge or pantry photos and nutrition labels are sent to Google Gemini only when you confirm reading them with AI.</li>
             <li>Supplement label searches are looked up in the NIH label database through this app&apos;s server; exercise videos load from YouTube when you tap one.</li>

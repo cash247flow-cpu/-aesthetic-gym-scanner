@@ -21,6 +21,8 @@ type Snapshot = DayPlan & { cardio: string | null }; // cardio label, null when 
 const SNAP_KEY = "ags:schedule:days";
 const SINCE_KEY = "ags:missed:since";
 const SKIP_KEY = "ags:missed:skipped";
+const NOTES_KEY = "ags:missed:notes";
+export const NOTE_MAX = 200;
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -126,6 +128,33 @@ export function rangeStatus(start: string, days: number, today = todayStr()): Da
           });
     return { date, items, trained };
   });
+}
+
+/**
+ * A short note the user adds to a missed day ("sore after going too heavy"), one per date.
+ * Kept on the phone only; the app never reads meaning into it. Empty text removes the note.
+ */
+export function loadMissedNotes(): Record<string, string> {
+  const raw = read<Record<string, unknown>>(NOTES_KEY, {});
+  const out: Record<string, string> = {};
+  if (raw && typeof raw === "object") {
+    for (const [date, text] of Object.entries(raw)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date) && typeof text === "string" && text.trim()) out[date] = cleanNote(text);
+    }
+  }
+  return out;
+}
+
+export const cleanNote = (text: string) =>
+  text.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, NOTE_MAX);
+
+export function setMissedNote(date: string, text: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const notes = loadMissedNotes();
+  const clean = cleanNote(text);
+  if (clean) notes[date] = clean;
+  else delete notes[date];
+  write(NOTES_KEY, notes);
 }
 
 /** Missed items this week that can still be made up (skipped ones are left off). */
