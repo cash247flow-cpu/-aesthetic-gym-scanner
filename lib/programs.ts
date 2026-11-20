@@ -177,8 +177,9 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         substitutes: [
           { name: "Dumbbell Hammer Curl", cue: "Palms facing in, elbows still, no swinging.", equipmentNeeded: ["dumbbells"], aestheticKey: "Preacher Curl", aestheticMap: "upper" },
         ] },
+      // Palms-facing grip: more rear-delt activity than palms-down (Schoenfeld et al. 2013, J Strength Cond Res, PMID 23302754).
       { name: "Reverse Pec Deck", sets: "2–3", reps: "10–12", restSeconds: "90–120",
-        cue: "45° angle, lead with the elbow.",
+        cue: "Use the handles with your palms facing each other if the machine has them. 45° angle, lead with the elbow.",
         equipmentNeeded: ["reverse pec deck"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper",
         substitutes: [
           { name: "Reverse Cable Crossover", cue: "Cables at shoulder height, crossed — left hand holds the right cable. Sweep out wide at 45°, leading with the elbows; let them cross back for a full stretch.", equipmentNeeded: ["cable machine"], aestheticKey: "Reverse Pec Deck", aestheticMap: "upper" },
@@ -213,11 +214,12 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
           { name: "Barbell Squat", cue: "Sit straight down, knees forward; control the eccentric.", equipmentNeeded: ["barbell","squat rack"], aestheticKey: "Hack Squat", aestheticMap: "legs" },
           { name: "Goblet Squat", cue: "Dumbbell at your chest, sit straight down between your knees, torso upright.", equipmentNeeded: ["dumbbells"], aestheticKey: "Hack Squat", aestheticMap: "legs" },
         ] },
+      // Slow lowering: 6 weeks of slow-lowering RDLs grew the hamstrings about as much as Nordic curls (Crawford et al. 2025, Med Sci Sports Exerc, PMID 40085810).
       { name: "Romanian Deadlift", sets: "3", reps: "10", restSeconds: "120–180",
-        cue: "Hinge at the hips, bar close, feel the hamstring stretch.",
+        cue: "Hinge at the hips, bar close. Lower slowly under control into the hamstring stretch.",
         equipmentNeeded: ["barbell"], aestheticKey: "Romanian Deadlift", aestheticMap: "legs",
         substitutes: [
-          { name: "Dumbbell RDL", cue: "Hinge at the hips, dumbbells close to the legs, feel the hamstring stretch.", equipmentNeeded: ["dumbbells"], aestheticKey: "Romanian Deadlift", aestheticMap: "legs" },
+          { name: "Dumbbell RDL", cue: "Hinge at the hips, dumbbells close to the legs. Lower slowly under control into the hamstring stretch.", equipmentNeeded: ["dumbbells"], aestheticKey: "Romanian Deadlift", aestheticMap: "legs" },
         ] },
       { name: "Leg Extension", sets: "3", reps: "10–12", restSeconds: "90–120",
         cue: "Seat back, push through the quad, squeeze at the top.",

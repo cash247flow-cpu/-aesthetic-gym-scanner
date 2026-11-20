@@ -94,3 +94,15 @@ test("shoulder cable swaps: one per head, offered with a cable machine, programm
   const pump = buildPlan("pump", all).exercises.find((e) => e.name === "Reverse Pec Deck")!;
   assert.ok(pump.alternatives!.some((a) => a.name === "Single-Arm Cable Rear Delt Raise"));
 });
+
+test("study-based cues: palms-facing handles on the Reverse Pec Deck; slow lowering on Romanian deadlifts", () => {
+  const all = [...CANONICAL_EQUIPMENT];
+  for (const session of ["pull", "pump"] as const) {
+    const rpd = buildPlan(session, all).exercises.find((e) => e.name === "Reverse Pec Deck")!;
+    assert.match(rpd.cue, /palms facing each other/);
+  }
+  const rdl = buildPlan("legs", all).exercises.find((e) => e.name === "Romanian Deadlift")!;
+  assert.match(rdl.cue, /Lower slowly under control/);
+  const dbRdl = buildPlan("legs", all.filter((e) => e !== "barbell")).exercises.find((e) => e.name === "Dumbbell RDL")!;
+  assert.match(dbRdl.cue, /Lower slowly under control/);
+});
