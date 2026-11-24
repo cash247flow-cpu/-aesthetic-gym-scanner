@@ -68,10 +68,27 @@ function fill(muscle: string | undefined, primary: Set<string>, secondary: Set<s
   return { fill: "#3f3f46", opacity: 1 };
 }
 
-function Figure({ mid, side, x, primary, secondary }: { mid: Shape[]; side: Shape[]; x: number; primary: Set<string>; secondary: Set<string> }) {
+type Pick = { selected?: string | null; onPick?: (muscle: string) => void };
+
+function Figure({ mid, side, x, primary, secondary, selected, onPick }: { mid: Shape[]; side: Shape[]; x: number; primary: Set<string>; secondary: Set<string> } & Pick) {
   const draw = (s: Shape, i: number) => {
     const f = fill(s.muscle, primary, secondary);
-    return <path key={i} d={s.d} fill={f.fill} fillOpacity={f.opacity} stroke="#000" strokeWidth="0.8" strokeLinejoin="round" />;
+    const picked = !!s.muscle && s.muscle === selected;
+    const muscle = s.muscle;
+    return (
+      <path
+        key={i}
+        d={s.d}
+        data-muscle={muscle}
+        fill={f.fill}
+        fillOpacity={f.opacity}
+        stroke={picked ? "#ecfccb" : "#000"}
+        strokeWidth={picked ? 1.1 : 0.8}
+        strokeLinejoin="round"
+        onClick={onPick && muscle ? () => onPick(muscle) : undefined}
+        className={onPick && muscle ? "cursor-pointer" : undefined}
+      />
+    );
   };
   return (
     <g transform={`translate(${x},0)`}>
@@ -80,6 +97,25 @@ function Figure({ mid, side, x, primary, secondary }: { mid: Shape[]; side: Shap
       <g transform="translate(100,0) scale(-1,1)">{side.map(draw)}</g>
       {mid.slice(1).map((s, i) => draw(s, i + 100))}
     </g>
+  );
+}
+
+/** The front and back figures on their own. With onPick, each muscle can be tapped. */
+export function BodyFigures({
+  primary,
+  secondary,
+  label,
+  className,
+  selected,
+  onPick,
+}: { primary: Set<string>; secondary: Set<string>; label: string; className?: string } & Pick) {
+  return (
+    <svg viewBox="0 0 210 186" className={className} role="img" aria-label={label}>
+      <Figure mid={FRONT_MID} side={FRONT_SIDE} x={0} primary={primary} secondary={secondary} selected={selected} onPick={onPick} />
+      <Figure mid={BACK_MID} side={BACK_SIDE} x={110} primary={primary} secondary={secondary} selected={selected} onPick={onPick} />
+      <text x="50" y="185" textAnchor="middle" fill="#71717a" fontSize="7">Front</text>
+      <text x="160" y="185" textAnchor="middle" fill="#71717a" fontSize="7">Back</text>
+    </svg>
   );
 }
 
@@ -108,12 +144,12 @@ export function MuscleMap({
   const worked = [...primary].map(muscleLabel);
   return (
     <figure className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
-      <svg viewBox="0 0 210 186" className={`mx-auto block w-full ${compact ? "max-w-[12.5rem]" : "max-w-[19rem]"}`} role="img" aria-label={`Muscles worked: ${worked.join(", ") || "none yet"}`}>
-        <Figure mid={FRONT_MID} side={FRONT_SIDE} x={0} primary={primary} secondary={secondary} />
-        <Figure mid={BACK_MID} side={BACK_SIDE} x={110} primary={primary} secondary={secondary} />
-        <text x="50" y="185" textAnchor="middle" fill="#71717a" fontSize="7">Front</text>
-        <text x="160" y="185" textAnchor="middle" fill="#71717a" fontSize="7">Back</text>
-      </svg>
+      <BodyFigures
+        primary={primary}
+        secondary={secondary}
+        label={`Muscles worked: ${worked.join(", ") || "none yet"}`}
+        className={`mx-auto block w-full ${compact ? "max-w-[12.5rem]" : "max-w-[19rem]"}`}
+      />
       <figcaption className="mt-2 text-center text-xs text-zinc-400">
         {caption && <span className="block text-zinc-300">{caption}</span>}
         {worked.length ? (

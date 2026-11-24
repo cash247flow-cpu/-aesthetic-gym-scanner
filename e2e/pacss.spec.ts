@@ -481,3 +481,36 @@ test("a missed day can carry a note: added on Home, kept after Skip, shown in th
   await page.locator('button[aria-label="Next week"]').click();
   await expect(page.locator('[aria-label="Missed-day notes"]')).toContainText("Sore after going too heavy on the weights");
 });
+
+test("exercises by muscle: tap a muscle on the body map to list the exercises that train it", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await go(page, "Progress", "Exercises by muscle");
+  await expect(page.getByText("Tap a muscle to see the exercises in your program that train it.")).toBeVisible();
+  const before = await page.evaluate(() => Object.keys(localStorage).sort());
+
+  // Tap the chest on the figure itself.
+  await page.locator('svg [data-muscle="chest"]').first().click();
+  await expect(page.locator('ul[aria-label="Muscles"] button[aria-pressed="true"]')).toHaveText("Chest");
+  const chest = page.locator('ul[aria-label="Exercises for Chest"]');
+  await expect(chest.locator("li").first()).toContainText("Incline Dumbbell Press");
+  await expect(chest.locator("li").first()).toContainText("Push · Pump");
+  await expect(chest.getByText("Reverse-Seated Machine Dip")).toBeVisible();
+  await shot(page, "muscle-explorer-chest");
+
+  // The "How to" opens from the list.
+  await chest.getByRole("button", { name: "How to do Incline Dumbbell Press" }).click();
+  await expect(page.locator('[aria-label="How to: Incline Dumbbell Press"]')).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Back muscles work from the name chips too, and helpers are listed separately.
+  await page.locator('ul[aria-label="Muscles"] button', { hasText: "Lower back" }).click();
+  await expect(page.getByText("No exercise in your program targets this muscle directly.", { exact: false })).toBeVisible();
+  await expect(page.locator('ul[aria-label="Helper exercises for Lower back"]')).toContainText("Romanian Deadlift");
+  await page.locator('ul[aria-label="Muscles"] button', { hasText: "Inner thighs" }).click();
+  await expect(page.getByText("Your program doesn't train this muscle.")).toBeVisible();
+
+  // Read-only: nothing is stored.
+  expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(before);
+});

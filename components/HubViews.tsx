@@ -45,7 +45,19 @@ function HubRow({ icon, label, sub, onClick }: Row) {
 }
 
 /** Progress tab: muscles trained this week, then wins and the body tracker. */
-export function ProgressHub({ onWins, onBody, onReview, onPhotos }: { onWins: () => void; onBody: () => void; onReview: () => void; onPhotos: () => void }) {
+export function ProgressHub({
+  onWins,
+  onBody,
+  onReview,
+  onPhotos,
+  onMuscles,
+}: {
+  onWins: () => void;
+  onBody: () => void;
+  onReview: () => void;
+  onPhotos: () => void;
+  onMuscles: () => void;
+}) {
   const [week, setWeek] = useState<{ exercises: string[]; workouts: number; untracked: number } | null>(null);
   const [lastWeight, setLastWeight] = useState<string | null>(null);
   const [plan, setPlan] = useState<{ done: number; madeUp: number; missed: number } | null>(null);
@@ -105,6 +117,7 @@ export function ProgressHub({ onWins, onBody, onReview, onPhotos }: { onWins: ()
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-2">
+        <HubRow icon="🎯" label="Exercises by muscle" sub="Tap a muscle to see the exercises that train it" onClick={onMuscles} />
         <HubRow icon="📊" label="Weekly evolution" sub="Weekly review and coaching summary" onClick={onReview} />
         <HubRow icon="📸" label="Visual evolution" sub="Private progress photos and comparisons" onClick={onPhotos} />
         <HubRow icon="🏆" label="Your wins" sub="Trophies, certificates, personal bests and history" onClick={onWins} />

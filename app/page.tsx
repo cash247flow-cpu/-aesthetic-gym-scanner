@@ -26,6 +26,7 @@ import { MissedCard } from "@/components/MissedCard";
 import { ReviewReadyCard } from "@/components/ReviewReadyCard";
 import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
 import { WeeklyReview } from "@/components/WeeklyReview";
+import { MuscleExplorer } from "@/components/MuscleExplorer";
 import { VisualEvolution } from "@/components/VisualEvolution";
 import { LockGate } from "@/components/AppLock";
 import { migrateRenamedExercises } from "@/lib/renames";
@@ -51,6 +52,7 @@ type View =
   | { state: "review" }
   | { state: "photos" }
   | { state: "activity" }
+  | { state: "muscles" }
   | { state: "data" }
   | { state: "coach"; tab: CoachTab; shopping?: boolean }
   | { state: "wins"; back: View }
@@ -122,7 +124,7 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }
 
-  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep" | "review" | "photos" | "activity" | "data", from?: View) {
+  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep" | "review" | "photos" | "activity" | "data" | "muscles", from?: View) {
     const hub = from ?? (view.state === "progress" || view.state === "more" ? view : ({ state: "upload" } as View));
     setReturnTo((stack) => [...stack.slice(-5), hub]);
     if (state === "sleep") setSleep(loadSleep());
@@ -277,7 +279,7 @@ export default function Home() {
       ? "home"
       : view.state === "meals"
         ? "meals"
-        : ["progress", "wins", "body", "review", "photos"].includes(view.state)
+        : ["progress", "wins", "body", "review", "photos", "muscles"].includes(view.state)
           ? "progress"
           : ["more", "habits", "supps", "week", "sleep", "activity", "data"].includes(view.state)
             ? "more"
@@ -398,7 +400,7 @@ export default function Home() {
       )}
 
       {view.state === "progress" && (
-        <ProgressHub onWins={showWins} onBody={() => go("body")} onReview={() => go("review")} onPhotos={() => go("photos")} />
+        <ProgressHub onWins={showWins} onBody={() => go("body")} onReview={() => go("review")} onPhotos={() => go("photos")} onMuscles={() => go("muscles")} />
       )}
 
       {view.state === "review" && (
@@ -417,6 +419,8 @@ export default function Home() {
       )}
 
       {view.state === "activity" && <ActivityView onBack={back} />}
+
+      {view.state === "muscles" && <MuscleExplorer onBack={back} />}
 
       {view.state === "data" && (
         <LockGate area="Data on this phone">

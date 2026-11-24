@@ -27,6 +27,10 @@ const BY_HAND: Record<string, Targets> = {
   "Kneeling Cable Crunch (Facing Away)": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
   "Garhammer Raise": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
   "Cable Oblique Crunch": { primaryMuscles: ["abdominals"], secondaryMuscles: [] }, // the map has no separate oblique region
+  "Hanging Knee Raise": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Captain's Chair Knee Raise": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Decline Reverse Crunch": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
+  "Dragon Flag": { primaryMuscles: ["abdominals"], secondaryMuscles: [] },
   "Reverse Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
   "Reverse Cable Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
   "Dumbbell Reverse Curl": { primaryMuscles: ["forearms"], secondaryMuscles: ["biceps"] },
