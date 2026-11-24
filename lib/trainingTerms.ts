@@ -56,9 +56,14 @@ export const TRAINING_TERMS: TermGroup[] = [
       },
       {
         term: "Antagonist superset",
-        meaning: "Two exercises for opposing muscles done back to back: one set of each, then rest. One muscle rests while the other works, so the workout takes less time.",
+        meaning: "Two exercises for opposing muscles done back to back: one set of each, then rest. One muscle rests while the other works.",
+        inApp: "Leg extension + leg curl, hip abduction + adduction, chest press + reverse pec deck on Pump, and wrist curl + reverse curl: 15–30 s between the two, 75–120 s after the pair.",
+      },
+      {
+        term: "Non-competing superset",
+        meaning: "Two exercises for muscles that don't overlap much, done back to back. It saves time without tiring the second muscle first.",
         inApp:
-          "Optional, under More, or with the Antagonist week under Your week. Pairs opposing muscles on the same day (e.g. leg extension + leg curl, chest press + row, curl + pushdown): 15–30 s between the two, 75–120 s after the pair. Progressive overload still tracks each exercise.",
+          "The Antagonist week's days: chest presses and flyes with curls, back pulls with triceps moves: 15–30 s between the two, 60–90 s after the pair. Turn supersets on under More, or with the Antagonist week under Your week. Progressive overload still tracks each exercise.",
       },
     ],
   },

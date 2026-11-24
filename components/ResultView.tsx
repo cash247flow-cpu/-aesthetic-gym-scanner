@@ -26,7 +26,7 @@ import type { MakeupFor } from "@/lib/missed";
 import { WorkoutTimer } from "@/components/WorkoutTimer";
 import { elapsedMs, loadActive, pauseTimer, saveActive, startTimer, type ActiveWorkout } from "@/lib/activeWorkout";
 import { AccentLast, TITLE } from "@/components/ui";
-import { PAIR_REST, TRANSITION_REST, loadSuperset, withSupersets } from "@/lib/superset";
+import { TRANSITION_REST, loadSuperset, withSupersets } from "@/lib/superset";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -301,7 +301,7 @@ export function ResultView({
         </p>
         {pairCount > 0 && (
           <p aria-label="Superset mode" className="mt-2 rounded-xl border border-lime-400/30 bg-lime-400/5 px-3 py-2 text-xs text-lime-100">
-            🔁 Antagonist supersets on: {pairCount} {pairCount === 1 ? "pair" : "pairs"} today. Alternate sets within each pair, then rest {PAIR_REST}s.
+            🔁 Supersets on: {pairCount} {pairCount === 1 ? "pair" : "pairs"} today. Alternate sets within each pair; each card shows its rest.
           </p>
         )}
       </header>
@@ -705,7 +705,10 @@ function ExerciseCard({
         <p aria-label="Superset" className="mt-3 rounded-lg border border-lime-400/30 bg-lime-400/5 px-2.5 py-2 text-sm text-lime-100">
           {ex.superset.order === 1
             ? `After each set, rest ${TRANSITION_REST}s and go straight to ${ex.superset.partner} (${ex.superset.group}2).`
-            : `After each set, rest ${PAIR_REST}s, then start the pair again with ${ex.superset.partner} (${ex.superset.group}1).`}
+            : `After each set, rest ${ex.restSeconds}s, then start the pair again with ${ex.superset.partner} (${ex.superset.group}1).`}
+          <span className="block text-xs text-lime-200/70">
+            {ex.superset.kind === "antagonist" ? "Antagonist pair: opposing muscles." : "Non-competing pair: muscles that don't overlap much."}
+          </span>
         </p>
       )}
 

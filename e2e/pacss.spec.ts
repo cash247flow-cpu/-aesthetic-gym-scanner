@@ -585,7 +585,7 @@ test("antagonist supersets: the More switch pairs opposing muscles on Legs; Push
 
   await openApp(page);
   await go(page, "More");
-  const sw = page.getByRole("switch", { name: "Antagonist supersets" });
+  const sw = page.getByRole("switch", { name: "Supersets" });
   await expect(sw).toHaveAttribute("aria-checked", "false");
   await sw.click();
   await expect(sw).toHaveAttribute("aria-checked", "true");
@@ -614,7 +614,7 @@ test("antagonist supersets: the More switch pairs opposing muscles on Legs; Push
   await expect(page.locator('[aria-label="Superset mode"]')).toHaveCount(0);
 });
 
-test("Antagonist week: Your week switches to Chest + Back / Legs / Shoulders + Arms with supersets on, and back", async ({ page }) => {
+test("Antagonist week: Your week switches to the diagram's Chest + Biceps + Shoulders / Legs / Back + Triceps with supersets on, and back", async ({ page }) => {
   await page.goto("/");
   await page.evaluate(() => localStorage.clear());
   await openApp(page);
@@ -623,18 +623,21 @@ test("Antagonist week: Your week switches to Chest + Back / Legs / Shoulders + A
   await page.getByRole("button", { name: "Use the Antagonist week" }).click();
   await expect(page.getByText("You're on the Antagonist week.", { exact: false })).toBeVisible();
   const state = await page.evaluate(() => ({ week: JSON.parse(localStorage.getItem("ags:schedule") ?? "[]").map((d: { choice: string }) => d.choice), superset: localStorage.getItem("ags:superset") }));
-  expect(state).toEqual({ week: ["arms", "chestback", "legs", "arms", "rest", "chestback", "legs"], superset: "on" });
+  expect(state).toEqual({ week: ["backtri", "chestbi", "legs", "backtri", "rest", "chestbi", "legs"], superset: "on" });
   await expect(page.locator('[aria-label="Thursday session"] button[aria-pressed="true"]')).toHaveText("Rest");
   await shot(page, "antagonist-week");
 
-  // A Chest + Back workout: three chest/back pairs.
+  // A Chest + Biceps + Shoulders workout: three chest/curl pairs.
   await openApp(page);
-  await page.locator('button[aria-label^="Chest + Back:"]').dispatchEvent("click");
+  await page.locator('button[aria-label^="Chest + Bis:"]').dispatchEvent("click");
   await page.waitForSelector("text=Back to home");
   await expect(page.locator('[aria-label="Superset mode"]')).toContainText("3 pairs today");
   const press = page.locator("[aria-roledescription=slide]", { has: page.locator("h3", { hasText: /^Incline Dumbbell Press$/ }) });
-  await expect(press.locator('[aria-label="Superset"]')).toContainText("go straight to Wide-Grip Lat Pulldown (A2)");
-  await shot(page, "antagonist-chestback");
+  await expect(press.locator('[aria-label="Superset"]')).toContainText("go straight to Spider Curl (A2)");
+  const curl = page.locator("[aria-roledescription=slide]", { has: page.locator("h3", { hasText: /^Spider Curl$/ }) });
+  await expect(curl.locator('[aria-label="Superset"]')).toContainText("rest 60–90s");
+  await expect(curl.locator('[aria-label="Superset"]')).toContainText("Non-competing pair");
+  await shot(page, "antagonist-chestbi");
 
   // Reset goes back to the standard week (supersets stay as the switch says).
   await openApp(page);

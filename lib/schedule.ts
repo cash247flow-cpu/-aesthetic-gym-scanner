@@ -17,8 +17,8 @@ export const CHOICES: { key: DayChoice; short: string; name: string }[] = [
   { key: "pull", short: "Pull", name: "Pull" },
   { key: "legs", short: "Legs", name: "Legs" },
   { key: "pump", short: "Pump", name: "Chest + Rear Delt Pump w/ Biceps" },
-  { key: "chestback", short: "Chest+Back", name: "Chest + Back" },
-  { key: "arms", short: "Delts+Arms", name: "Shoulders + Arms" },
+  { key: "chestbi", short: "Chest+Bis", name: "Chest + Biceps + Shoulders" },
+  { key: "backtri", short: "Back+Tris", name: "Back + Triceps" },
   { key: "rest", short: "Rest", name: "Rest" },
 ];
 
@@ -33,17 +33,24 @@ export const DEFAULT_WEEK: WeekPlan = [
   { choice: "rest", name: "Rest" },
 ];
 
-// Antagonist week: opposing muscles share a day so every day can be supersetted. Mon/Fri Chest +
-// Back, Tue/Sat Legs + Abs, Wed/Sun Shoulders + Arms, Thursday off. Picked under Your week.
+// Antagonist week, as the owner's diagram: Mon/Fri Chest + Biceps + Shoulders, Tue/Sat Legs + Abs,
+// Wed/Sun Back + Triceps, Thursday off. Every day has supersets. Picked under Your week.
 export const ANTAGONIST_WEEK: WeekPlan = [
-  { choice: "arms", name: "Shoulders + Arms" },
-  { choice: "chestback", name: "Chest + Back" },
+  { choice: "backtri", name: "Back + Triceps" },
+  { choice: "chestbi", name: "Chest + Biceps + Shoulders" },
   { choice: "legs", name: "Legs" },
-  { choice: "arms", name: "Shoulders + Arms" },
+  { choice: "backtri", name: "Back + Triceps" },
   { choice: "rest", name: "Rest" },
-  { choice: "chestback", name: "Chest + Back" },
+  { choice: "chestbi", name: "Chest + Biceps + Shoulders" },
   { choice: "legs", name: "Legs" },
 ];
+
+// The first Antagonist week (released 2026-11-24, replaced the same day) used other days; a week
+// saved with them moves to the diagram's days on the same weekdays.
+const RENAMED: Record<string, DayPlan> = {
+  chestback: { choice: "chestbi", name: "Chest + Biceps + Shoulders" },
+  arms: { choice: "backtri", name: "Back + Triceps" },
+};
 
 export const isAntagonistWeek = (week: WeekPlan) =>
   week.every((d, i) => d.choice === ANTAGONIST_WEEK[i].choice && d.name === ANTAGONIST_WEEK[i].name && !d.abs && !d.forearms);
@@ -53,7 +60,8 @@ const VALID = new Set<string>(CHOICES.map((c) => c.key));
 export function loadWeek(): WeekPlan {
   try {
     const raw = localStorage.getItem(KEY);
-    const parsed = raw ? (JSON.parse(raw) as WeekPlan) : null;
+    const saved = raw ? (JSON.parse(raw) as WeekPlan) : null;
+    const parsed = Array.isArray(saved) ? saved.map((d) => (d && RENAMED[d.choice] ? { ...d, ...RENAMED[d.choice] } : d)) : null;
     if (Array.isArray(parsed) && parsed.length === 7 && parsed.every((d) => d && VALID.has(d.choice))) return parsed;
   } catch {
     /* fall through to the default */

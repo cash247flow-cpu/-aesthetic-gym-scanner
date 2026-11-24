@@ -33,36 +33,37 @@ const COMBOS = {
       ["legs", "Cable Oblique Crunch"],
     ] as const,
   },
-  // Antagonist week (Your week → Antagonist week): opposing muscles on the same day, listed in
-  // superset order (lib/superset.ts pairs each chest move with a back move, each curl with a
-  // triceps move). Built only from Push and Pull exercises; their swaps come with them.
-  chestback: {
-    label: "Chest + Back",
-    note: "Compare with last week's Chest + Back.",
+  // Antagonist week (Your week → Antagonist week), laid out as the owner's diagram: Mon/Fri Chest +
+  // Biceps + Shoulders, Wed/Sun Back + Triceps. Listed in superset order (lib/superset.ts pairs each
+  // chest move with a curl and each back move with a triceps move). Built only from Push and Pull
+  // exercises; their swaps come with them.
+  chestbi: {
+    label: "Chest + Biceps + Shoulders",
+    note: "Compare with last week's Chest + Biceps + Shoulders.",
     picks: [
       ["push", "Incline Dumbbell Press"],
-      ["pull", "Wide-Grip Lat Pulldown"],
+      ["pull", "Spider Curl"],
       ["push", "Machine Chest Press"],
-      ["pull", "Chest-Supported T-Bar Row"],
+      ["pull", "Incline Dumbbell Curl"],
       ["push", "High-to-Low Cable Fly"],
-      ["pull", "Seated Cable Row"],
-      ["pull", "Shrugs"],
-    ] as const,
-  },
-  arms: {
-    label: "Shoulders + Arms",
-    note: "Compare with last week's Shoulders + Arms.",
-    picks: [
+      ["pull", "Cable Hammer Curl"],
       ["push", "Dumbbell Overhead Press"],
       ["push", "Chest-Supported Lateral Raise"],
-      ["pull", "Reverse Pec Deck"],
-      ["pull", "Spider Curl"],
+    ] as const,
+  },
+  backtri: {
+    label: "Back + Triceps",
+    note: "Compare with last week's Back + Triceps.",
+    picks: [
+      ["pull", "Wide-Grip Lat Pulldown"],
       ["push", "Cable Rope Pushdown"],
-      ["pull", "Incline Dumbbell Curl"],
+      ["pull", "Chest-Supported T-Bar Row"],
       ["push", "EZ-Bar Skullcrusher"],
+      ["pull", "Seated Cable Row"],
+      ["pull", "Reverse Pec Deck"],
+      ["pull", "Shrugs"],
       ["pull", "Wrist Curl"],
       ["pull", "Reverse Curl"],
-      ["pull", "Cable Hammer Curl"],
     ] as const,
   },
   // Stand-alone forearm session for rest days: the two forearm exercises from Pull.
@@ -115,7 +116,7 @@ export type PlannedExercise = {
 };
 
 /** Group letter, place in the pair, and the other exercise of the pair. */
-export type SupersetTag = { group: string; order: 1 | 2; partner: string };
+export type SupersetTag = { group: string; order: 1 | 2; partner: string; kind: "antagonist" | "non-competing" };
 
 export type Alternative = Omit<PlannedExercise, "alternatives">;
 

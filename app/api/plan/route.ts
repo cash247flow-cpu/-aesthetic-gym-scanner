@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   const { session, equipment, withAbs } = (body ?? {}) as { session?: unknown; equipment?: unknown; withAbs?: unknown };
   if (!isSessionKey(session)) {
-    return NextResponse.json({ error: 'session must be "push", "pull", "legs", "pump", "chestback", "arms", "abs" or "forearms".' }, { status: 400 });
+    return NextResponse.json({ error: 'session must be "push", "pull", "legs", "pump", "chestbi", "backtri", "abs" or "forearms".' }, { status: 400 });
   }
   if (
     !Array.isArray(equipment) ||

@@ -218,11 +218,11 @@ export function MoreHub({
           }}
         />
         <SwitchRow
-          label="🔁 Antagonist supersets"
+          label="🔁 Supersets"
           desc={
             superset
-              ? "On: opposing muscles on the same day are paired (e.g. leg extension + leg curl, chest press + row, curl + pushdown). Rest 75–120 s after each pair."
-              : "Off: straight sets. On pairs opposing muscles that share a day. For a fully paired week, see Your week → Antagonist week."
+              ? "On: pairs on the same day alternate sets (e.g. leg extension + leg curl, chest press + curl, pulldown + pushdown). Each card shows its rest."
+              : "Off: straight sets. On pairs exercises that share a day. For a week built for supersets, see Your week → Antagonist week."
           }
           on={superset}
           onChange={(on) => {
