@@ -527,3 +527,18 @@ test("exercises by muscle: tap a muscle on the body map to list the exercises th
   await expect(page.locator('[data-figure="female"]')).toBeVisible();
   await expect(page.locator('[aria-label="Body figure"] button[aria-pressed="true"]')).toHaveText("Female");
 });
+
+test("training terms: More opens a plain-English glossary of the plan's words", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  const before = await page.evaluate(() => Object.keys(localStorage).sort());
+  await go(page, "More", "Training terms");
+  await expect(page.getByRole("heading", { name: /Training terms/ })).toBeVisible();
+  for (const t of ["True failure", "Drop set", "Double progression", "Progression hold", "Swap"]) await expect(page.getByText(t, { exact: true })).toBeVisible();
+  await expect(page.getByText("Used on the last set of Hip Abduction.")).toBeVisible();
+  await shot(page, "training-terms");
+  await page.getByRole("button", { name: "← Back" }).click();
+  await expect(page.getByRole("button", { name: /Training terms/ })).toBeVisible();
+  expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(before);
+});

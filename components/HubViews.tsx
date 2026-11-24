@@ -169,6 +169,7 @@ export function MoreHub({
   onCardio,
   onActivity,
   onData,
+  onTerms,
 }: {
   scanMode: boolean;
   onScanMode: (on: boolean) => void;
@@ -179,6 +180,7 @@ export function MoreHub({
   onCardio: () => void;
   onActivity: () => void;
   onData: () => void;
+  onTerms: () => void;
 }) {
   const [overload, setOverload] = useState(true);
   const [backupSub, setBackupSub] = useState<string | null>(null);
@@ -215,6 +217,7 @@ export function MoreHub({
         <HubRow icon="✅" label="Daily habits" sub={HABITS.map((h) => h.title).join(" · ")} onClick={onHabits} />
         <HubRow icon="💊" label="Supplements" sub="Daily checklist and label check" onClick={onSupps} />
         <HubRow icon="🗓️" label="Your week" sub="Which session on which day, and ab days" onClick={onWeek} />
+        <HubRow icon="📖" label="Training terms" sub="The words your plan uses, in plain English" onClick={onTerms} />
         <HubRow icon="😴" label="Sleep times" sub="Wake time and tonight's Sleep Lock timeline" onClick={onSleep} />
         <HubRow icon="🏃" label="Cardio Day" sub="Treadmill or StairMaster, no photo needed" onClick={onCardio} />
         <HubRow icon="💾" label="Data on this phone" sub={backupSub ?? "Backups, storage status and where your records live"} onClick={onData} />

@@ -27,6 +27,7 @@ import { ReviewReadyCard } from "@/components/ReviewReadyCard";
 import { AI_CONSENT_HEADERS, requestAiConsent } from "@/components/AiConsent";
 import { WeeklyReview } from "@/components/WeeklyReview";
 import { MuscleExplorer } from "@/components/MuscleExplorer";
+import { TrainingTerms } from "@/components/TrainingTerms";
 import { VisualEvolution } from "@/components/VisualEvolution";
 import { LockGate } from "@/components/AppLock";
 import { migrateRenamedExercises } from "@/lib/renames";
@@ -53,6 +54,7 @@ type View =
   | { state: "photos" }
   | { state: "activity" }
   | { state: "muscles" }
+  | { state: "terms" }
   | { state: "data" }
   | { state: "coach"; tab: CoachTab; shopping?: boolean }
   | { state: "wins"; back: View }
@@ -124,7 +126,7 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }
 
-  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep" | "review" | "photos" | "activity" | "data" | "muscles", from?: View) {
+  function go(state: "cardio" | "body" | "week" | "habits" | "meals" | "supps" | "sleep" | "review" | "photos" | "activity" | "data" | "muscles" | "terms", from?: View) {
     const hub = from ?? (view.state === "progress" || view.state === "more" ? view : ({ state: "upload" } as View));
     setReturnTo((stack) => [...stack.slice(-5), hub]);
     if (state === "sleep") setSleep(loadSleep());
@@ -281,7 +283,7 @@ export default function Home() {
         ? "meals"
         : ["progress", "wins", "body", "review", "photos", "muscles"].includes(view.state)
           ? "progress"
-          : ["more", "habits", "supps", "week", "sleep", "activity", "data"].includes(view.state)
+          : ["more", "habits", "supps", "week", "sleep", "activity", "data", "terms"].includes(view.state)
             ? "more"
             : null;
   // Workouts, cardio and loading get the whole screen.
@@ -422,6 +424,8 @@ export default function Home() {
 
       {view.state === "muscles" && <MuscleExplorer onBack={back} />}
 
+      {view.state === "terms" && <TrainingTerms onBack={back} />}
+
       {view.state === "data" && (
         <LockGate area="Data on this phone">
           <DataView onBack={back} />
@@ -439,6 +443,7 @@ export default function Home() {
           onCardio={() => openCardio()}
           onActivity={() => go("activity")}
           onData={() => go("data")}
+          onTerms={() => go("terms")}
         />
       )}
 
