@@ -110,7 +110,7 @@ export function ProgressHub({
       )}
 
       <div className="mt-4">
-        <MuscleMap primary={muscles.primary} secondary={muscles.secondary} caption="Muscles trained this week" />
+        <MuscleMap primary={muscles.primary} secondary={muscles.secondary} caption="Muscles trained this week" toggle />
         {!!week?.untracked && (
           <p className="mt-1.5 text-center text-xs text-zinc-500">Workouts finished before this update aren&apos;t on the map.</p>
         )}

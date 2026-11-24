@@ -514,4 +514,16 @@ test("exercises by muscle: tap a muscle on the body map to list the exercises th
 
   // Read-only: nothing is stored.
   expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(before);
+
+  // Male/Female: the figure switches, the choice is remembered, and the Progress map follows it.
+  await expect(page.locator('[data-figure="male"]')).toBeVisible();
+  await page.locator('[aria-label="Body figure"] button', { hasText: "Female" }).click();
+  await expect(page.locator('[data-figure="female"]')).toBeVisible();
+  await page.locator('ul[aria-label="Muscles"] button', { hasText: "Glutes" }).click();
+  await expect(page.locator('[data-figure="female"] path[data-muscle="glutes"][fill="#c6f432"]').first()).toBeVisible();
+  await shot(page, "muscle-explorer-female");
+  expect(await page.evaluate(() => localStorage.getItem("ags:body:figure"))).toBe("female");
+  await go(page, "Progress");
+  await expect(page.locator('[data-figure="female"]')).toBeVisible();
+  await expect(page.locator('[aria-label="Body figure"] button[aria-pressed="true"]')).toHaveText("Female");
 });

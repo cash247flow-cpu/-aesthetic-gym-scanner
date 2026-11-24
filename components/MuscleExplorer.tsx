@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { BodyFigures, muscleLabel } from "@/components/MuscleMap";
+import { BodyFigures, FigureToggle, muscleLabel, useBodyFigure } from "@/components/MuscleMap";
 import { ExerciseGuide, hasGuide } from "@/components/ExerciseGuide";
 import { AccentLast, TITLE } from "@/components/ui";
 import { MUSCLES, exercisesFor, type IndexEntry } from "@/lib/exerciseIndex";
@@ -16,6 +16,7 @@ const NONE = new Set<string>();
 export function MuscleExplorer({ onBack }: { onBack: () => void }) {
   const [muscle, setMuscle] = useState<string | null>(null);
   const [guide, setGuide] = useState<string | null>(null);
+  const [sex, setSex] = useBodyFigure();
   const closeGuide = useCallback(() => setGuide(null), []);
   const list = useMemo(() => (muscle ? exercisesFor(muscle) : null), [muscle]);
   const selected = useMemo(() => (muscle ? new Set([muscle]) : NONE), [muscle]);
@@ -31,13 +32,17 @@ export function MuscleExplorer({ onBack }: { onBack: () => void }) {
       <p className="mt-1 text-sm text-zinc-400">Tap a muscle to see the exercises in your program that train it.</p>
 
       <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
+        <div className="mb-3">
+          <FigureToggle sex={sex} onChange={setSex} />
+        </div>
         <BodyFigures
+          sex={sex}
           primary={selected}
           secondary={NONE}
           selected={muscle}
           onPick={setMuscle}
           label={muscle ? `Body map, ${muscleLabel(muscle)} selected` : "Body map: tap a muscle"}
-          className="mx-auto block w-full max-w-[22rem] touch-manipulation"
+          className="mx-auto w-full max-w-[22rem] touch-manipulation"
         />
         <ul aria-label="Muscles" className="mt-3 flex flex-wrap justify-center gap-1.5">
           {MUSCLES.map((m) => (

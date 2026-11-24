@@ -47,3 +47,18 @@ test("every muscle on the map has at least one exercise, main or helper", () => 
   const inner = exercisesFor("adductors").main;
   assert.deepEqual(inner[0], { ...inner[0], name: "Hip Adduction", days: ["Legs"], swapFor: undefined });
 });
+
+test("body figures: both sexes show every tracked muscle (front or back) but the outer hips, and keep the MIT notice", async () => {
+  const { BODY_ART } = await import("@/lib/bodyArt");
+  const { readFileSync } = await import("node:fs");
+  for (const sex of ["male", "female"] as const) {
+    const drawn = new Set([...BODY_ART[sex].front.shapes, ...BODY_ART[sex].back.shapes].map((s) => s.m).filter(Boolean));
+    for (const m of MUSCLES) {
+      if (m === "abductors") assert.ok(!drawn.has(m)); // no outer-hip shape in this artwork; chosen by name
+      else assert.ok(drawn.has(m), `${sex}: ${m} not drawn`);
+    }
+    for (const side of ["front", "back"] as const) assert.ok(BODY_ART[sex][side].outline.length > 100);
+  }
+  const src = readFileSync("lib/bodyArt.ts", "utf8");
+  assert.match(src, /MIT License[\s\S]*Copyright \(c\) 2022 ELABBASSI Hicham[\s\S]*permission notice shall be included/);
+});
