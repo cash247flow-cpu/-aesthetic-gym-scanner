@@ -79,7 +79,11 @@ export type PlannedExercise = {
   // Other listed options for this slot that the gym has equipment for (the Swap button).
   alternatives?: Alternative[];
   savedSwap?: boolean; // set in the browser when a swap remembered from an earlier workout is used
+  superset?: SupersetTag; // set in the browser when antagonist supersets are on (lib/superset.ts)
 };
+
+/** Group letter, place in the pair, and the other exercise of the pair. */
+export type SupersetTag = { group: string; order: 1 | 2; partner: string };
 
 export type Alternative = Omit<PlannedExercise, "alternatives">;
 

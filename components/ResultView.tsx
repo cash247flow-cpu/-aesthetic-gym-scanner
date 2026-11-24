@@ -26,6 +26,7 @@ import type { MakeupFor } from "@/lib/missed";
 import { WorkoutTimer } from "@/components/WorkoutTimer";
 import { elapsedMs, loadActive, pauseTimer, saveActive, startTimer, type ActiveWorkout } from "@/lib/activeWorkout";
 import { AccentLast, TITLE } from "@/components/ui";
+import { PAIR_REST, TRANSITION_REST, loadSuperset, withSupersets } from "@/lib/superset";
 
 export function formatRest(restSeconds: string): string {
   const nums = restSeconds.split(/[–-]/).map((n) => Number(n.trim()));
@@ -63,7 +64,11 @@ export function ResultView({
   const isLegs = plan.sessionLabel === "Legs & Abs";
   // Swap button choices, remembered between workouts (programmed exercise → chosen alternative).
   const [swaps, setSwaps] = useState<SavedSwaps>(loadSwaps);
-  const exercises = applySwaps(plan.exercises, swaps);
+  // Antagonist supersets (More → switch): pairs are tagged after swaps, so a swap keeps its pair.
+  const [superset] = useState<boolean>(loadSuperset);
+  const swapped = applySwaps(plan.exercises, swaps);
+  const exercises = superset ? withSupersets(swapped) : swapped;
+  const pairCount = exercises.filter((e) => e.superset?.order === 1).length;
   // Abs marker goes before the first abs card, but only if a non-abs card precedes it.
   const firstAbsIndex = exercises.findIndex((e) => e.abs === true);
   const [rest, setRest] = useState<RestRequest | null>(null);
@@ -294,6 +299,11 @@ export function ResultView({
               ? `${plan.note} · + ${plan.counts.abs} ab ${plural(plan.counts.abs)} at the end`
               : plan.note}
         </p>
+        {pairCount > 0 && (
+          <p aria-label="Superset mode" className="mt-2 rounded-xl border border-lime-400/30 bg-lime-400/5 px-3 py-2 text-xs text-lime-100">
+            🔁 Antagonist supersets on: {pairCount} {pairCount === 1 ? "pair" : "pairs"} today. Alternate sets within each pair, then rest {PAIR_REST}s.
+          </p>
+        )}
       </header>
 
       <PreWorkoutReminder />
@@ -606,7 +616,15 @@ function ExerciseCard({
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium text-zinc-500">{String(index).padStart(2, "0")}</p>
+          <p className="text-[11px] font-medium text-zinc-500">
+            {String(index).padStart(2, "0")}
+            {ex.superset && (
+              <span className="ml-1.5 rounded-full bg-lime-400 px-1.5 py-px font-bold text-zinc-950">
+                Superset {ex.superset.group}
+                {ex.superset.order}
+              </span>
+            )}
+          </p>
           <h3 className="text-lg font-semibold leading-tight">{ex.name}</h3>
           {ex.swappedFrom && (
             <p className="mt-0.5 text-xs text-zinc-500">
@@ -682,6 +700,14 @@ function ExerciseCard({
         </div>
       )}
       {showGuide && <ExerciseGuide exercise={ex.name} onClose={closeGuide} />}
+
+      {ex.superset && (
+        <p aria-label="Superset" className="mt-3 rounded-lg border border-lime-400/30 bg-lime-400/5 px-2.5 py-2 text-sm text-lime-100">
+          {ex.superset.order === 1
+            ? `After each set, rest ${TRANSITION_REST}s and go straight to ${ex.superset.partner} (${ex.superset.group}2).`
+            : `After each set, rest ${PAIR_REST}s, then start the pair again with ${ex.superset.partner} (${ex.superset.group}1).`}
+        </p>
+      )}
 
       <p className="mt-3 text-sm text-zinc-200">
         <span className="font-semibold text-zinc-400">Cue · </span>

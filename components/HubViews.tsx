@@ -10,6 +10,7 @@ import { loadUnit } from "@/components/SetLogger";
 import { loadEntries } from "@/lib/bodyLog";
 import { weekCounts, weekStatus } from "@/lib/missed";
 import { loadOverload, saveOverload } from "@/lib/overload";
+import { loadSuperset, saveSuperset } from "@/lib/superset";
 import { statsTotal, weekStartOf } from "@/lib/cardioStats";
 import { EVENT_LABEL, loadEvents, type EventName } from "@/lib/events";
 import { referralUrl } from "@/lib/achievements/sharePrefs";
@@ -183,9 +184,11 @@ export function MoreHub({
   onTerms: () => void;
 }) {
   const [overload, setOverload] = useState(true);
+  const [superset, setSuperset] = useState(false);
   const [backupSub, setBackupSub] = useState<string | null>(null);
   useEffect(() => {
     setOverload(loadOverload());
+    setSuperset(loadSuperset());
     setBackupSub(lastBackupText(loadLastBackup()));
   }, []);
 
@@ -212,6 +215,19 @@ export function MoreHub({
           onChange={(on) => {
             setOverload(on);
             saveOverload(on);
+          }}
+        />
+        <SwitchRow
+          label="🔁 Antagonist supersets"
+          desc={
+            superset
+              ? "On: Legs and Pump pair opposing muscles (leg extension + leg curl, hip abduction + adduction, chest press + reverse pec deck). Rest 75–120 s after each pair."
+              : "Off: straight sets. On pairs opposing muscles on Legs and Pump; Push and Pull stay straight sets."
+          }
+          on={superset}
+          onChange={(on) => {
+            setSuperset(on);
+            saveSuperset(on);
           }}
         />
         <HubRow icon="✅" label="Daily habits" sub={HABITS.map((h) => h.title).join(" · ")} onClick={onHabits} />

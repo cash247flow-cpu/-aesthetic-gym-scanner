@@ -573,3 +573,43 @@ test("exercises by muscle: the figure cycles through muscles until one is tapped
   await page.waitForTimeout(1600);
   await expect(page.locator('path[fill="#c6f432"]')).toHaveCount(0);
 });
+
+test("antagonist supersets: the More switch pairs opposing muscles on Legs; Push stays straight sets", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  // Off by default: no pairs.
+  await page.locator('button[aria-label^="Legs:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  await expect(page.locator('[aria-label="Superset mode"]')).toHaveCount(0);
+
+  await openApp(page);
+  await go(page, "More");
+  const sw = page.getByRole("switch", { name: "Antagonist supersets" });
+  await expect(sw).toHaveAttribute("aria-checked", "false");
+  await sw.click();
+  await expect(sw).toHaveAttribute("aria-checked", "true");
+  expect(await page.evaluate(() => localStorage.getItem("ags:superset"))).toBe("on");
+
+  await openApp(page);
+  await page.locator('button[aria-label^="Legs:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  await expect(page.locator('[aria-label="Superset mode"]')).toContainText("2 pairs today");
+  const ext = page.locator("[aria-roledescription=slide]", { has: page.locator("h3", { hasText: /^Leg Extension$/ }) });
+  await expect(ext.getByText("Superset A1")).toBeAttached();
+  await expect(ext.locator('[aria-label="Superset"]')).toContainText("rest 15–30s and go straight to Seated Leg Curls (A2)");
+  await expect(ext.getByRole("button", { name: "Start rest timer for Leg Extension" })).toContainText("Rest 15–30s");
+  const curl = page.locator("[aria-roledescription=slide]", { has: page.locator("h3", { hasText: /^Seated Leg Curls$/ }) });
+  await expect(curl.getByRole("button", { name: "Start rest timer for Seated Leg Curls" })).toContainText("Rest 75–120s");
+  const hack = page.locator("[aria-roledescription=slide]", { has: page.locator("h3", { hasText: /^Hack Squat$/ }) });
+  await expect(hack.locator('[aria-label="Superset"]')).toHaveCount(0);
+  await expect(hack.getByRole("button", { name: "Start rest timer for Hack Squat" })).toContainText("Rest 2–3 min");
+  await ext.scrollIntoViewIfNeeded();
+  await shot(page, "superset-legs");
+
+  // Push has no opposing muscles: no pairs even with the switch on.
+  await openApp(page);
+  await page.locator('button[aria-label^="Push:"]').dispatchEvent("click");
+  await page.waitForSelector("text=Back to home");
+  await expect(page.locator('[aria-label="Superset mode"]')).toHaveCount(0);
+});
