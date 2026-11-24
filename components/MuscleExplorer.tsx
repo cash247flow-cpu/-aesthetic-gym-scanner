@@ -1,12 +1,28 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BodyFigures, FigureToggle, muscleLabel, useBodyFigure } from "@/components/MuscleMap";
 import { ExerciseGuide, hasGuide } from "@/components/ExerciseGuide";
 import { AccentLast, TITLE } from "@/components/ui";
 import { MUSCLES, exercisesFor, type IndexEntry } from "@/lib/exerciseIndex";
 
 const NONE = new Set<string>();
+// The muscles the idle animation lights up in turn (outer hips have no shape on the figure).
+export const CYCLE = MUSCLES.filter((m) => m !== "abductors");
+const CYCLE_MS = 1400;
+
+/** Until a muscle is picked, light each one up in turn. Off for "reduce motion". */
+function useMuscleCycle(active: boolean): string | null {
+  const [i, setI] = useState<number | null>(null);
+  useEffect(() => {
+    if (!active) return setI(null);
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    setI(0);
+    const id = setInterval(() => setI((n) => ((n ?? 0) + 1) % CYCLE.length), CYCLE_MS);
+    return () => clearInterval(id);
+  }, [active]);
+  return i === null ? null : CYCLE[i];
+}
 
 /**
  * Exercises by muscle: tap a muscle on the figure (or its name below it) to see every exercise
@@ -19,7 +35,9 @@ export function MuscleExplorer({ onBack }: { onBack: () => void }) {
   const [sex, setSex] = useBodyFigure();
   const closeGuide = useCallback(() => setGuide(null), []);
   const list = useMemo(() => (muscle ? exercisesFor(muscle) : null), [muscle]);
-  const selected = useMemo(() => (muscle ? new Set([muscle]) : NONE), [muscle]);
+  const demo = useMuscleCycle(!muscle);
+  const lit = muscle ?? demo;
+  const selected = useMemo(() => (lit ? new Set([lit]) : NONE), [lit]);
 
   return (
     <section className="mt-2">
@@ -44,6 +62,17 @@ export function MuscleExplorer({ onBack }: { onBack: () => void }) {
           label={muscle ? `Body map, ${muscleLabel(muscle)} selected` : "Body map: tap a muscle"}
           className="mx-auto w-full max-w-[22rem] touch-manipulation"
         />
+        {!muscle && (
+          <p data-cycle={demo ?? ""} className="mt-2 h-5 text-center text-sm text-zinc-400" aria-hidden>
+            {demo ? (
+              <>
+                <span className="font-semibold text-lime-300">{muscleLabel(demo)}</span> · tap any muscle
+              </>
+            ) : (
+              "Tap any muscle"
+            )}
+          </p>
+        )}
         <ul aria-label="Muscles" className="mt-3 flex flex-wrap justify-center gap-1.5">
           {MUSCLES.map((m) => (
             <li key={m}>
@@ -52,7 +81,11 @@ export function MuscleExplorer({ onBack }: { onBack: () => void }) {
                 aria-pressed={m === muscle}
                 onClick={() => setMuscle(m)}
                 className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition active:scale-95 ${
-                  m === muscle ? "border-lime-400 bg-lime-400 text-zinc-950" : "border-zinc-700 text-zinc-300 hover:border-lime-400"
+                  m === muscle
+                    ? "border-lime-400 bg-lime-400 text-zinc-950"
+                    : m === demo
+                      ? "border-lime-400/70 text-lime-200"
+                      : "border-zinc-700 text-zinc-300 hover:border-lime-400"
                 }`}
               >
                 {muscleLabel(m)}

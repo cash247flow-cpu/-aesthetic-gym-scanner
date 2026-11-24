@@ -36,7 +36,7 @@ function View({ view, label, primary, secondary, selected, onPick }: { view: Bod
               vectorEffect="non-scaling-stroke"
               strokeLinejoin="round"
               onClick={onPick && muscle ? () => onPick(muscle) : undefined}
-              className={onPick && muscle ? "cursor-pointer" : undefined}
+              className={`motion-safe:transition-[fill,fill-opacity] motion-safe:duration-500 ${onPick && muscle ? "cursor-pointer" : ""}`}
             />
           );
         })}

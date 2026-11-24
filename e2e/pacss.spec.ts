@@ -542,3 +542,34 @@ test("training terms: More opens a plain-English glossary of the plan's words", 
   await expect(page.getByRole("button", { name: /Training terms/ })).toBeVisible();
   expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(before);
 });
+
+test("exercises by muscle: the figure cycles through muscles until one is tapped; still with reduced motion", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await openApp(page);
+  await go(page, "Progress", "Exercises by muscle");
+  const label = page.locator("p[data-cycle]");
+  await expect(label).toHaveAttribute("data-cycle", "shoulders");
+  await expect(page.locator('path[data-muscle="shoulders"][fill="#c6f432"]').first()).toBeVisible();
+  const frames: string[] = [];
+  for (let i = 0; i < 4; i++) {
+    await page.waitForTimeout(1450);
+    frames.push((await label.getAttribute("data-cycle")) ?? "");
+    await page.screenshot({ path: test.info().outputPath(`cycle-${i}.png`) });
+  }
+  expect(new Set(frames).size).toBeGreaterThan(2); // it moves on by itself
+  // Tapping stops the cycle and shows that muscle's exercises.
+  await page.locator('ul[aria-label="Muscles"] button', { hasText: "Biceps" }).click();
+  await expect(page.locator("p[data-cycle]")).toHaveCount(0);
+  await expect(page.locator('ul[aria-label="Exercises for Biceps"]')).toBeVisible();
+  await page.waitForTimeout(1600);
+  await expect(page.locator('ul[aria-label="Muscles"] button[aria-pressed="true"]')).toHaveText("Biceps");
+
+  // Reduce motion: no cycling, nothing lit until a tap.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openApp(page);
+  await go(page, "Progress", "Exercises by muscle");
+  await expect(page.locator("p[data-cycle]")).toHaveText("Tap any muscle");
+  await page.waitForTimeout(1600);
+  await expect(page.locator('path[fill="#c6f432"]')).toHaveCount(0);
+});
