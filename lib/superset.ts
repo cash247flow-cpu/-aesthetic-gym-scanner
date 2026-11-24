@@ -1,8 +1,9 @@
 // Antagonist supersets: an optional mode that pairs exercises for opposing muscles and alternates
-// their sets (A1 set, A2 set, then rest). Only where the plan already has both muscles on the same
-// day: Legs (quads/hams isolation, outer/inner hips) and Pump (chest/rear delts). The heavy Hack
-// Squat and Romanian Deadlift stay straight sets (the owner's choice). Pairs are matched by slot,
-// so a swapped exercise keeps its pair. Progressive overload is unchanged: it works per exercise.
+// their sets (A1 set, A2 set, then rest). Only where a day has both muscles: Legs (quads/hams
+// isolation, outer/inner hips), Pump (chest/rear delts), the Antagonist week's Chest + Back and
+// Shoulders + Arms, and the two forearm exercises (flexors/extensors). The heavy Hack Squat and
+// Romanian Deadlift stay straight sets (the owner's choice). Pairs are matched by slot, so a
+// swapped exercise keeps its pair. Progressive overload is unchanged: it works per exercise.
 import type { PlannedExercise } from "@/lib/plan";
 
 const KEY = "ags:superset";
@@ -12,6 +13,14 @@ export const ANTAGONIST_PAIRS: [string, string][] = [
   ["Leg Extension", "Seated Leg Curls"],
   ["Hip Abduction", "Hip Adduction"],
   ["Machine Chest Press", "Reverse Pec Deck"],
+  // Chest + Back
+  ["Incline Dumbbell Press", "Wide-Grip Lat Pulldown"],
+  ["Machine Chest Press", "Chest-Supported T-Bar Row"],
+  ["High-to-Low Cable Fly", "Seated Cable Row"],
+  // Shoulders + Arms (and Pull's forearm finish)
+  ["Spider Curl", "Cable Rope Pushdown"],
+  ["Incline Dumbbell Curl", "EZ-Bar Skullcrusher"],
+  ["Wrist Curl", "Reverse Curl"],
 ];
 
 /** Rest after the first exercise of a pair (just the move across) and after the pair. */

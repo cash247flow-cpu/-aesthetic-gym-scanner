@@ -9,12 +9,15 @@ import {
   abWarnings,
   canAddAbs,
   isDefaultWeek,
+  ANTAGONIST_WEEK,
+  isAntagonistWeek,
   withAbs,
   withForearms,
   withChoice,
   type WeekPlan,
 } from "@/lib/schedule";
 import { AccentLast, TITLE } from "@/components/ui";
+import { saveSuperset } from "@/lib/superset";
 
 /** Weekly split editor: pick Push / Pull / Legs / Pump / Rest for each day. */
 export function WeekEditor({
@@ -66,7 +69,7 @@ export function WeekEditor({
                 </p>
                 <p className="truncate text-xs text-zinc-400">{plan.name}</p>
               </div>
-              <div role="group" aria-label={`${DAY_NAMES[day]} session`} className="mt-2 grid grid-cols-5 gap-1">
+              <div role="group" aria-label={`${DAY_NAMES[day]} session`} className="mt-2 grid grid-cols-4 gap-1">
                 {CHOICES.map((c) => {
                   const on = plan.choice === c.key;
                   return (
@@ -134,7 +137,31 @@ export function WeekEditor({
 
       <p className="mt-3 text-xs text-zinc-500">
         Pump = chest from Push + rear delts and biceps from Pull. Pull ends with forearms; “+ Forearms” adds them to a rest day.
+        Chest+Back and Delts+Arms are the Antagonist week&apos;s days, made from Push and Pull exercises.
       </p>
+
+      <section aria-label="Antagonist week" className="mt-4 rounded-2xl border border-lime-400/30 bg-lime-400/5 p-3.5">
+        <p className="font-semibold">🔁 Antagonist week</p>
+        <p className="mt-1 text-xs text-zinc-300">
+          Opposing muscles on the same day, so you can superset them: Mon &amp; Fri Chest + Back, Tue &amp; Sat Legs + Abs, Wed &amp; Sun
+          Shoulders + Arms, Thursday off.
+        </p>
+        {isAntagonistWeek(week) ? (
+          <p className="mt-2 text-xs font-semibold text-lime-300">You&apos;re on the Antagonist week. “Reset to my training plan” below switches back.</p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              if (!window.confirm("Switch to the Antagonist week? This also turns antagonist supersets on. You can reset to your training plan any time.")) return;
+              saveSuperset(true);
+              onChange(ANTAGONIST_WEEK);
+            }}
+            className="mt-2 h-10 rounded-full bg-gradient-to-r from-lime-400 to-emerald-300 px-4 text-sm font-semibold text-zinc-950 transition active:scale-95"
+          >
+            Use the Antagonist week
+          </button>
+        )}
+      </section>
 
       {!isDefaultWeek(week) && (
         <button

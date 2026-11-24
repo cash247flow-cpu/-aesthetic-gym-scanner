@@ -58,7 +58,7 @@ export const TRAINING_TERMS: TermGroup[] = [
         term: "Antagonist superset",
         meaning: "Two exercises for opposing muscles done back to back: one set of each, then rest. One muscle rests while the other works, so the workout takes less time.",
         inApp:
-          "Optional, under More. Pairs leg extension + leg curl and hip abduction + adduction on Legs, and chest press + reverse pec deck on Pump: 15–30 s between the two, 75–120 s after the pair. Progressive overload still tracks each exercise.",
+          "Optional, under More, or with the Antagonist week under Your week. Pairs opposing muscles on the same day (e.g. leg extension + leg curl, chest press + row, curl + pushdown): 15–30 s between the two, 75–120 s after the pair. Progressive overload still tracks each exercise.",
       },
     ],
   },

@@ -221,8 +221,8 @@ export function MoreHub({
           label="🔁 Antagonist supersets"
           desc={
             superset
-              ? "On: Legs and Pump pair opposing muscles (leg extension + leg curl, hip abduction + adduction, chest press + reverse pec deck). Rest 75–120 s after each pair."
-              : "Off: straight sets. On pairs opposing muscles on Legs and Pump; Push and Pull stay straight sets."
+              ? "On: opposing muscles on the same day are paired (e.g. leg extension + leg curl, chest press + row, curl + pushdown). Rest 75–120 s after each pair."
+              : "Off: straight sets. On pairs opposing muscles that share a day. For a fully paired week, see Your week → Antagonist week."
           }
           on={superset}
           onChange={(on) => {

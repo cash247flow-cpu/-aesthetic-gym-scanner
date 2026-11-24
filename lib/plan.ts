@@ -33,6 +33,38 @@ const COMBOS = {
       ["legs", "Cable Oblique Crunch"],
     ] as const,
   },
+  // Antagonist week (Your week → Antagonist week): opposing muscles on the same day, listed in
+  // superset order (lib/superset.ts pairs each chest move with a back move, each curl with a
+  // triceps move). Built only from Push and Pull exercises; their swaps come with them.
+  chestback: {
+    label: "Chest + Back",
+    note: "Compare with last week's Chest + Back.",
+    picks: [
+      ["push", "Incline Dumbbell Press"],
+      ["pull", "Wide-Grip Lat Pulldown"],
+      ["push", "Machine Chest Press"],
+      ["pull", "Chest-Supported T-Bar Row"],
+      ["push", "High-to-Low Cable Fly"],
+      ["pull", "Seated Cable Row"],
+      ["pull", "Shrugs"],
+    ] as const,
+  },
+  arms: {
+    label: "Shoulders + Arms",
+    note: "Compare with last week's Shoulders + Arms.",
+    picks: [
+      ["push", "Dumbbell Overhead Press"],
+      ["push", "Chest-Supported Lateral Raise"],
+      ["pull", "Reverse Pec Deck"],
+      ["pull", "Spider Curl"],
+      ["push", "Cable Rope Pushdown"],
+      ["pull", "Incline Dumbbell Curl"],
+      ["push", "EZ-Bar Skullcrusher"],
+      ["pull", "Wrist Curl"],
+      ["pull", "Reverse Curl"],
+      ["pull", "Cable Hammer Curl"],
+    ] as const,
+  },
   // Stand-alone forearm session for rest days: the two forearm exercises from Pull.
   forearms: {
     label: "Forearms",

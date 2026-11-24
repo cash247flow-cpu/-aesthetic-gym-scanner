@@ -17,6 +17,8 @@ export const CHOICES: { key: DayChoice; short: string; name: string }[] = [
   { key: "pull", short: "Pull", name: "Pull" },
   { key: "legs", short: "Legs", name: "Legs" },
   { key: "pump", short: "Pump", name: "Chest + Rear Delt Pump w/ Biceps" },
+  { key: "chestback", short: "Chest+Back", name: "Chest + Back" },
+  { key: "arms", short: "Delts+Arms", name: "Shoulders + Arms" },
   { key: "rest", short: "Rest", name: "Rest" },
 ];
 
@@ -30,6 +32,21 @@ export const DEFAULT_WEEK: WeekPlan = [
   { choice: "pump", name: "Chest + Rear Delt Pump w/ Biceps" },
   { choice: "rest", name: "Rest" },
 ];
+
+// Antagonist week: opposing muscles share a day so every day can be supersetted. Mon/Fri Chest +
+// Back, Tue/Sat Legs + Abs, Wed/Sun Shoulders + Arms, Thursday off. Picked under Your week.
+export const ANTAGONIST_WEEK: WeekPlan = [
+  { choice: "arms", name: "Shoulders + Arms" },
+  { choice: "chestback", name: "Chest + Back" },
+  { choice: "legs", name: "Legs" },
+  { choice: "arms", name: "Shoulders + Arms" },
+  { choice: "rest", name: "Rest" },
+  { choice: "chestback", name: "Chest + Back" },
+  { choice: "legs", name: "Legs" },
+];
+
+export const isAntagonistWeek = (week: WeekPlan) =>
+  week.every((d, i) => d.choice === ANTAGONIST_WEEK[i].choice && d.name === ANTAGONIST_WEEK[i].name && !d.abs && !d.forearms);
 
 const VALID = new Set<string>(CHOICES.map((c) => c.key));
 

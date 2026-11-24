@@ -65,6 +65,8 @@ const SESSION_BUTTONS: { key: SessionKey; label: string; hint: string }[] = [
   { key: "pull", label: "Pull", hint: "Back · Rear delts · Biceps" },
   { key: "legs", label: "Legs", hint: "Quads · Hams · Calves · Abs" },
   { key: "pump", label: "Pump", hint: "Chest · Rear delts · Biceps" },
+  { key: "chestback", label: "Chest + Back", hint: "Antagonist day" },
+  { key: "arms", label: "Delts + Arms", hint: "Shoulders · Biceps · Triceps" },
   { key: "abs", label: "Abs", hint: "Leg raises · Crunches" },
   { key: "forearms", label: "Forearms", hint: "Wrist curls · Reverse curls" },
 ];
