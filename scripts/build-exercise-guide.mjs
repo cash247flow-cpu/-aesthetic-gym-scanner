@@ -76,6 +76,7 @@ const MATCHES = {
   "Lying Leg Curl": { db: "Lying Leg Curls" },
   "Standing Calf Raise": { db: "Standing Calf Raises" },
   "Hip Abduction": { db: "Thigh Abductor" },
+  "Hip Adduction": { db: "Thigh Adductor" },
   "Goblet Squat": { db: "Goblet Squat", note: "Photos show a kettlebell — hold one dumbbell vertically at your chest instead." },
   "Dumbbell Split Squat": { db: "Split Squat with Dumbbells" },
   "Standing Dumbbell Calf Raise": { db: "Standing Dumbbell Calf Raise" },

@@ -509,7 +509,8 @@ test("exercises by muscle: tap a muscle on the body map to list the exercises th
   await expect(page.getByText("No exercise in your program targets this muscle directly.", { exact: false })).toBeVisible();
   await expect(page.locator('ul[aria-label="Helper exercises for Lower back"]')).toContainText("Romanian Deadlift");
   await page.locator('ul[aria-label="Muscles"] button', { hasText: "Inner thighs" }).click();
-  await expect(page.getByText("Your program doesn't train this muscle.")).toBeVisible();
+  await expect(page.locator('ul[aria-label="Exercises for Inner thighs"] li').first()).toContainText("Hip Adduction");
+  await expect(page.locator('ul[aria-label="Exercises for Inner thighs"] li').first()).toContainText("Legs · in the plan");
 
   // Read-only: nothing is stored.
   expect(await page.evaluate(() => Object.keys(localStorage).sort())).toEqual(before);

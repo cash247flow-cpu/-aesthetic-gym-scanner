@@ -106,3 +106,12 @@ test("study-based cues: palms-facing handles on the Reverse Pec Deck; slow lower
   const dbRdl = buildPlan("legs", all.filter((e) => e !== "barbell")).exercises.find((e) => e.name === "Dumbbell RDL")!;
   assert.match(dbRdl.cue, /Lower slowly under control/);
 });
+
+test("Legs: Hip Adduction (inner thighs) follows Hip Abduction on the same machine, with cable and bodyweight swaps", () => {
+  const names = buildPlan("legs", CANONICAL_EQUIPMENT).exercises.map((e) => e.name);
+  assert.equal(names.indexOf("Hip Adduction"), names.indexOf("Hip Abduction") + 1);
+  const cable = buildPlan("legs", ["cable machine", "ankle strap"]).exercises.find((e) => e.swappedFrom === "Hip Adduction");
+  assert.equal(cable?.name, "Cable Hip Adduction");
+  const none = buildPlan("legs", []).exercises.find((e) => e.swappedFrom === "Hip Adduction");
+  assert.equal(none?.name, "Side-Lying Hip Adduction");
+});

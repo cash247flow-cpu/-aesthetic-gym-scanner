@@ -49,6 +49,7 @@ export const LEG_AESTHETIC: Record<string, { label: string; reason: string }> = 
   "Seated Leg Curl":     { label: "Hams",   reason: "Seated curl stretches the hamstring at the hip — best growth position." },
   "Standing Calf Raise": { label: "Calves", reason: "Full-stretch calves complete the lower-leg look in shorts." },
   "Hip Abduction":       { label: "Glutes", reason: "Upper glute/hip shape — the 'shelf' look from behind." },
+  "Hip Adduction":       { label: "Inner thighs", reason: "Trains the inner thighs, which nothing else in the program works. Same machine as Hip Abduction, pads switched." },
   // Abs: picks from an EMG-tested ranking — loadable, deep stretch, hip flexors kept out of it.
   "Face-Away Crunch":    { label: "Abs · Upper", reason: "Facing away puts tension on the abs in the stretch; bracing your hips keeps them from doing the work." },
   "Reverse Crunch":      { label: "Abs · Lower", reason: "Curling the pelvis hits the lower abs without the hip flexors taking over; the mat adds the stretch." },
@@ -247,6 +248,14 @@ export const SESSIONS: Record<"push" | "pull" | "legs", { label: string; note: s
         substitutes: [
           { name: "Cable Hip Abduction", cue: "Lean slightly away; sweep out and hold 1–2s at the top.", equipmentNeeded: ["cable machine","ankle strap"], aestheticKey: "Hip Abduction", aestheticMap: "legs" },
           { name: "Side-Lying Hip Abduction", cue: "Lie on your side, top leg straight and slightly behind you; lift with the side of the hip and hold 1–2s at the top.", equipmentNeeded: [], aestheticKey: "Hip Abduction", aestheticMap: "legs" },
+        ] },
+      // Inner thighs: the other setting of a combined adductor/abductor machine.
+      { name: "Hip Adduction", sets: "3", reps: "10–12", restSeconds: "90–120",
+        cue: "Switch the machine to the inner-thigh setting, pads on the inside of your knees. Squeeze your legs together, hold 1s, then let them open slowly into the stretch.",
+        equipmentNeeded: ["abductor machine"], aestheticKey: "Hip Adduction", aestheticMap: "legs",
+        substitutes: [
+          { name: "Cable Hip Adduction", cue: "Ankle strap on the leg nearest the cable; sweep it across in front of the other leg and hold 1s.", equipmentNeeded: ["cable machine","ankle strap"], aestheticKey: "Hip Adduction", aestheticMap: "legs" },
+          { name: "Side-Lying Hip Adduction", cue: "Lie on your side, top foot planted in front; lift the bottom leg with the inner thigh and hold 1–2s at the top.", equipmentNeeded: [], aestheticKey: "Hip Adduction", aestheticMap: "legs" },
         ] },
       // Abs: the S-tier picks, plus one oblique slot. Slot 1's swaps are the face-away crunch variations.
       { name: "Assisted Lat Pulldown Crunch", sets: "3", reps: "failure", restSeconds: "90–120",

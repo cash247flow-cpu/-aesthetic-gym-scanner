@@ -36,14 +36,14 @@ test("a swap shows its own cue, or the main exercise's when it has none", () => 
   assert.match(db?.cue ?? "", /dumbbells close to the legs/);
 });
 
-test("every muscle on the map but the inner thighs has at least one exercise, main or helper", () => {
+test("every muscle on the map has at least one exercise, main or helper", () => {
   for (const m of MUSCLES) {
     const { main, helping } = exercisesFor(m);
-    // The program has no inner-thigh (adductor) work; the screen says so.
-    if (m === "adductors") assert.equal(main.length + helping.length, 0);
-    else assert.ok(main.length + helping.length > 0, `${m} has no exercises`);
+    assert.ok(main.length + helping.length > 0, `${m} has no exercises`);
     for (const e of helping) assert.ok(!e.primary.includes(m));
   }
   const abs = exercisesFor("abdominals").main.map((e) => e.name);
   for (const n of ["Hanging Knee Raise", "Dragon Flag", "Cable Oblique Crunch"]) assert.ok(abs.includes(n), n);
+  const inner = exercisesFor("adductors").main;
+  assert.deepEqual(inner[0], { ...inner[0], name: "Hip Adduction", days: ["Legs"], swapFor: undefined });
 });
